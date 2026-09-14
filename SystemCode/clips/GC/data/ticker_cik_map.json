@@ -1,0 +1,14 @@
+{
+  "AAPL": {
+    "cik": "0000320193",
+    "name": "Apple Inc."
+  },
+  "NVDA": {
+    "cik": "0001045810",
+    "name": "NVIDIA Corporation"
+  },
+  "MSFT": {
+    "cik": "0000789019",
+    "name": "Microsoft Corporation"
+  }
+}

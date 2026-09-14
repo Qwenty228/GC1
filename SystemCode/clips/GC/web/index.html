@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Node 1 — Data Sources Explorer</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#171a21; --border:#2a2f3a; --text:#e6e6e6;
+            --muted:#9aa4b2; --accent:#4c8bf5; --edgar:#f5a623; --alpaca:#4cc38a; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif;
+           background:var(--bg); color:var(--text); }
+    header { padding:20px 24px; border-bottom:1px solid var(--border); }
+    h1 { font-size:18px; margin:0 0 4px; }
+    .sub { color:var(--muted); font-size:13px; }
+    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+                padding:16px 24px; border-bottom:1px solid var(--border); }
+    select, button { font-size:14px; padding:8px 12px; border-radius:8px;
+                     border:1px solid var(--border); background:var(--panel);
+                     color:var(--text); cursor:pointer; }
+    button:hover { border-color:var(--accent); }
+    button.alpaca { border-color:var(--alpaca); }
+    button.edgar { border-color:var(--edgar); }
+    label { color:var(--muted); font-size:13px; }
+    main { padding:16px 24px; display:grid; gap:20px; }
+    .section { border:1px solid var(--border); border-radius:10px;
+               background:var(--panel); overflow:hidden; }
+    .section h2 { font-size:15px; margin:0; padding:12px 16px;
+                  border-bottom:1px solid var(--border); display:flex;
+                  justify-content:space-between; align-items:center; }
+    .badge { font-size:11px; padding:2px 8px; border-radius:999px;
+             background:#2a2f3a; color:var(--muted); }
+    .badge.live { color:var(--alpaca); }
+    .badge.sample { color:var(--edgar); }
+    .section-body { padding:0; display:none; }
+    .section.open .section-body { display:block; }
+    .panel-title { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
+                   color:var(--muted); padding:12px 16px 4px; }
+    table { width:100%; border-collapse:collapse; font-size:12.5px; }
+    th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border);
+             vertical-align:top; }
+    th { color:var(--muted); font-weight:600; }
+    td.field { color:var(--accent); font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
+    td.type { color:var(--edgar); font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
+    td.example { color:var(--muted); font-family:ui-monospace,Menlo,monospace;
+                 max-width:340px; overflow:hidden; text-overflow:ellipsis; }
+    .records { padding:8px 16px 16px; }
+    .record { border:1px solid var(--border); border-radius:8px; margin-top:10px; }
+    .record summary { cursor:pointer; padding:10px 12px; font-size:13px; }
+    .record pre { margin:0; padding:12px; background:#0c0e12; overflow:auto;
+                  font-size:12px; border-top:1px solid var(--border); }
+    .hint { color:var(--muted); font-size:12px; padding:10px 16px; }
+    .error { color:#ff6b6b; padding:12px 16px; }
+    a { color:var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Node 1 — Data Sources Explorer</h1>
+    <div class="sub">Inspect raw data + generated data dictionary for Alpaca news and SEC EDGAR 8-K filings.</div>
+  </header>
+
+  <div class="controls">
+    <label for="ticker">Company</label>
+    <select id="ticker"></select>
+    <label for="limit">Limit</label>
+    <select id="limit">
+      <option>5</option><option selected>10</option><option>20</option>
+    </select>
+    <button class="alpaca" id="btn-alpaca">Load Alpaca News</button>
+    <button class="edgar" id="btn-edgar">Load EDGAR 8-K Filings</button>
+  </div>
+
+  <main>
+    <section class="section" id="sec-alpaca">
+      <h2><span>Alpaca News <span class="badge" id="alpaca-badge"></span></span></h2>
+      <div class="section-body" id="alpaca-body"></div>
+    </section>
+    <section class="section" id="sec-edgar">
+      <h2><span>SEC EDGAR — 8-K Filings <span class="badge" id="edgar-badge"></span></span></h2>
+      <div class="section-body" id="edgar-body"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

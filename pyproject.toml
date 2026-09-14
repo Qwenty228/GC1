@@ -1,0 +1,26 @@
+[project]
+name = "datasources"
+version = "0.1.0"
+description = "Node 1 — Data Sources: Alpaca financial news + SEC EDGAR 8-K filings, with a data-dictionary explorer UI."
+readme = "README.md"
+authors = [
+    { name = "Qwenty228", email = "natsg90@gmail.com" }
+]
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.128.8",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "uvicorn[standard]>=0.39.0",
+]
+
+[project.scripts]
+datasources = "datasources.cli:main"
+datasources-server = "datasources.server:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["uv_build>=0.8.12,<0.9.0"]
+build-backend = "uv_build"

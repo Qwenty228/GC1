@@ -1,0 +1,377 @@
+[
+  {
+    "field": "cik",
+    "type": "str",
+    "example": "0001045810"
+  },
+  {
+    "field": "entityType",
+    "type": "str",
+    "example": "operating"
+  },
+  {
+    "field": "sic",
+    "type": "str",
+    "example": "3674"
+  },
+  {
+    "field": "sicDescription",
+    "type": "str",
+    "example": "Semiconductors & Related Devices"
+  },
+  {
+    "field": "ownerOrg",
+    "type": "str",
+    "example": "04 Manufacturing"
+  },
+  {
+    "field": "insiderTransactionForOwnerExists",
+    "type": "int",
+    "example": 1
+  },
+  {
+    "field": "insiderTransactionForIssuerExists",
+    "type": "int",
+    "example": 1
+  },
+  {
+    "field": "name",
+    "type": "str",
+    "example": "NVIDIA CORP"
+  },
+  {
+    "field": "tickers",
+    "type": "array<str>",
+    "length": 1,
+    "example": "NVDA"
+  },
+  {
+    "field": "exchanges",
+    "type": "array<str>",
+    "length": 1,
+    "example": "Nasdaq"
+  },
+  {
+    "field": "ein",
+    "type": "str",
+    "example": "943177549"
+  },
+  {
+    "field": "lei",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "description",
+    "type": "str",
+    "example": ""
+  },
+  {
+    "field": "website",
+    "type": "str",
+    "example": ""
+  },
+  {
+    "field": "investorWebsite",
+    "type": "str",
+    "example": ""
+  },
+  {
+    "field": "category",
+    "type": "str",
+    "example": "Large accelerated filer"
+  },
+  {
+    "field": "fiscalYearEnd",
+    "type": "str",
+    "example": "0131"
+  },
+  {
+    "field": "stateOfIncorporation",
+    "type": "str",
+    "example": "DE"
+  },
+  {
+    "field": "stateOfIncorporationDescription",
+    "type": "str",
+    "example": "DE"
+  },
+  {
+    "field": "addresses",
+    "type": "object",
+    "example": null
+  },
+  {
+    "field": "addresses.mailing",
+    "type": "object",
+    "example": null
+  },
+  {
+    "field": "addresses.mailing.street1",
+    "type": "str",
+    "example": "2788 SAN TOMAS EXPRESSWAY"
+  },
+  {
+    "field": "addresses.mailing.street2",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.mailing.city",
+    "type": "str",
+    "example": "SANTA CLARA"
+  },
+  {
+    "field": "addresses.mailing.stateOrCountry",
+    "type": "str",
+    "example": "CA"
+  },
+  {
+    "field": "addresses.mailing.zipCode",
+    "type": "str",
+    "example": "95051"
+  },
+  {
+    "field": "addresses.mailing.stateOrCountryDescription",
+    "type": "str",
+    "example": "CA"
+  },
+  {
+    "field": "addresses.mailing.isForeignLocation",
+    "type": "int",
+    "example": 0
+  },
+  {
+    "field": "addresses.mailing.foreignStateTerritory",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.mailing.country",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.mailing.countryCode",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.business",
+    "type": "object",
+    "example": null
+  },
+  {
+    "field": "addresses.business.street1",
+    "type": "str",
+    "example": "2788 SAN TOMAS EXPRESSWAY"
+  },
+  {
+    "field": "addresses.business.street2",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.business.city",
+    "type": "str",
+    "example": "SANTA CLARA"
+  },
+  {
+    "field": "addresses.business.stateOrCountry",
+    "type": "str",
+    "example": "CA"
+  },
+  {
+    "field": "addresses.business.zipCode",
+    "type": "str",
+    "example": "95051"
+  },
+  {
+    "field": "addresses.business.stateOrCountryDescription",
+    "type": "str",
+    "example": "CA"
+  },
+  {
+    "field": "addresses.business.isForeignLocation",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.business.foreignStateTerritory",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.business.country",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "addresses.business.countryCode",
+    "type": "NoneType",
+    "example": null
+  },
+  {
+    "field": "phone",
+    "type": "str",
+    "example": "408-486-2000"
+  },
+  {
+    "field": "flags",
+    "type": "str",
+    "example": ""
+  },
+  {
+    "field": "formerNames",
+    "type": "array<dict>",
+    "length": 1,
+    "example": null
+  },
+  {
+    "field": "formerNames[].name",
+    "type": "str",
+    "example": "NVIDIA CORP/CA"
+  },
+  {
+    "field": "formerNames[].from",
+    "type": "str",
+    "example": "1998-05-07T04:00:00.000Z"
+  },
+  {
+    "field": "formerNames[].to",
+    "type": "str",
+    "example": "2002-06-04T04:00:00.000Z"
+  },
+  {
+    "field": "filings",
+    "type": "object",
+    "example": null
+  },
+  {
+    "field": "filings.recent",
+    "type": "object",
+    "example": null
+  },
+  {
+    "field": "filings.recent.accessionNumber",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "0001199039-26-000014"
+  },
+  {
+    "field": "filings.recent.filingDate",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "2026-09-08"
+  },
+  {
+    "field": "filings.recent.reportDate",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "2026-09-03"
+  },
+  {
+    "field": "filings.recent.acceptanceDateTime",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "2026-09-08T21:09:19.000Z"
+  },
+  {
+    "field": "filings.recent.act",
+    "type": "array<str>",
+    "length": 1001,
+    "example": ""
+  },
+  {
+    "field": "filings.recent.form",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "4"
+  },
+  {
+    "field": "filings.recent.fileNumber",
+    "type": "array<str>",
+    "length": 1001,
+    "example": ""
+  },
+  {
+    "field": "filings.recent.filmNumber",
+    "type": "array<str>",
+    "length": 1001,
+    "example": ""
+  },
+  {
+    "field": "filings.recent.items",
+    "type": "array<str>",
+    "length": 1001,
+    "example": ""
+  },
+  {
+    "field": "filings.recent.core_type",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "4"
+  },
+  {
+    "field": "filings.recent.size",
+    "type": "array<int>",
+    "length": 1001,
+    "example": 18345
+  },
+  {
+    "field": "filings.recent.isXBRL",
+    "type": "array<int>",
+    "length": 1001,
+    "example": 0
+  },
+  {
+    "field": "filings.recent.isInlineXBRL",
+    "type": "array<int>",
+    "length": 1001,
+    "example": 0
+  },
+  {
+    "field": "filings.recent.isXBRLNumeric",
+    "type": "array<int>",
+    "length": 1001,
+    "example": 0
+  },
+  {
+    "field": "filings.recent.primaryDocument",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "xslF345X06/wk-form4_1788901755.xml"
+  },
+  {
+    "field": "filings.recent.primaryDocDescription",
+    "type": "array<str>",
+    "length": 1001,
+    "example": "FORM 4"
+  },
+  {
+    "field": "filings.files",
+    "type": "array<dict>",
+    "length": 1,
+    "example": null
+  },
+  {
+    "field": "filings.files[].name",
+    "type": "str",
+    "example": "CIK0001045810-submissions-001.json"
+  },
+  {
+    "field": "filings.files[].filingCount",
+    "type": "int",
+    "example": 1476
+  },
+  {
+    "field": "filings.files[].filingFrom",
+    "type": "str",
+    "example": "1998-03-06"
+  },
+  {
+    "field": "filings.files[].filingTo",
+    "type": "str",
+    "example": "2020-07-04"
+  }
+]
