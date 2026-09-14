@@ -14,3 +14,7 @@ wheels/
 
 # Cached EDGAR submissions (regenerable)
 data/cache/
+
+# Test and editor artifacts
+.pytest_cache/
+.DS_Store
