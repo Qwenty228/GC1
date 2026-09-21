@@ -1,0 +1,1 @@
+"""Real-time Alpaca Trading API news stream client."""
