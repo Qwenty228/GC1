@@ -17,6 +17,7 @@ dependencies = [
 [project.scripts]
 datasources = "datasources.cli:main"
 datasources-server = "datasources.server:main"
+datasources-news-stream = "alpaca_news.main:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "pytest-asyncio>=0.25"]
