@@ -1,0 +1,18 @@
+{
+  "news": [
+    {
+      "id": 92000002,
+      "headline": "Synthetic REST article two (no content returned)",
+      "author": "Synthetic Author",
+      "created_at": "2026-09-21T11:00:00Z",
+      "updated_at": "2026-09-21T11:00:00Z",
+      "summary": "Synthetic REST summary two.",
+      "content": "",
+      "url": "https://news.example.test/rest-two",
+      "images": [],
+      "symbols": ["NVDA"],
+      "source": "reuters"
+    }
+  ],
+  "next_page_token": null
+}

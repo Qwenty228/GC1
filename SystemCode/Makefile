@@ -4,13 +4,15 @@
 #   make run               serve the UI + API on http://127.0.0.1:8000
 #   make test              run the offline test suite
 #   make edgar T=NVDA      backend-only CLI (no web layer)
+#   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
+#   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
 
 UV := uv
 T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
-.PHONY: help sync run test companies edgar alpaca clean clean-cache
+.PHONY: help sync run test companies edgar alpaca ingest ingest-once ingest-demo clean clean-cache
 
 help: ## Show this help
 	@echo "Node 1 — Data Sources"
@@ -38,6 +40,15 @@ edgar: sync ## Fetch recent 8-K filings, e.g. make edgar T=NVDA LIMIT=5
 
 alpaca: sync ## Fetch recent news, e.g. make alpaca T=AAPL LIMIT=5
 	$(UV) run datasources alpaca $(T) --limit $(LIMIT)
+
+ingest: sync ## Start automatic ingestion (one worker per output dir)
+	$(UV) run datasources-ingest run
+
+ingest-once: sync ## One SEC poll + one Alpaca REST backfill, then exit
+	$(UV) run datasources-ingest run --once
+
+ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
+	$(UV) run datasources-ingest demo
 
 clean: ## Remove Python and test caches
 	find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
