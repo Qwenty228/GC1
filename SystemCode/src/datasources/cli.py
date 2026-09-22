@@ -40,6 +40,12 @@ def main(argv: list[str] | None = None) -> int:
     p_alpaca = sub.add_parser("alpaca", help="Fetch most-recent Alpaca news.")
     p_alpaca.add_argument("ticker")
     p_alpaca.add_argument("--limit", type=int, default=10)
+    p_alpaca.add_argument(
+        "--demo",
+        action="store_true",
+        default=None,
+        help="Return the bundled synthetic sample instead of calling Alpaca.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -48,7 +54,11 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "edgar":
         result = sec.recent_8k(args.ticker, limit=args.limit, refresh=args.refresh)
     elif args.command == "alpaca":
-        result = alpaca.recent_news(args.ticker, limit=args.limit)
+        try:
+            result = alpaca.recent_news(args.ticker, limit=args.limit, demo=args.demo)
+        except alpaca.AlpacaConfigError as exc:
+            print(f"Configuration error: {exc}", file=sys.stderr)
+            return 2
     else:  # pragma: no cover - argparse enforces choices
         parser.error(f"unknown command {args.command!r}")
         return 2

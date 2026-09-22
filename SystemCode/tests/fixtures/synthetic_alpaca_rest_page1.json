@@ -1,0 +1,18 @@
+{
+  "news": [
+    {
+      "id": 92000001,
+      "headline": "Synthetic REST article one",
+      "author": "Synthetic Author",
+      "created_at": "2026-09-21T10:00:00Z",
+      "updated_at": "2026-09-21T10:00:00Z",
+      "summary": "Synthetic REST summary one.",
+      "content": "<p>Synthetic REST body one.</p>",
+      "url": "https://news.example.test/rest-one",
+      "images": [],
+      "symbols": ["NVDA"],
+      "source": "benzinga"
+    }
+  ],
+  "next_page_token": "c3ludGhldGljLXBhZ2UtMg=="
+}

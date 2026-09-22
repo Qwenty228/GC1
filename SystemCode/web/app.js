@@ -65,7 +65,7 @@ async function load(source) {
     }
     if (source === "alpaca") {
       badgeEl.classList.add(data.live ? "live" : "sample");
-      badgeEl.textContent = data.live ? "live" : "sample data (no API keys)";
+      badgeEl.textContent = data.live ? "live" : "demo mode · synthetic sample data";
     } else {
       const cacheTag = data.from_cache ? "cached" : "fresh request";
       badgeEl.textContent = `${data.count} filings · CIK ${data.cik} · ${cacheTag}`;

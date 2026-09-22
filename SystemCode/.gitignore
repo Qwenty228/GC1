@@ -2,3 +2,10 @@
 .venv/
 __pycache__/
 .pytest_cache/
+
+# Generated ingestion output (raw documents, processed records, ledger, logs, demo).
+output/
+
+# SEC submissions cache is regenerated on demand; keep the committed MSFT fixture.
+data/cache/*
+!data/cache/submissions_CIK0000789019.json

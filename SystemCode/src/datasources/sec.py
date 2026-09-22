@@ -15,7 +15,12 @@ saved submissions JSON. `recent_8k` loads (cache-or-fetch) then parses.
 from __future__ import annotations
 
 import json
+import logging
+import os
+import re
+import tempfile
 import time
+from pathlib import Path
 
 import requests
 
@@ -27,10 +32,121 @@ CACHE_DIR = config.DATA_DIR / "cache"
 # Cache is considered fresh for this long. SEC updates throughout the day, so a
 # few hours keeps repeated exploration fast without going permanently stale.
 DEFAULT_MAX_AGE_HOURS = 12
+ARCHIVES_BASE = "https://www.sec.gov/Archives/edgar/data"
+LOGGER = logging.getLogger(__name__)
+
+# filings.recent columns that must be present and aligned with accessionNumber.
+REQUIRED_FILING_FIELDS = ("accessionNumber", "form", "filingDate", "primaryDocument")
+_ACCESSION = re.compile(r"^\d{10}-\d{2}-\d{6}$")
+# EDGAR primary documents are plain filenames, occasionally one sub-directory deep.
+_PRIMARY_DOCUMENT = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]*(/[A-Za-z0-9_][A-Za-z0-9._-]*)?$")
+
+
+class SubmissionsFormatError(ValueError):
+    """Raised when submissions JSON violates the aligned-array contract."""
 
 
 def _cache_path(cik10: str):
     return CACHE_DIR / f"submissions_CIK{cik10}.json"
+
+
+def save_submissions_cache(cik: str, data: dict) -> Path:
+    """Atomically replace the shared per-CIK cache used by `load_submissions`."""
+    path = _cache_path(cik.zfill(10))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+    return path
+
+
+def archive_directory_url(cik: str, accession: str) -> str:
+    """Archive folder: CIK without leading zeros, accession without hyphens."""
+    return f"{ARCHIVES_BASE}/{int(cik)}/{accession.replace('-', '')}"
+
+
+def filing_index_url(cik: str, accession: str) -> str:
+    """Human-readable filing index; the filename keeps the hyphenated accession."""
+    return f"{archive_directory_url(cik, accession)}/{accession}-index.htm"
+
+
+def primary_document_url(cik: str, accession: str, primary_document: str) -> str:
+    """Primary document URL. Raises ValueError for an unsafe/invalid filename."""
+    if not valid_primary_document(primary_document):
+        raise ValueError(f"invalid primary document filename {primary_document!r}")
+    return f"{archive_directory_url(cik, accession)}/{primary_document}"
+
+
+def valid_accession(accession: str | None) -> bool:
+    return bool(accession) and bool(_ACCESSION.match(accession))
+
+
+def valid_primary_document(name: str | None) -> bool:
+    return bool(name) and ".." not in name and bool(_PRIMARY_DOCUMENT.match(name))
+
+
+def filing_columns(submissions_or_file: dict) -> dict:
+    """Return the columnar filings arrays.
+
+    Main submissions JSON nests them under ``filings.recent``; the historical
+    ``CIK##########-submissions-###.json`` files listed in ``filings.files``
+    carry the same arrays at the top level.
+    """
+    filings = submissions_or_file.get("filings")
+    if isinstance(filings, dict) and isinstance(filings.get("recent"), dict):
+        return filings["recent"]
+    if isinstance(submissions_or_file.get("accessionNumber"), list):
+        return submissions_or_file
+    raise SubmissionsFormatError("no filings.recent arrays found")
+
+
+def filing_rows(
+    columns: dict, forms: set[str] | None = None, warnings: list[str] | None = None
+) -> list[dict]:
+    """Turn aligned filings arrays into row dicts, newest-first as EDGAR orders them.
+
+    Required columns must exist and share accessionNumber's length; otherwise the
+    whole payload is rejected rather than silently truncated (no `zip`). An
+    optional column that is missing or misaligned becomes null for every row and
+    a warning is recorded.
+    """
+    for name in REQUIRED_FILING_FIELDS:
+        if not isinstance(columns.get(name), list):
+            raise SubmissionsFormatError(f"required filings column {name!r} is missing")
+    total = len(columns["accessionNumber"])
+    for name in REQUIRED_FILING_FIELDS:
+        if len(columns[name]) != total:
+            raise SubmissionsFormatError(
+                f"filings column {name!r} has {len(columns[name])} entries, "
+                f"accessionNumber has {total}"
+            )
+    usable: list[str] = []
+    for name, values in columns.items():
+        if name in REQUIRED_FILING_FIELDS:
+            usable.append(name)
+        elif not isinstance(values, list) or len(values) != total:
+            message = (
+                f"optional filings column {name!r} is misaligned "
+                f"({len(values) if isinstance(values, list) else type(values).__name__} vs {total}); set to null"
+            )
+            LOGGER.warning(message)
+            if warnings is not None:
+                warnings.append(message)
+        else:
+            usable.append(name)
+    all_names = list(columns.keys())
+    rows: list[dict] = []
+    for i in range(total):
+        form = columns["form"][i]
+        if forms is not None and form not in forms:
+            continue
+        rows.append({name: (columns[name][i] if name in usable else None) for name in all_names})
+    return rows
 
 
 def _download_submissions(cik10: str) -> dict:
@@ -66,8 +182,7 @@ def load_submissions(
             return json.loads(path.read_text()), True  # cache hit -> request blocked
 
     data = _download_submissions(cik10)
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data))
+    save_submissions_cache(cik10, data)
     return data, False
 
 
@@ -87,30 +202,17 @@ def parse_8k(
     dictionary reflects exactly what EDGAR provides.
     """
     cik10 = cik.zfill(10)
-    cik_int = int(cik10)
-    recent = submissions["filings"]["recent"]
-    keys = list(recent.keys())
-    total = len(recent.get("accessionNumber", []))
-
     records: list[dict] = []
-    for i in range(total):
-        if recent["form"][i] != "8-K":
-            continue
-
-        rec = {key: recent[key][i] for key in keys}
+    for rec in filing_rows(filing_columns(submissions), forms={"8-K"}):
         accession = rec["accessionNumber"]
-        acc_nodash = accession.replace("-", "")
         primary = rec.get("primaryDocument") or ""
 
         rec["cik"] = cik10
         rec["ticker"] = ticker
-        rec["filing_index_url"] = (
-            f"https://www.sec.gov/Archives/edgar/data/"
-            f"{cik_int}/{acc_nodash}/{accession}-index.htm"
-        )
+        rec["filing_index_url"] = filing_index_url(cik10, accession)
         rec["primary_doc_url"] = (
-            f"https://www.sec.gov/Archives/edgar/data/{cik_int}/{acc_nodash}/{primary}"
-            if primary
+            primary_document_url(cik10, accession, primary)
+            if valid_primary_document(primary)
             else None
         )
 

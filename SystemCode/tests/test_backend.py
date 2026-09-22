@@ -69,15 +69,56 @@ def test_load_submissions_uses_cache_and_blocks_request(tmp_path, monkeypatch):
         sec.load_submissions(cik, force=True)
 
 
-def test_alpaca_falls_back_to_sample_without_keys(monkeypatch):
+def test_alpaca_without_keys_is_a_configuration_error(monkeypatch):
     monkeypatch.delenv("ALPACA_API_KEY", raising=False)
     monkeypatch.delenv("ALPACA_SECRET_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_AUTH_MODE", raising=False)
+    monkeypatch.delenv("DATASOURCES_DEMO_MODE", raising=False)
+    import pytest
+
+    with pytest.raises(alpaca.AlpacaConfigError):
+        alpaca.recent_news("NVDA", limit=10)
+
+
+def test_api_alpaca_reports_configuration_error(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from datasources.server import app
+
+    monkeypatch.delenv("ALPACA_API_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_SECRET_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_AUTH_MODE", raising=False)
+    monkeypatch.delenv("DATASOURCES_DEMO_MODE", raising=False)
+    client = TestClient(app)
+    resp = client.get("/api/alpaca", params={"ticker": "NVDA"})
+    assert resp.status_code == 503
+    assert "Configuration error" in resp.json()["error"]
+    demo = client.get("/api/alpaca", params={"ticker": "NVDA", "demo": "true"}).json()
+    assert demo["live"] is False and demo["demo"] is True
+
+
+def test_alpaca_explicit_demo_mode_returns_labelled_sample(monkeypatch):
+    monkeypatch.delenv("ALPACA_API_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_SECRET_KEY", raising=False)
+    monkeypatch.setenv("DATASOURCES_DEMO_MODE", "true")
 
     result = alpaca.recent_news("NVDA", limit=10)
-    assert result["live"] is False
+    assert result["live"] is False and result["demo"] is True
     assert result["count"] >= 1
     assert all("NVDA" in r["symbols"] for r in result["records"])
     assert all(r["_source"] == "sample" for r in result["records"])
     # data dict should describe the headline field with a known description
     by_field = {r["field"]: r for r in result["data_dict"]}
     assert "headline" in by_field
+
+
+def test_cli_alpaca_reports_configuration_error(monkeypatch, capsys):
+    from datasources import cli
+
+    monkeypatch.delenv("ALPACA_API_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_SECRET_KEY", raising=False)
+    monkeypatch.delenv("ALPACA_AUTH_MODE", raising=False)
+    monkeypatch.delenv("DATASOURCES_DEMO_MODE", raising=False)
+    assert cli.main(["alpaca", "NVDA"]) == 2
+    assert "Configuration error" in capsys.readouterr().err
+    assert cli.main(["alpaca", "NVDA", "--demo"]) == 0

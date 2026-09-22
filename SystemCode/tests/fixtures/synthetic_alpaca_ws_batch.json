@@ -1,0 +1,30 @@
+[
+  {"T": "success", "msg": "authenticated"},
+  {"T": "subscription", "news": ["NVDA"]},
+  {
+    "T": "n",
+    "id": 91000001,
+    "headline": "Synthetic Co &amp; NVIDIA announce test partnership",
+    "summary": "Synthetic summary: revenue won&#39;t decline, per the <b>test</b> fixture.",
+    "author": "Synthetic Reporter",
+    "created_at": "2026-09-21T14:00:00Z",
+    "updated_at": "2026-09-21T14:05:00Z",
+    "content": "<p>First paragraph with revenue of $1.2 billion, up 12%.</p><ul><li>Point one</li><li>Point two is not negative</li></ul><table><tr><td>Q1</td><td>$</td><td>(3.4</td><td>)</td></tr></table>",
+    "url": "https://news.example.test/synthetic-nvda-partnership",
+    "symbols": ["nvda", "BRK.B", " NVDA "],
+    "source": "benzinga"
+  },
+  {
+    "T": "n",
+    "id": 91000002,
+    "headline": "Second synthetic headline without content",
+    "summary": "",
+    "author": "",
+    "created_at": "2026-09-21T15:00:00-04:00",
+    "updated_at": "not-a-timestamp",
+    "content": "",
+    "url": "https://news.example.test/second",
+    "symbols": ["NVDA"],
+    "source": "benzinga"
+  }
+]

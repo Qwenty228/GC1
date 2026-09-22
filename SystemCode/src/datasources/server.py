@@ -41,10 +41,16 @@ def api_edgar(ticker: str, limit: int = 10, refresh: bool = False) -> JSONRespon
 
 
 @app.get("/api/alpaca")
-def api_alpaca(ticker: str, limit: int = 10) -> JSONResponse:
-    """Most-recent Alpaca news for `ticker` (records + data dictionary)."""
+def api_alpaca(ticker: str, limit: int = 10, demo: bool | None = None) -> JSONResponse:
+    """Most-recent Alpaca news for `ticker` (records + data dictionary).
+
+    Sample data is returned only in explicit demo mode (`demo=true` or
+    DATASOURCES_DEMO_MODE=true); missing credentials are a configuration error.
+    """
     try:
-        return JSONResponse(alpaca.recent_news(ticker, limit=limit))
+        return JSONResponse(alpaca.recent_news(ticker, limit=limit, demo=demo))
+    except alpaca.AlpacaConfigError as exc:
+        return JSONResponse({"error": f"Configuration error: {exc}"}, status_code=503)
     except Exception as exc:
         return JSONResponse({"error": f"{type(exc).__name__}: {exc}"}, status_code=502)
 
