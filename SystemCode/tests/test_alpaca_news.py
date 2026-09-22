@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -11,6 +12,7 @@ from alpaca_news.client import (
     handle_messages,
     load_settings,
     parse_message_batch,
+    persist_raw_message,
     parse_symbols,
     subscription_message,
 )
@@ -33,6 +35,14 @@ ARTICLE = {
 
 def test_parses_valid_alpaca_news_message():
     assert parse_message_batch(json.dumps([ARTICLE])) == [ARTICLE]
+
+
+def test_persists_received_message_as_jsonl(tmp_path: Path):
+    archive_path = tmp_path / "output" / "alpaca_news_stream.jsonl"
+
+    persist_raw_message(json.dumps([ARTICLE]), archive_path)
+
+    assert json.loads(archive_path.read_text(encoding="utf-8")) == [ARTICLE]
 
 
 def test_handles_multiple_messages_in_one_json_array():

@@ -28,6 +28,7 @@ ARTICLE_FIELDS = (
     "symbols",
     "source",
 )
+DEFAULT_MESSAGE_ARCHIVE = Path(__file__).resolve().parents[2] / "output" / "alpaca_news_stream.jsonl"
 
 
 class MissingCredentialsError(ValueError):
@@ -77,6 +78,14 @@ def parse_message_batch(raw_message: str | bytes) -> list[dict[str, Any]]:
     if not isinstance(decoded, list):
         raise ValueError("Alpaca message must be a JSON array")
     return [message for message in decoded if isinstance(message, dict)]
+
+
+def persist_raw_message(raw_message: str | bytes, archive_path: Path = DEFAULT_MESSAGE_ARCHIVE) -> None:
+    """Append one received JSON websocket frame to the message archive."""
+    decoded = json.loads(raw_message)
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with archive_path.open("a", encoding="utf-8") as archive:
+        archive.write(json.dumps(decoded, ensure_ascii=True) + "\n")
 
 
 def extract_article(message: Mapping[str, Any]) -> dict[str, Any]:
@@ -137,7 +146,11 @@ def handle_messages(
     return processed
 
 
-async def stream_once(settings: NewsSettings, seen_article_ids: set[str]) -> None:
+async def stream_once(
+    settings: NewsSettings,
+    seen_article_ids: set[str],
+    message_archive: Path = DEFAULT_MESSAGE_ARCHIVE,
+) -> None:
     """Connect, subscribe, and process news until the connection closes."""
     headers = {
         "APCA-API-KEY-ID": settings.api_key,
@@ -151,6 +164,7 @@ async def stream_once(settings: NewsSettings, seen_article_ids: set[str]) -> Non
         LOGGER.info("Connected to Alpaca news stream; subscribed to %s", settings.symbols)
         async for raw_message in websocket:
             try:
+                persist_raw_message(raw_message, message_archive)
                 handle_messages(raw_message, seen_article_ids)
             except (ValueError, json.JSONDecodeError) as error:
                 LOGGER.warning("Ignoring invalid Alpaca message: %s", error)
