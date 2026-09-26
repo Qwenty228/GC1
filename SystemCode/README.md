@@ -1,11 +1,17 @@
 # Data Sources
 
 Node 1 of the pipeline collects **SEC EDGAR 8-K filings** and **Alpaca news** for a
-configurable list of symbols (default `NVDA`), preprocesses them with a small
-deterministic **LangGraph** graph, writes one versioned JSON record per
-filing / article revision under `output/`, and stores every record in the local
-**PostgreSQL** `stock_news` database. No LLM calls, no embeddings, no
-summarisation, sentiment or recommendations.
+configurable list of symbols (default `NVDA`), runs each record through a
+**LangGraph** graph, writes one versioned JSON record per filing / article
+revision under `output/`, and stores every record in the local **PostgreSQL**
+`stock_news` database.
+
+Optionally (`SIMILARITY_ENABLED=true`, off by default) the same graph compares
+each new article or filing with the news already stored — local embeddings,
+pgvector plus full-text retrieval, then an LLM comparison — **before** storing
+it, and groups the records into *events*. See
+[Semantic comparison and event grouping](#semantic-comparison-and-event-grouping).
+No summarisation, sentiment or recommendations.
 
 The original pieces still work as before:
 
@@ -33,6 +39,10 @@ All other settings are documented with defaults in [.env.example](.env.example).
 Never commit `.env` or put secrets in logs, screenshots or support requests.
 The worker never logs request headers, and it masks credential values if they
 ever appear in a log line.
+
+Semantic event grouping needs extra, explicit setup steps (optional packages, a
+model download and an API key); they are listed in
+[Setting up semantic comparison](#setting-up-semantic-comparison).
 
 ### Alpaca authentication
 
@@ -63,6 +73,11 @@ uv run datasources-ingest run --no-sec
 
 # Offline demo over bundled fixtures -> output/demo (is_sample = true)
 uv run datasources-ingest demo
+# ...also stored in PostgreSQL as sample rows, grouped into events if SIMILARITY_ENABLED=true
+uv run datasources-ingest demo --with-database
+
+# Print the compiled LangGraph (Mermaid diagram + edge list)
+uv run datasources-ingest graph
 
 # Ingest a saved payload (transport = file): REST page, /api/* wrapper,
 # WebSocket batch, or the existing JSONL archive of WebSocket frames
@@ -82,7 +97,13 @@ enforces this. The worker owns the Alpaca WebSocket, so don't also run
 worker runs. Don't start collectors from FastAPI. The web server stays a
 read-only view and starts no background tasks.
 
-Makefile shortcuts: `make ingest`, `make ingest-once`, `make ingest-demo`, `make test`.
+Run **one graph writer per database partition** (live or sample). A PostgreSQL
+advisory lock, held for the life of the process, enforces it across output
+directories and across `datasources-similarity backfill` / `retry`, so stop the
+worker before running those. It is released automatically if the process dies.
+
+Makefile shortcuts: `make ingest`, `make ingest-once`, `make ingest-demo`, `make graph`, `make test`,
+`make similarity-status`, `make similarity-backfill LIMIT=100`, `make similarity-retry LIMIT=100`.
 
 ## How it works
 
@@ -94,17 +115,38 @@ Alpaca WebSocket (existing       │
   alpaca_news.client) ───────────┤──> bounded queue ──> single writer
 Alpaca REST backfill (startup,   │                        1. ledger decision (source identity)
   every (re)subscription) ───────┘                        2. SEC: download primary 8-K HTML, save raw
-                                                          3. LangGraph  START -> prepare_data -> END
+                                                          3. LangGraph (below): prepare, compare,
+                                                             group, then ONE PostgreSQL transaction
                                                           4. atomic write processed/<...>.json
                                                           5. atomic ledger update
 ```
 
-* **Graph** (`src/datasources/ingest/graph.py`): a `StateGraph` with typed state
-  and a single `prepare_data` node, compiled once and reused. The node validates
-  each `SourceEnvelope` with Pydantic, picks the adapter from the envelope's
-  explicit `provider`, and returns prepared records plus per-record errors. One
-  malformed record never discards the rest of the batch. Polling, WebSocket,
-  downloads, duplicate tracking and file writing all run outside the graph.
+* **Graph** (`src/datasources/ingest/graph.py`): a `StateGraph` with typed state,
+  compiled once and reused; the database, embedding model and comparison
+  backend arrive through LangGraph's runtime context.
+
+  ```text
+  START -> prepare_data --(no valid record)--> END
+  prepare_data -> create_text_units -> generate_embeddings -> retrieve_candidates -> route_candidates
+  route_candidates --(no plausible candidate)--> propose_new_event ---------> resolve_event_memberships
+  route_candidates --(plausible candidates)----> compare_with_llm ----------> resolve_event_memberships
+  route_candidates --(nothing to decide)-------------------------------------> resolve_event_memberships
+  resolve_event_memberships -> persist_result --(next record in the batch)--> create_text_units
+                                              --(done)---------------------> END
+  ```
+
+  `prepare_data` validates each `SourceEnvelope` with Pydantic, picks the adapter
+  from the envelope's explicit `provider`, and isolates per-record errors: one
+  malformed record never discards the rest of the batch. Records are then
+  analysed **one at a time**; `persist_result` commits each record (document,
+  revision, sources, text units, embeddings, event decisions) before the next
+  one is analysed, so the next record already sees it. With similarity
+  disabled the analysis nodes pass the record through, `persist_result` stores
+  it exactly as before, and its analysis is reported as `disabled`. "Nothing to
+  decide" covers disabled or skipped analysis, a failed earlier stage, a replay
+  of an already stored record, and an exact-content match. Polling, WebSocket,
+  downloads, source-identity tracking and file writing all run outside the
+  graph.
 * **Envelope** (`schema.py`): provider (`sec_edgar`/`alpaca`), transport
   (`rest`/`websocket`/`file`), API endpoint, retrieval time, requested symbols,
   sample marker, raw record, raw-file references and, for SEC, the downloaded
@@ -192,6 +234,9 @@ uv run datasources-db backfill   # store existing output/processed records (idem
 uv run datasources-db smoke      # bounded live end-to-end test (see Tests)
 ```
 
+`datasources-db backfill` and `smoke` store records without semantic analysis;
+`uv run datasources-similarity backfill` analyses stored records afterwards.
+
 Configuration uses the standard libpq variable names, so `psql`, pgAdmin and
 this project share one `.env`. `PGPASSWORD` belongs in `.env` only, which is
 git-ignored; `.env.example` carries placeholders. `DATASOURCES_DB_ENABLED=false`
@@ -250,22 +295,28 @@ Idempotency is enforced by the database, not by application logic:
 unchanged payload conflicts and inserts nothing. A genuinely changed payload
 inserts a **new revision** and `document.current_revision_id` moves to it; the
 old revision is kept, and `document_revision` is immutable by trigger. An 8-K/A
-has its own accession, so it is its own `document`. There is no semantic or
-similarity matching here.
+has its own accession, so it is its own `document`. Documents are identified by
+source identity only: semantic similarity (below) groups documents into events,
+but never merges, replaces or deletes a document.
 
 ### Transactions and async safety
 
-Everything for one record — document, revision, company links, SEC details and
-raw source — is written in **one transaction**, so a failed related insert leaves
-no partial article (`tests/test_db_persistence.py` proves this with a real check
-violation). All SQL is parameterised.
+Everything for one record — document, revision, company links, SEC details, raw
+source and, when enabled, its text units, embeddings, analysis status and event
+decisions — is written by the graph's `persist_result` node in **one
+transaction**, so a failed related insert leaves no partial article
+(`tests/test_db_persistence.py` proves this with a real check violation, and
+`tests/test_similarity_pipeline.py` for the analysis rows). No transaction is
+held open while an embedding model or the LLM runs. All SQL is parameterised.
 
-The worker persists from `IngestionService.process_sec` / `process_alpaca`, which
-the writer already runs off the event loop via `asyncio.to_thread`, so the
-synchronous driver never blocks asyncio. Persistence happens **before** the
-processed file is written and before the ledger is marked, so a database failure
-leaves the record pending for the next poll instead of marked done with nothing
-stored.
+The writer runs `IngestionService.process_sec` / `process_alpaca` (and so the
+whole graph) off the event loop via `asyncio.to_thread`, so neither the
+synchronous driver nor a model call blocks asyncio. Persistence happens
+**before** the processed file is written and before the ledger is marked, so a
+database failure leaves the record pending for the next poll instead of marked
+done with nothing stored. If PostgreSQL commits but the file or ledger write
+then fails, the redelivery finds the stored revision and its analysis, reuses
+them, and calls no model again.
 
 ### Inspecting stored news (pgAdmin / psql)
 
@@ -319,25 +370,347 @@ SELECT d.source_record_id, r.title, left(r.body_text, 200) AS cleaned_text,
  WHERE d.record_type = 'news_article'
  LIMIT 1;
 
--- Embeddings are a later stage: all three must be 0 for now.
-SELECT (SELECT count(*) FROM text_unit) AS text_units,
-       (SELECT count(*) FROM embedding) AS embeddings,
-       (SELECT count(*) FROM embedding_profile) AS profiles;
+-- Semantic analysis coverage of current revisions ('not_analyzed' while similarity is off).
+SELECT record_type, analysis_status, count(*) FROM current_revision_analysis
+ WHERE NOT is_sample GROUP BY 1, 2 ORDER BY 1, 2;
 ```
 
-### Embeddings are a later stage
+More event queries are in [Inspecting events](#inspecting-events).
 
-No embeddings are generated and no LLM is called. `text_unit`, `embedding` and
-`embedding_profile` are left empty; `text_unit.embedding_status` already defaults
-to `pending` for whatever creates them. pgvector availability is reported by
-`datasources-db check` and is independent of news storage working.
+## Semantic comparison and event grouping
+
+Off unless `SIMILARITY_ENABLED=true`. When on, each eligible article or filing is
+compared with previously **committed** news inside the ingestion graph, and only
+then stored — together with its text units, embeddings and event decisions — in
+one transaction. Collection, source-identity checks, raw payload capture and SEC
+downloads stay outside the graph, unchanged.
+
+### Setting up semantic comparison
+
+```powershell
+uv sync --locked --extra local-embeddings     # CPU-only torch + sentence-transformers (large download)
+uv run datasources-db migrate                 # migration 002: analysis, event and retrieval tables
+uv run datasources-similarity download-model  # explicit model download (~130 MB, Hugging Face cache)
+# in .env: SIMILARITY_ENABLED=true and ANTHROPIC_API_KEY=<your key>
+uv run datasources-similarity check           # validates DB, pgvector, schema, model, credentials; writes nothing
+uv run datasources-similarity backfill --limit 100   # bootstrap stored records; repeat until "selected": 0
+uv run datasources-ingest run                 # the worker now compares and groups inline
+```
+
+* The embedding stack is an optional extra because torch is large. `uv run`
+  keeps it installed, but a plain `uv sync --locked` (without
+  `--extra local-embeddings`) removes it again.
+* The model is **never** downloaded implicitly: loading uses local files only,
+  and a missing model is a startup error that names `download-model`.
+* With `SIMILARITY_ENABLED=true`, startup fails with a clear message if the
+  database is disabled, pgvector or migration 002 is missing, the model is not
+  downloaded, or no Anthropic credentials are found. Outages *after* startup
+  never stop ingestion: the article is stored and its analysis is `pending`.
+* `SIMILARITY_COMPARISON_BACKEND=mock` runs everything except the LLM: every
+  compared pair becomes an `uncertain` pending relation, so nothing is ever
+  linked. It exists for offline demos and plumbing checks.
+
+### The analysis nodes
+
+| Node | Does | Model / DB access |
+| --- | --- | --- |
+| `create_text_units` | Detects a replay of an already stored revision (then nothing is recomputed), finds the document's previous revision, builds text units | reads |
+| `generate_embeddings` | Reuses stored vectors for identical input under the same profile, embeds the rest in batches, validates dimensions | embedding model |
+| `retrieve_candidates` | Semantic + lexical search over committed rows, fusion, event mapping, index coverage | reads |
+| `route_candidates` | Exact-content shortcut; decides `compare_with_llm`, `propose_new_event`, or "nothing to decide" | — |
+| `propose_new_event` | No plausible candidate: drafts provisional events, **no LLM call** | — |
+| `compare_with_llm` | Bounded, validated comparison of incoming segments with candidate events | LLM |
+| `resolve_event_memberships` | Applies the rules below; sets the analysis status | — |
+| `persist_result` | One transaction: document, revision, sources, units, vectors, analysis, comparisons, events, memberships | writes |
+
+### Text units
+
+* **Articles** use the existing `analysis_text` (headline, the summary only when
+  the body does not already contain it, then the body). An article that fits
+  the model limit is one `document` unit; a longer one becomes ordered `chunk`
+  units, split at paragraph and sentence boundaries (words only as a last
+  resort) with a modest overlap (`SIMILARITY_CHUNK_OVERLAP_TOKENS`, 48) inside a
+  section. Later chunks carry the headline as a short context prefix. Promo
+  lines such as "Read Also: …" and image credits are not embedded.
+* **SEC filings** use the extracted primary-document `body_text`, never the
+  generated metadata header, split at `Item x.xx` headings. The cover page, the
+  signature block, "furnished … shall not be deemed filed" paragraphs,
+  forward-looking-statement safe harbours, "does not purport to be complete"
+  sentences and exhibit lists that only name the XBRL cover page (101/104) are
+  not embedded. Each unit is prefixed with `<issuer> Form 8-K filed <date>`.
+  Exhibits are still not downloaded or extracted.
+* Every unit records the exact source spans it came from (`location.spans`), its
+  section, token count and overlap, so a passage is always traceable. Nothing
+  is truncated: each chunk fits the tokenizer limit, and every passage that is
+  not embedded is recorded with its section, reason and source spans in
+  `revision_analysis.stage_status.skipped_passages`.
+* **Segments** are the parts of a revision that can describe one event: a news
+  article is one segment; each substantive SEC Item is one. Items 7.01 and 9.01
+  (and an exhibit index) accompany a single primary Item; an Item that only
+  says "the information in Item X is incorporated here" joins Item X. Several
+  chunks of one segment support one event, never several copies of it.
+* Headline-only and summary-only articles are one unit with a *limited* evidence
+  level, passed to the comparison as such. A revision with no usable text is
+  stored with analysis `skipped` and a `skip_reason` (`no_text`,
+  `insufficient_text`, `boilerplate_only`, `extraction_failed`).
+
+### Embeddings
+
+| | |
+| --- | --- |
+| Backend | `sentence-transformers` 6.1 on CPU (PyTorch 2.14 CPU wheels from the PyTorch index, configured in `pyproject.toml` per uv's PyTorch guide) |
+| Model | [`BAAI/bge-small-en-v1.5`](https://huggingface.co/BAAI/bge-small-en-v1.5), MIT licence, pinned to commit `5c38ec7c405ec4b44b94cc5a9bb96e735b38267a` |
+| Dimensions / distance | 384, L2-normalised output, cosine distance (pgvector `<=>`) |
+| Input limit | 512 tokens (BERT WordPiece, special tokens included); chunks target 384 so the context prefix always fits |
+| Query instruction | none: the model card says passages need no instruction, and this is passage-to-passage comparison |
+| Measured speed | about 27 units/s on this development machine's CPU (159 units from the 58 stored revisions in 5.9 s) |
+| Test backend | `hashing`: deterministic bag-of-words hashing, its own profile, for tests and offline demos only |
+
+Each embedding space is one row of the existing `embedding_profile` table:
+model provider, name and version (the pinned commit), dimensions, distance
+metric, text-preparation version (`textunits-1`) and the encoding and chunking
+settings, identified by a SHA-256 `config_hash`. Retrieval only ever compares
+vectors of the same profile, never vectors that merely have the same length.
+A new model, revision or chunking setting creates a new profile; its work is
+versioned and has to be rebuilt with `backfill`. Vectors are validated
+(dimensions, finite, non-zero) before storage, and the existing
+`embedding_dimensions_check` trigger validates them again. Identical input text
+under the same profile reuses the stored vector instead of recomputing it.
+
+### Retrieval
+
+* **Candidate pool** (committed rows only): same sample/live partition, same
+  embedding profile, the **current** revision of a **different** document, at
+  least one shared company (`revision_company`), and a source time within
+  `SIMILARITY_WINDOW_DAYS` (7, an experimental starting point) of the incoming
+  record's anchor time.
+* **Anchor time** is the record's own time, never the worker's clock:
+  `published_at` (Alpaca `created_at`, SEC `acceptanceDateTime`) → source
+  `updated_at` → SEC filing date (start of that UTC day; used for the window only,
+  never stored as a timestamp) → retrieval time. The fallback used is recorded.
+  The window is symmetric, so an article that arrives late (out of order) still
+  finds coverage from before and after it.
+* **Bounded fallbacks.** No resolvable company link: no company filter, but the
+  window narrows to `SIMILARITY_NO_COMPANY_WINDOW_HOURS` (48); recorded as a
+  limitation. A new revision of an already stored document never finds its own
+  earlier revisions as independent sources; the previous revision's events are
+  compared deliberately and presented to the model as "an earlier revision of
+  this same article".
+* **Two independent channels.** Semantic: exact pgvector cosine search over the
+  pool, top `SIMILARITY_SEMANTIC_TOP_K` (20) per incoming unit. Lexical:
+  PostgreSQL full-text search on a generated `text_unit.search_tsv` column (GIN
+  index), an OR-query of the unit's most frequent English lexemes, ranked with
+  `ts_rank_cd`, top `SIMILARITY_LEXICAL_TOP_K` (20). Neither channel gates the
+  other, and there is no Levenshtein filter.
+* **Fusion.** Reciprocal rank fusion, `score = Σ 1 / (60 + rank)` over the
+  channels a candidate appears in (`SIMILARITY_RRF_K`). Each channel's rank and
+  score are stored in `retrieval_candidate` for every hit, with the reason a hit
+  was not compared.
+* **Plausibility** decides what may reach the LLM, never what is "the same
+  event": cosine ≥ `SIMILARITY_MIN_SEMANTIC_SIMILARITY` (0.78) **or** a top-3
+  full-text hit (`SIMILARITY_LEXICAL_PLAUSIBLE_RANK`). Calibration on the 58
+  stored NVIDIA revisions (1,653 document pairs, max unit-to-unit cosine):
+  median 0.69, 90th percentile 0.77, 99th 0.86 — and three recurring "whale
+  activity" articles from different days scored 0.98–0.999 while genuinely
+  related IonQ/NVIDIA coverage scored 0.84–0.89. A high score alone therefore
+  never links anything. The shortlist keeps the best `SIMILARITY_MAX_CANDIDATE_EVENTS`
+  (6) events.
+* **Self-matches** are impossible: the incoming document is excluded from the
+  pool and events the revision already belongs to are never candidates.
+* **Coverage.** Each analysis records how many revisions in its window have no
+  embeddings under the profile. If any are unindexed, "no match" is not proof of
+  uniqueness: the analysis is `partial` and new events carry the flag
+  `index_coverage_partial`. Revisions that can never be indexed (analysis
+  `skipped` for lack of text, or `failed`) are counted separately and do not keep
+  their neighbours partial. Candidates whose own grouping is still pending are
+  not compared; they compare against this record when their turn comes.
+* A retrieval error leaves the analysis `pending`. It is never read as "no
+  matches".
+
+### LLM comparison
+
+The comparison node sends Claude (the official `anthropic` SDK; model
+`SIMILARITY_COMPARISON_MODEL`, default `claude-opus-5`) the incoming segments and
+their units, and for each shortlisted event its defining evidence (title, known
+facts, origin passage) plus the matched passages, with document, revision, unit
+and event IDs replaced by short references. It compares participants, action,
+object, event date or fiscal period (separately from publication date),
+figures (metric, units, currency, period), status (planned, announced,
+completed, cancelled, denied) and additional or incompatible claims. Missing
+facts are unknown, never contradictions.
+
+| Label | Meaning | Resolution |
+| --- | --- | --- |
+| `same_event_repeated` | Same occurrence, nothing new (paraphrase, syndicated copy, missing details) | linked to the event |
+| `same_event_update` | Same occurrence, new facts or a later development (announced → completed / cancelled) | linked, marked as an update |
+| `same_event_conflict` | Same occurrence, a comparable claim is incompatible (same metric, period and context; or a denial) | linked and flagged; both sources kept |
+| `different_event` | A different occurrence (participants, action, object or period differ) | not linked |
+| `uncertain` | Not enough context to decide | a *pending* relation, never a merge |
+
+**Event grouping convention (MVP):** an event is one identifiable occurrence or
+transaction plus its later developments. Recurring occurrences — results for
+different fiscal quarters, different trading sessions, different monthly
+figures — are separate events. The model compares claims as reported; it does
+not decide which source is true.
+
+* **Structured output:** JSON-schema structured outputs (`output_config.format`)
+  with a Pydantic mirror of the schema. `stop_reason` is checked before any
+  content is read; a refusal or a truncated answer is an error, never a result.
+* **Validation:** every returned reference must be one that was supplied, every
+  evidence quote must occur verbatim in the passage it cites, and a same-event
+  label without verified evidence on both sides is downgraded to `uncertain`.
+  Requested pairs the model did not judge are recorded as unevaluated.
+* **Untrusted input:** all article and filing text is XML-escaped inside
+  delimited elements, and the system prompt tells the model to treat it as data
+  and never follow instructions inside it.
+* **Bounds:** at most `SIMILARITY_LLM_MAX_EVENTS_PER_CALL` (6) events and
+  `SIMILARITY_LLM_MAX_INPUT_CHARS` (30,000) characters per call,
+  `SIMILARITY_LLM_MAX_OUTPUT_TOKENS` (16,000), a
+  `SIMILARITY_LLM_TIMEOUT_SECONDS` (180) timeout, `SIMILARITY_LLM_MAX_RETRIES`
+  (2, the SDK's retries for 429/5xx/connection errors), and per record
+  `SIMILARITY_LLM_MAX_CALLS_PER_RECORD` (3) calls and
+  `SIMILARITY_LLM_TOKEN_BUDGET_PER_RECORD` tokens. Incoming units that do not fit
+  a prompt are listed as omitted. Pairs left unevaluated by a limit make the
+  analysis `partial`; pairs left by a failure make it `pending`.
+* **Usage** (input/output/cache tokens, served model, request IDs) is stored per
+  comparison and summed per analysis.
+* **Refusal fallback:** requests opt in to the API's server-side fallback
+  (`fallbacks: "default"`, beta header `server-side-fallback-2026-07-01`), which
+  re-runs a declined request on Anthropic's recommended fallback model. Set
+  `SIMILARITY_COMPARISON_FALLBACKS=none` for a model that does not support it.
+* **Exact-content shortcut:** a segment whose whitespace-normalised text is
+  identical to a passage already in a candidate event, has at least
+  `SIMILARITY_EXACT_MATCH_MIN_CHARS` (400) characters after boilerplate removal,
+  and has full text on both sides, is linked as `same_event_repeated` without a
+  model call (typically syndicated copy, or a new revision whose text did not
+  change). Identical boilerplate or headlines never qualify.
+
+### Resolution rules
+
+* A segment is linked to every candidate event it was judged the same as, with
+  the supporting units recorded (`event_membership_unit`). One membership per
+  (event, revision): overlapping chunks and several segments collapse into it,
+  keeping the most informative relation (conflict > update > repeated).
+* A segment gets a **provisional** new event only after **every** shortlisted
+  candidate was evaluated and none matched. Rejecting one candidate does not
+  reject the others; an unevaluated candidate leaves the segment unresolved.
+* `uncertain` keeps a pending relation to the candidate event and gives the
+  segment its own provisional event, so the article stays visible without being
+  merged.
+* Links are made only to events whose defining evidence was compared directly:
+  A ~ B and B ~ C never puts A and C together.
+* A provisional event becomes `corroborated` once a second document joins it. A
+  retry that links a segment elsewhere marks its own single-source provisional
+  event `superseded` (kept, hidden from current views).
+* Multi-event filings get one event per substantive Item.
+
+### Failures and recovery
+
+| Situation | Result |
+| --- | --- |
+| Embedding, retrieval or LLM failure (after the SDK's retries) | Article stored; analysis `pending` with the sanitized error, attempts and `next_retry_at`; whatever was valid (units, vectors, scores, judgments) kept |
+| Limits reached (call/token budget, unjudged pairs) or incomplete index coverage | Article stored; analysis `partial` |
+| Database failure in `persist_result` | Nothing for that record is committed; ingestion stays incomplete and the record is retried |
+| Commit succeeded, file or ledger write failed | Redelivery reuses the stored revision and analysis: no duplicate events, no model call |
+| `pending` too many times (`SIMILARITY_MAX_ANALYSIS_ATTEMPTS`, 5) | `failed` |
+
+Ingestion completion (the file ledger) and analysis completion (`revision_analysis`)
+are tracked separately: a stored article with pending analysis is complete for
+ingestion and is finished by `retry`, which never depends on the ledger
+rediscovering it.
+
+### Maintenance commands
+
+```powershell
+uv run datasources-similarity check                        # configuration report, no writes
+uv run datasources-similarity download-model               # explicit model download (network)
+uv run datasources-similarity backfill --limit 100         # stored revisions without analysis: index all, then group
+uv run datasources-similarity backfill --limit 100 --index-only
+uv run datasources-similarity retry --limit 100            # pending / partial analyses that are due
+uv run datasources-similarity retry --all --revision-id <revision uuid>
+uv run datasources-similarity status                       # analysis status, units, events, coverage
+uv run datasources-similarity inspect --revision-id <revision uuid>   # units, candidates + scores, comparisons, events
+uv run datasources-similarity evaluate --limit 10 --confirm-paid-calls   # real backend on labelled examples
+uv run datasources-ingest graph                            # the compiled graph
+```
+
+Add `--sample` to `backfill`, `retry` and `status` to work on sample data.
+
+* **Bootstrap** (`backfill`): the 58 revisions stored before this feature have no
+  embeddings. `backfill` selects up to `--limit` current revisions without an
+  analysis, oldest first, and runs the same graph twice: an index-only pass that
+  creates units and vectors for the whole selection, then a grouping pass in
+  source-time order. Indexing first means no historical record is declared new
+  merely because its neighbours were not embedded yet. It is bounded and
+  idempotent; repeat it until it selects 0.
+* **Retry** re-runs the graph for stored revisions (never rewriting them):
+  stored units and vectors are reused, pairs that were already judged are not
+  sent again, and unique constraints make a repeated retry a no-op.
+* These are maintenance tools, not a replacement for the inline analysis.
+
+### Throughput
+
+Model calls run inline in the single writer, so they bound ingestion
+throughput: one article costs a few embedding milliseconds plus, when it has
+plausible candidates, one or more LLM calls (seconds each). For NVIDIA news
+most articles have plausible same-company candidates within a week. The queue
+stays bounded and is never drained by dropping records: when it is full,
+collectors wait, and the pressure is reported (`queue_full_waits`,
+`queue_wait_ms`, `queue_max_depth`, and a warning at most once a minute; the
+periodic stats line shows `queue <depth>/<size>`). Keep
+`SIMILARITY_LLM_MAX_CALLS_PER_RECORD` and `SIMILARITY_MAX_CANDIDATE_EVENTS` modest
+if throughput matters more than coverage.
+
+### Schema (migration 002, additive)
+
+| Object | Purpose |
+| --- | --- |
+| `text_unit.search_tsv` + GIN index | Generated `to_tsvector('english', input_text)` for lexical retrieval |
+| `revision_analysis` | Status per (revision, embedding profile, pipeline version): `completed` / `partial` / `pending` / `failed` / `skipped`, stage status, skip reason, evidence level, anchor, index coverage, limitations, usage, model + prompt version, attempts, sanitized last error, next retry. Mutable, because `document_revision` is immutable. |
+| `news_event` | Event: partition (`is_sample`), analysis space (profile + pipeline version), status (`provisional` / `corroborated` / `superseded`), title, facts, flags, first/last source time, origin |
+| `event_membership` + `event_membership_unit` | Revision → event: `origin` / `same_event_*` / `uncertain` (pending), one per (event, revision), with supporting units |
+| `event_comparison` | Each decision: label, method (`llm` / `exact_content`), matching facts, differences, evidence from both sides, explanation, uncertainty, validation notes, model, prompt version, usage. Immutable. |
+| `retrieval_candidate` | Semantic rank/similarity, lexical rank/score, fused score/rank, shortlist flag, not-compared reason |
+| `current_event_membership`, `current_live_event`, `current_revision_analysis` | Views over current revisions only: a superseded revision is never an additional source |
+
+Triggers reject any event, membership or comparison that would mix the sample
+and live partitions or two analysis spaces. The existing tables and triggers
+(`text_unit`, `embedding`, `embedding_profile`) are reused unchanged, and
+publisher credibility tiers are not touched.
+
+### Inspecting events
+
+```sql
+-- Live events with the most independent documents (current revisions only).
+SELECT title, status, documents, articles, filings, publishers,
+       has_updates, has_conflicts, pending_relations, first_source_time
+  FROM current_live_event ORDER BY documents DESC, first_source_time DESC LIMIT 20;
+
+-- Everything linked to one event, with how each revision relates to it.
+SELECT m.relation, m.state, d.record_type, r.title, r.published_at, c.label, c.explanation
+  FROM event_membership m
+  JOIN document_revision r ON r.revision_id = m.revision_id
+  JOIN document d ON d.document_id = m.document_id
+  LEFT JOIN event_comparison c ON c.comparison_id = m.comparison_id
+ WHERE m.event_id = '<event uuid>' ORDER BY r.published_at;
+
+-- Conflicting claims, with the evidence quoted from both sides.
+SELECT e.title, c.differences, c.evidence FROM event_comparison c
+  JOIN news_event e ON e.event_id = c.candidate_event_id
+ WHERE c.label = 'same_event_conflict' AND NOT e.is_sample;
+
+-- Analyses waiting for a retry, and why.
+SELECT a.status, a.attempts, a.next_retry_at, a.last_error, r.title
+  FROM revision_analysis a JOIN document_revision r ON r.revision_id = a.revision_id
+ WHERE a.status IN ('pending', 'partial') ORDER BY a.next_retry_at NULLS FIRST;
+```
 
 ## Duplicate tracking
 
-Tracking uses source identity only. There is no semantic or similarity
-deduplication, no embeddings, and no merging of different records about the
-same event. Different accessions and different article IDs always stay
-separate, even with identical text.
+Tracking uses source identity only. Different accessions and different article
+IDs always stay separate documents, even with identical text. Semantic
+comparison never deduplicates: it links separate documents to a shared event
+and records how they relate (repeated, update, conflict, uncertain).
 
 | Provider | Identity | Rule |
 | --- | --- | --- |
@@ -529,6 +902,7 @@ requested symbols, adapter, dedup identity/fingerprint), `raw_file_refs`,
 ```powershell
 uv run pytest                                      # offline fixtures + mocked network, plus
                                                    # database tests when stock_news is reachable
+                                                   # (semantic-grouping DB tests also need migration 002)
 $env:RUN_LIVE_TESTS = "1"; uv run pytest -m live   # opt-in: real SEC + Alpaca (needs .env)
 
 # Bounded live end-to-end test: real NVDA news + one real 8-K -> PostgreSQL -> read back -> replay
@@ -545,10 +919,58 @@ does not report an unavailable API as a successful live test.
 `tests/test_db_persistence.py` covers the mapping offline and, against a real
 database, the round trip, replay idempotency, the revision model for changed
 payloads, 8-K/A staying a separate filing, identical text under different ids
-staying separate, unknown tickers being reported rather than invented, no
-embeddings being created, and a **rollback test**: a related insert that violates
-a real check constraint must leave no document or revision behind. Every record
-it writes is `is_sample = true` and is deleted afterwards.
+staying separate, unknown tickers being reported rather than invented, the
+storage layer alone creating no embeddings, and a **rollback test**: a related
+insert that violates a real check constraint must leave no document or revision
+behind. Every record it writes is `is_sample = true` and is deleted afterwards.
+
+Semantic comparison is tested at three levels, all offline apart from the local
+database, with no model download and no API call:
+
+* `tests/test_similarity_offline.py` — text units on the real NVIDIA 8-Ks
+  (cover/signature/safe-harbour/XBRL-only exhibits skipped, Item segmentation,
+  cross-reference Items, traceable spans, token limits, overlap, nothing
+  truncated), limited evidence and skip reasons, profile identity, vector
+  validation, the prompt's escaping of untrusted text, the response schema,
+  reference and evidence validation, the Anthropic adapter against a fake client
+  (request shape, refusal, `max_tokens`, invalid JSON, timeouts), RRF fusion and
+  plausibility (no lexical gate), anchor precedence, routing, the resolution
+  rules, request budgets, and pending vs partial.
+* `tests/test_similarity_pipeline.py` — the **real compiled graph** against
+  PostgreSQL with a deterministic hashing embedder and a scripted model:
+  the node path of the no-candidate route (no model call) and of the compare
+  route; comparison happening **before** the incoming document exists in the
+  database; a second sequential article finding the first, also inside one
+  batch with a malformed record in the middle; model and embedding failures
+  stored as `pending` and completed by retry without duplicate memberships;
+  same-source replay (no new rows, no model call); identical text from two
+  sources staying two documents (linked by the exact-content shortcut); a
+  changed revision keeping its history and counting once; profile isolation
+  (same and different dimensions); sample/live isolation (live rows only inside
+  a rolled-back transaction); a multi-event filing and overlapping chunks;
+  no transitive merging; budget exhaustion; every labelled example; the
+  bootstrap's index-then-group passes without self-matches; partial index
+  coverage; a transaction rollback; a commit followed by a file-write crash; and
+  the writer lock.
+* `tests/test_similarity_cli.py` — `backfill`, `retry`, `status` and `inspect`
+  end-to-end on sample data, the lock refusal, and `evaluate` refusing to spend
+  money without `--confirm-paid-calls`.
+
+The scripted model proves orchestration, not accuracy. The real backend is
+evaluated separately and explicitly:
+
+```powershell
+uv run datasources-similarity evaluate --limit 10 --confirm-paid-calls
+```
+
+It runs the configured model (one paid call per example) and the local
+embedding model on `tests/fixtures/synthetic_similarity_labelled_examples.json`
+(paraphrase, missing price, different fiscal quarters, completion, cancellation,
+comparable-figure conflict, denial, different metric of the same results, vague
+headline, different partner) and reports accuracy per expected label, a
+confusion table, cosine similarity per pair and token usage. It writes nothing to
+the database. The examples are synthetic and few: treat the result as a smoke
+signal, not a benchmark.
 
 Offline tests cover SEC array parsing and URL generation, primary 8-K
 extraction (tables, visible inline XBRL, hidden content), download and
@@ -585,6 +1007,30 @@ process lock, and clean shutdown.
   `uv run datasources-db backfill` once for those.
 * Collection cursors stay in `output/state/ledger.json`; the `ingestion_state`
   table is left empty so there is one source of truth for them.
+* **Semantic grouping is an MVP.** Retrieval defaults (7-day window, 0.78 cosine
+  floor, top-3 lexical hits, 6 candidate events) are experimental starting points
+  calibrated on 58 stored NVIDIA revisions, not tuned values. Comparison accuracy
+  depends on the model and has only been exercised with scripted responses here
+  (see `evaluate`).
+* Without a matching candidate, provisional events are proposed per segment
+  without a model: an 8-K with two unrelated substantive Items gets two events,
+  but a long multi-topic article is one event, and two Items about one
+  occurrence (for example 1.01 for a merger agreement and 8.01 announcing the
+  same deal) start as two.
+  Events are never merged automatically; only a single-source provisional event
+  is superseded, and only when a later comparison links its segment elsewhere.
+* The lexical channel ranks with PostgreSQL's `ts_rank_cd` on an OR-query; it has
+  no corpus-level IDF, so common same-company words raise many scores. Only its
+  rank is used for plausibility.
+* Candidates whose own analysis is still pending are not compared; the pair is
+  compared when that candidate is analysed or retried.
+* Semantic retrieval is exact (sequential scan over the company/time-scoped
+  pool). The `embedding.embedding` column has no fixed dimension, so an ANN
+  index (HNSW / IVFFlat) would need a per-profile expression index; that is a
+  later step if the pool grows large.
+* Inline model calls bound ingestion throughput (see [Throughput](#throughput)).
+* `demo --with-database` rows are sample data; the database tests delete all
+  sample rows when they finish.
 
 ## Postman WebSocket check
 
@@ -604,3 +1050,10 @@ Stop `datasources-ingest` first: Alpaca may reject a second concurrent connectio
 * [Alpaca market data authentication](https://docs.alpaca.markets/us/docs/about-market-data-api)
 * [LangGraph](https://docs.langchain.com/oss/python/langgraph/overview)
 * [uv dependency management](https://docs.astral.sh/uv/concepts/projects/dependencies/)
+* [uv with PyTorch (CPU-only index)](https://docs.astral.sh/uv/guides/integration/pytorch/)
+* [Sentence Transformers installation](https://sbert.net/docs/installation.html)
+* [BAAI/bge-small-en-v1.5 model card](https://huggingface.co/BAAI/bge-small-en-v1.5)
+* [pgvector](https://github.com/pgvector/pgvector)
+* [PostgreSQL full-text search](https://www.postgresql.org/docs/current/textsearch.html)
+* [Reciprocal rank fusion (Cormack, Clarke & Büttcher, SIGIR 2009)](https://plg.uwaterloo.ca/~gvcormac/cormacksigir09-rrf.pdf)
+* [Claude API structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)

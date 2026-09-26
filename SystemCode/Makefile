@@ -8,13 +8,17 @@
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
 #   make db-check          report the PostgreSQL connection and pgvector
 #   make db-smoke          bounded live end-to-end test into PostgreSQL
+#   make graph             print the compiled ingestion graph
+#   make similarity-status semantic analysis / event grouping status
 
 UV := uv
 T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
-.PHONY: help sync run test companies edgar alpaca ingest ingest-once ingest-demo \n	db-check db-migrate db-inspect db-backfill db-smoke clean clean-cache
+.PHONY: help sync sync-local-embeddings run test companies edgar alpaca ingest ingest-once ingest-demo graph \
+	db-check db-migrate db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	similarity-backfill similarity-retry similarity-status clean clean-cache
 
 help: ## Show this help
 	@echo "Node 1 — Data Sources"
@@ -26,6 +30,9 @@ help: ## Show this help
 
 sync: ## Create/refresh .venv from pyproject.toml + uv.lock
 	$(UV) sync
+
+sync-local-embeddings: ## Also install the local CPU embedding backend (torch + sentence-transformers)
+	$(UV) sync --locked --extra local-embeddings
 
 run: sync ## Serve the web UI and API at http://127.0.0.1:8000
 	@echo "Open http://127.0.0.1:8000 — Ctrl-C to stop"
@@ -52,6 +59,9 @@ ingest-once: sync ## One SEC poll + one Alpaca REST backfill, then exit
 ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 	$(UV) run datasources-ingest demo
 
+graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
+	$(UV) run datasources-ingest graph
+
 db-check: sync ## Report the database and whether pgvector is enabled
 	$(UV) run datasources-db check
 
@@ -66,6 +76,21 @@ db-backfill: sync ## Store existing output/processed records (idempotent)
 
 db-smoke: sync ## Bounded live end-to-end test into PostgreSQL
 	$(UV) run datasources-db smoke --symbol $(T) --max-articles 5 --lookback-hours 72
+
+similarity-check: ## Validate the semantic-analysis configuration (no writes)
+	$(UV) run datasources-similarity check
+
+similarity-download-model: ## Download the configured embedding model (explicit network access)
+	$(UV) run datasources-similarity download-model
+
+similarity-backfill: ## Index, then group, stored revisions without analysis (LIMIT=<n>)
+	$(UV) run datasources-similarity backfill --limit $(LIMIT)
+
+similarity-retry: ## Retry pending / partial analyses (LIMIT=<n>)
+	$(UV) run datasources-similarity retry --limit $(LIMIT)
+
+similarity-status: ## Analysis status, events and index coverage
+	$(UV) run datasources-similarity status
 
 clean: ## Remove Python and test caches
 	find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true

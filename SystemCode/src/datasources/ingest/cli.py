@@ -3,11 +3,14 @@
     uv run datasources-ingest run            # EDGAR polling + Alpaca WebSocket + REST backfill
     uv run datasources-ingest run --once     # one SEC poll per company + one REST backfill, then exit
     uv run datasources-ingest demo           # offline, bundled fixtures -> output/demo/
+    uv run datasources-ingest demo --with-database   # same, stored as sample rows (+ analysis if enabled)
     uv run datasources-ingest process-file PATH --provider alpaca|sec_edgar [--sec-html-dir DIR] [--demo]
     uv run datasources-ingest status [--demo]
+    uv run datasources-ingest graph          # print the compiled LangGraph (Mermaid)
 
-Run exactly one worker per output directory (a file lock enforces it). Do not
-also run `datasources-news-stream`: the worker already owns the WebSocket.
+Run exactly one worker per output directory (a file lock enforces it) and one
+graph writer per database partition (a PostgreSQL advisory lock enforces it).
+Do not also run `datasources-news-stream`: the worker already owns the WebSocket.
 """
 
 from __future__ import annotations
@@ -59,7 +62,8 @@ def configure_logging(root: Path, verbose: bool = False) -> None:
                                              backupCount=5, encoding="utf-8"),
     ]
     redactor = RedactSecrets([os.getenv(name, "") for name in (
-        "ALPACA_API_KEY", "ALPACA_SECRET_KEY", "ALPACA_BROKER_CLIENT_ID", "ALPACA_BROKER_CLIENT_SECRET")])
+        "ALPACA_API_KEY", "ALPACA_SECRET_KEY", "ALPACA_BROKER_CLIENT_ID", "ALPACA_BROKER_CLIENT_SECRET",
+        "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "PGPASSWORD")])
     formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
     for handler in handlers:
         handler.addFilter(redactor)
@@ -83,8 +87,29 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     auth: AlpacaAuth | None = None
     if enable_alpaca:
         auth = auth_from_env()  # AlpacaConfigError when credentials are missing
+    database = open_database()
     return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth,
-                            database=open_database())
+                            database=database, analyzer=open_similarity(database))
+
+
+def open_similarity(database):
+    """Build the semantic-analysis runtime when SIMILARITY_ENABLED=true, validating it at startup.
+
+    Missing configuration (no database, no pgvector, schema not migrated, model not
+    downloaded, no API credentials) is a startup error. Outages later at run time
+    leave individual analyses pending instead.
+    """
+    from ..similarity.pipeline import build_runtime
+    from ..similarity.settings import load_similarity_settings
+
+    settings = load_similarity_settings()
+    if not settings.enabled:
+        LOGGER.info("similarity disabled (SIMILARITY_ENABLED=false): records are stored without event grouping; "
+                    "their analysis is reported as 'disabled'")
+        return None
+    runtime = build_runtime(database, settings)
+    LOGGER.info("similarity enabled: %s", runtime.describe())
+    return runtime
 
 
 def open_database():
@@ -102,8 +127,8 @@ def open_database():
     info = database.check()
     LOGGER.info("PostgreSQL: %s", info.describe())
     if not info.pgvector_installed:
-        LOGGER.warning("pgvector is not enabled in %s; news storage still works, embeddings will need it later",
-                       info.database)
+        LOGGER.warning("pgvector is not enabled in %s; news storage still works, semantic comparison "
+                       "(SIMILARITY_ENABLED=true) needs it", info.database)
     return database
 
 
@@ -225,10 +250,15 @@ def _load_payloads(path: Path) -> list:
     return [json.loads(text)]
 
 
-def run_demo(settings: IngestSettings) -> IngestionService:
-    """Offline end-to-end run over bundled fixtures into output/demo (is_sample=true)."""
+def run_demo(settings: IngestSettings, *, database=None, analyzer=None) -> IngestionService:
+    """Offline end-to-end run over bundled fixtures into output/demo (is_sample=true).
+
+    Files only by default. With a database the records are stored as sample rows
+    (never mixed with live data) and, when an analyzer is given, grouped into events.
+    """
     settings = settings.with_overrides(demo=True)
-    service = IngestionService(settings, document_fetcher=fixture_document_fetcher(FIXTURE_8K_DIR))
+    service = IngestionService(settings, document_fetcher=fixture_document_fetcher(FIXTURE_8K_DIR),
+                               database=database, analyzer=analyzer)
     service.startup()
     submissions = json.loads(FIXTURE_SUBMISSIONS.read_text(encoding="utf-8"))
     _process_sec_payload(service, submissions, source=FIXTURE_SUBMISSIONS, symbol="NVDA", only_available=FIXTURE_8K_DIR)
@@ -272,7 +302,10 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--no-sec", action="store_true")
     p_run.add_argument("--no-alpaca", action="store_true")
 
-    sub.add_parser("demo", help="Offline run over bundled fixtures into output/demo")
+    p_demo = sub.add_parser("demo", help="Offline run over bundled fixtures into output/demo")
+    p_demo.add_argument("--with-database", action="store_true",
+                        help="Also store the demo records in PostgreSQL as sample rows (and group them when "
+                             "SIMILARITY_ENABLED=true)")
 
     p_file = sub.add_parser("process-file", help="Ingest a saved JSON/JSONL payload (transport=file)")
     p_file.add_argument("path", type=Path)
@@ -284,8 +317,15 @@ def main(argv: list[str] | None = None) -> int:
     p_status = sub.add_parser("status", help="Print ledger counts")
     p_status.add_argument("--demo", action="store_true")
 
+    sub.add_parser("graph", help="Print the compiled ingestion graph (Mermaid) and its edges")
+
     args = parser.parse_args(argv)
     command = args.command or "run"
+    if command == "graph":
+        return print_graph()
+    writer_lock = None
+    service = None
+    demo_database = None
     try:
         demo = command == "demo" or bool(getattr(args, "demo", False))
         settings = load_settings(demo=demo)
@@ -298,14 +338,23 @@ def main(argv: list[str] | None = None) -> int:
             service = IngestionService(settings)
             service.ledger.load()
             print(json.dumps({"root": str(settings.root), **service.ledger.counts(),
-                              "cursors": service.ledger.data["cursors"]}, indent=2))
+                              "cursors": service.ledger.data["cursors"],
+                              "note": "ingestion completion only; see `datasources-similarity status` for analysis"},
+                             indent=2))
             return 0
+
+        from ..similarity.lock import GraphWriterLock
 
         with ProcessLock(settings.root):
             if command == "run":
                 enable_sec = not args.no_sec
                 enable_alpaca = not args.no_alpaca
                 service = build_live_service(settings, enable_sec=enable_sec, enable_alpaca=enable_alpaca)
+                if service.database is not None:
+                    # One graph writer per database partition, across output directories and
+                    # the backfill / retry commands (the file lock above only covers one directory).
+                    writer_lock = GraphWriterLock(service.database, is_sample=False,
+                                                  purpose="ingestion worker").acquire()
                 LOGGER.info("starting ingestion: symbols=%s root=%s sec=%s alpaca=%s", settings.symbols,
                             settings.root, enable_sec, enable_alpaca)
                 try:
@@ -313,11 +362,16 @@ def main(argv: list[str] | None = None) -> int:
                 except KeyboardInterrupt:
                     LOGGER.info("interrupted")
             elif command == "demo":
-                service = run_demo(settings)
+                analyzer = None
+                if args.with_database:
+                    demo_database = open_database()
+                    if demo_database is None:
+                        raise ConfigurationError("--with-database needs DATASOURCES_DB_ENABLED=true")
+                    writer_lock = GraphWriterLock(demo_database, is_sample=True, purpose="demo").acquire()
+                    analyzer = open_similarity(demo_database)
+                service = run_demo(settings, database=demo_database, analyzer=analyzer)
             else:
                 service = run_process_file(settings, args.path, args.provider, args.sec_html_dir, args.symbol)
-            if getattr(service, "database", None) is not None:
-                service.database.close()
             print(json.dumps({"root": str(settings.root), "stats": dict(service.stats),
                               "ledger": service.ledger.counts()}, indent=2))
         return 0
@@ -325,6 +379,24 @@ def main(argv: list[str] | None = None) -> int:
         message = error.args[0] if isinstance(error, KeyError) and error.args else str(error)
         sys.stderr.write(f"Configuration error: {message}\n")
         return 2
+    finally:
+        if writer_lock is not None:
+            writer_lock.release()
+        database = getattr(service, "database", None) or demo_database
+        if database is not None:
+            database.close()
+
+
+def print_graph() -> int:
+    """Show the compiled graph: a Mermaid diagram plus a plain edge list."""
+    from .graph import get_graph
+
+    drawn = get_graph().get_graph()
+    print(drawn.draw_mermaid())
+    print("edges:")
+    for edge in drawn.edges:
+        print(f"  {edge.source} -> {edge.target}{'  (conditional)' if edge.conditional else ''}")
+    return 0
 
 
 if __name__ == "__main__":

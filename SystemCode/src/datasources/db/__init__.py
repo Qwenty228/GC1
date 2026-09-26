@@ -5,8 +5,9 @@
     with Database() as db, db.transaction() as conn:
         result = persist_record(conn, record, raw_payload=article)
 
-Embeddings are deliberately out of scope here: see `repository` for what is left
-to the later embedding stage.
+Text units, embeddings, analysis status and events are written by
+`datasources.similarity.store` from the ingestion graph's `persist_result` node,
+in the same transaction as `persist_record`.
 """
 
 from .connection import ConnectionInfo, Database, DatabaseError

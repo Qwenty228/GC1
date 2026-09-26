@@ -10,6 +10,7 @@ used as real data.
 | `synthetic_8k_financial.htm` | Inline-XBRL 8-K primary document | Tables with split `$` / `)` / `%` cells, visible and hidden iXBRL facts, script/style/comment removal, lists, exhibit links |
 | `synthetic_alpaca_ws_batch.json` | Alpaca WebSocket frame (JSON array) | Operational frames mixed with `T="n"` news messages |
 | `synthetic_alpaca_rest_page1.json`, `synthetic_alpaca_rest_page2.json` | Alpaca REST `/v1beta1/news` pages | Pagination via `next_page_token`, an article without `content` |
+| `synthetic_similarity_labelled_examples.json` | Pairs of news passages with an expected comparison label | Paraphrase, missing information, different fiscal quarters, completion and cancellation updates, comparable-figure and denial conflicts, a vague headline, different partners. Drives the orchestration tests (with scripted model responses) and `datasources-similarity evaluate` (real backend). Fictional companies. |
 
 Real (non-synthetic) fixtures used by the tests live in `data/`:
 

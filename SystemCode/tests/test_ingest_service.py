@@ -497,6 +497,39 @@ def test_broker_auth_uses_cached_bearer_token():
     assert "csecret" not in repr(auth)
 
 
+def test_full_queue_blocks_producers_and_reports_pressure(settings):
+    service = alpaca_service(settings.with_overrides(queue_size=1))
+    first, second = service.alpaca_items([{**ARTICLE, "id": 1}, {**ARTICLE, "id": 2}], transport="rest",
+                                         endpoint="rest", retrieved_at=datetime.now(timezone.utc), raw_refs=[])
+
+    async def scenario():
+        await service.enqueue(first)
+        blocked = asyncio.create_task(service.enqueue(second))
+        await asyncio.sleep(0.05)
+        assert not blocked.done()  # back-pressure: the producer waits, nothing is dropped
+        service.queue.get_nowait()
+        await blocked
+        return service.queue.qsize()
+
+    assert asyncio.run(scenario()) == 1
+    assert service.stats["queue_full_waits"] == 1 and service.stats["queue_max_depth"] == 1
+    assert service.stats["queue_wait_ms"] >= 40
+
+
+def test_file_only_and_demo_runs_label_analysis_disabled(tmp_path, monkeypatch):
+    monkeypatch.setenv("INGEST_OUTPUT_DIR", str(tmp_path / "out"))
+    service = cli.run_demo(load_settings(demo=True))
+    saved = service.stats["sec_saved"] + service.stats["alpaca_saved"]
+    assert saved and service.stats["analysis_disabled"] == saved
+
+
+def test_enabling_similarity_without_a_database_fails_at_startup(settings, monkeypatch):
+    monkeypatch.setenv("SIMILARITY_ENABLED", "true")
+    monkeypatch.setenv("DATASOURCES_DB_ENABLED", "false")
+    with pytest.raises(ConfigurationError, match="requires PostgreSQL"):
+        cli.build_live_service(settings, enable_sec=False, enable_alpaca=False)
+
+
 def test_shutdown_finishes_current_record_and_leaves_queue_retryable(settings):
     service = alpaca_service(settings)
     items = service.alpaca_items([{**ARTICLE, "id": 1}, {**ARTICLE, "id": 2}], transport="rest", endpoint="rest",

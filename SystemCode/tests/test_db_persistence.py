@@ -28,12 +28,12 @@ from datasources.ingest.schema import (
 
 psycopg = pytest.importorskip("psycopg")
 
+from conftest import TEST_PUBLISHER, cleanup_sample_rows
 from datasources.db import Database, PersistResult, map_content, persist_record
 from datasources.db.repository import ALPACA_NAMESPACE, publisher_key
 from datasources.db.settings import load_db_settings
 
 NVDA_CIK = "0001045810"
-TEST_PUBLISHER = "pytest-synthetic-wire"
 
 
 # --------------------------------------------------------------------------- fixtures
@@ -53,38 +53,7 @@ def db():
 
 
 def _cleanup(database: Database) -> None:
-    with database.transaction() as conn:
-        conn.execute(
-            """
-            WITH sample AS (SELECT document_id FROM document WHERE is_sample = true),
-                 revs AS (SELECT revision_id FROM document_revision
-                           WHERE document_id IN (SELECT document_id FROM sample))
-            DELETE FROM document_revision_source WHERE revision_id IN (SELECT revision_id FROM revs)
-            """
-        )
-        conn.execute(
-            """
-            DELETE FROM revision_company WHERE revision_id IN (
-                SELECT revision_id FROM document_revision WHERE document_id IN (
-                    SELECT document_id FROM document WHERE is_sample = true))
-            """
-        )
-        conn.execute(
-            """
-            DELETE FROM sec_filing_details WHERE revision_id IN (
-                SELECT revision_id FROM document_revision WHERE document_id IN (
-                    SELECT document_id FROM document WHERE is_sample = true))
-            """
-        )
-        conn.execute("UPDATE document SET current_revision_id = NULL WHERE is_sample = true")
-        conn.execute(
-            """
-            DELETE FROM document_revision WHERE document_id IN (
-                SELECT document_id FROM document WHERE is_sample = true)
-            """
-        )
-        conn.execute("DELETE FROM document WHERE is_sample = true")
-        conn.execute("DELETE FROM publisher WHERE canonical_key = %s", (publisher_key(TEST_PUBLISHER),))
+    cleanup_sample_rows(database)
 
 
 def _digest(text: str) -> str:
