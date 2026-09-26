@@ -24,6 +24,7 @@ from pathlib import Path
 
 from .. import config
 from ..alpaca import AlpacaAuth, AlpacaConfigError, auth_from_env
+from ..db import DatabaseError
 from .adapters import unwrap_payload
 from .sec_client import FetchResult, SecClient, SecFetchError
 from .service import IngestionService, ProcessLock
@@ -82,7 +83,28 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     auth: AlpacaAuth | None = None
     if enable_alpaca:
         auth = auth_from_env()  # AlpacaConfigError when credentials are missing
-    return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth)
+    return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth,
+                            database=open_database())
+
+
+def open_database():
+    """Open the PostgreSQL pool unless DATASOURCES_DB_ENABLED=false.
+
+    Connecting here rather than on the first record means a misconfigured database
+    is a startup failure, not a surprise mid-ingestion.
+    """
+    from ..db import Database, db_enabled, load_db_settings
+
+    if not db_enabled():
+        LOGGER.warning("DATASOURCES_DB_ENABLED=false: ingesting to files only, nothing will be stored in PostgreSQL")
+        return None
+    database = Database(load_db_settings())
+    info = database.check()
+    LOGGER.info("PostgreSQL: %s", info.describe())
+    if not info.pgvector_installed:
+        LOGGER.warning("pgvector is not enabled in %s; news storage still works, embeddings will need it later",
+                       info.database)
+    return database
 
 
 def _news_settings(settings: IngestSettings, auth: AlpacaAuth):
@@ -294,10 +316,12 @@ def main(argv: list[str] | None = None) -> int:
                 service = run_demo(settings)
             else:
                 service = run_process_file(settings, args.path, args.provider, args.sec_html_dir, args.symbol)
+            if getattr(service, "database", None) is not None:
+                service.database.close()
             print(json.dumps({"root": str(settings.root), "stats": dict(service.stats),
                               "ledger": service.ledger.counts()}, indent=2))
         return 0
-    except (ConfigurationError, AlpacaConfigError, KeyError) as error:
+    except (ConfigurationError, AlpacaConfigError, DatabaseError, KeyError) as error:
         message = error.args[0] if isinstance(error, KeyError) and error.args else str(error)
         sys.stderr.write(f"Configuration error: {message}\n")
         return 2

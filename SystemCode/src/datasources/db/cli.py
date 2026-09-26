@@ -1,0 +1,587 @@
+"""`datasources-db`: connection check, migrations and the end-to-end smoke test.
+
+    uv run datasources-db check            # which database, and is pgvector enabled
+    uv run datasources-db migrate          # apply the additive migrations (idempotent)
+    uv run datasources-db inspect          # row counts per table
+    uv run datasources-db smoke            # bounded live fetch -> store -> read back -> replay
+
+`smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
+news from Alpaca and one recent NVIDIA 8-K from SEC EDGAR, stores them through
+the same persistence layer normal ingestion uses, reads them back, then replays
+the exact same payloads to prove nothing is duplicated. It never generates
+embeddings and never calls an LLM.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+import tempfile
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+from .. import config
+from ..alpaca import AlpacaConfigError, auth_from_env, iter_news_pages
+from ..ingest.adapters import sec_context_from_submissions, unwrap_payload
+from ..ingest.sec_client import SecClient, SecFetchError
+from ..ingest.service import IngestionService
+from ..ingest.settings import ConfigurationError, load_settings, require_sec_user_agent
+from .connection import Database, DatabaseError
+from .migrate import apply_migrations
+from .repository import ALPACA_NAMESPACE, persist_record
+from .settings import load_db_settings
+
+LOGGER = logging.getLogger("datasources.db")
+
+TABLES = (
+    "provider", "company", "company_symbol", "publisher", "document", "document_revision",
+    "document_revision_source", "revision_company", "sec_filing_details", "text_unit",
+    "embedding", "embedding_profile", "ingestion_state",
+)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# ------------------------------------------------------------------------- commands
+def cmd_check(db: Database) -> int:
+    info = db.check()
+    print(info.describe())
+    print(json.dumps({
+        "database": info.database,
+        "server_version": info.server_version,
+        "user": info.user,
+        "host": info.host,
+        "port": info.port,
+        "tables": info.tables,
+        "pgvector_enabled": info.pgvector_installed,
+        "pgvector_version": info.pgvector_version,
+    }, indent=2))
+    if not info.pgvector_installed:
+        print("\nNote: pgvector is NOT enabled. News storage does not need it; "
+              "the later embedding stage does (CREATE EXTENSION vector;).", file=sys.stderr)
+    return 0
+
+
+def cmd_migrate(db: Database) -> int:
+    results = apply_migrations(db)
+    for result in results:
+        print(f"{result.filename}: {'applied' if result.applied else 'already applied'}")
+    if not results:
+        print("no migrations found")
+    return 0
+
+
+def cmd_backfill(db: Database, args) -> int:
+    """Store already-processed records from `output/processed/` into PostgreSQL.
+
+    Needed once, for records the worker completed before the database existed:
+    the file ledger has them marked completed, so a normal run skips them. This
+    is idempotent, so running it twice stores nothing the second time.
+    """
+    from ..ingest.schema import PreparedRecord
+    from ..ingest.store import OutputStore
+
+    settings = load_settings(demo=args.demo)
+    store = OutputStore(settings.root)
+    counts = {"seen": 0, "inserted": 0, "updated": 0, "skipped": 0, "failed": 0}
+    for path, doc in store.iter_processed():
+        if doc is None:
+            counts["failed"] += 1
+            continue
+        counts["seen"] += 1
+        try:
+            record = PreparedRecord.model_validate(doc)
+        except Exception as error:
+            counts["failed"] += 1
+            print(f"  ! {path.name}: not a valid record ({error})", file=sys.stderr)
+            continue
+        raw_payload, raw_document = _raw_from_refs(store, record)
+        try:
+            with db.transaction() as conn:
+                result = persist_record(conn, record, raw_payload=raw_payload, raw_document=raw_document)
+        except Exception as error:
+            counts["failed"] += 1
+            print(f"  ! {record.record_id}: {error}", file=sys.stderr)
+            continue
+        counts[result.outcome] += 1
+    print(json.dumps({"root": str(settings.root), **counts}, indent=2))
+    return 0 if counts["failed"] == 0 else 1
+
+
+def _raw_from_refs(store, record) -> tuple[dict[str, Any], str | None]:
+    """Recover the original payload and HTML from the raw files the worker saved."""
+    raw_payload: dict[str, Any] = {}
+    raw_document: str | None = None
+    for ref in record.raw_file_refs:
+        path = store.abs(ref)
+        if not path.exists():
+            continue
+        if ref.startswith("raw/alpaca/articles/") and path.suffix == ".json":
+            try:
+                raw_payload = json.loads(path.read_text(encoding="utf-8")).get("article") or {}
+            except (OSError, ValueError):
+                pass
+        elif ref.startswith("raw/sec/documents/"):
+            try:
+                raw_document = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                pass
+    if not raw_payload and record.record_type == "sec_filing" and record.sec_metadata is not None:
+        # The SEC "payload" is the submissions row; reconstruct what the adapter saw.
+        raw_payload = {
+            "accessionNumber": record.sec_metadata.accession_number,
+            "form": record.sec_metadata.form,
+            "filingDate": record.sec_metadata.filing_date,
+            "reportDate": record.sec_metadata.report_date,
+            "acceptanceDateTime": record.sec_metadata.acceptance_datetime_raw,
+            "items": ",".join(record.sec_metadata.items),
+            "primaryDocument": record.sec_metadata.primary_document,
+            "backfilled_from": "output/processed",
+        }
+    return raw_payload, raw_document
+
+
+def cmd_inspect(db: Database) -> int:
+    rows: dict[str, Any] = {}
+    with db.connection() as conn:
+        for table in TABLES:
+            cur = conn.execute("SELECT to_regclass(%s) IS NOT NULL AS present", (f"public.{table}",))
+            row = cur.fetchone()
+            if not row or not row["present"]:
+                rows[table] = "missing"
+                continue
+            cur = conn.execute(f"SELECT count(*) AS n FROM {table}")  # table from the fixed TABLES tuple
+            count = cur.fetchone()
+            rows[table] = int(count["n"]) if count else 0
+    print(json.dumps(rows, indent=2))
+    return 0
+
+
+# ------------------------------------------------------------------------- smoke test
+class Smoke:
+    """Bounded end-to-end test: real fetch -> persist -> read back -> replay."""
+
+    def __init__(self, db: Database, symbol: str, *, max_articles: int, lookback_hours: int,
+                 root: Path, live_alpaca: bool = True, live_sec: bool = True):
+        self.db = db
+        self.symbol = symbol
+        self.max_articles = max_articles
+        self.lookback_hours = lookback_hours
+        self.settings = load_settings(demo=False).with_overrides(symbols=[symbol], output_root=root)
+        self.service = IngestionService(self.settings, database=db)
+        self.live_alpaca = live_alpaca
+        self.live_sec = live_sec
+        self.summary: dict[str, Any] = {
+            "database": None, "pgvector_enabled": None, "symbol": symbol,
+            "alpaca": {"mode": None, "fetched": 0, "inserted": 0, "updated": 0, "skipped": 0, "failed": 0},
+            "sec": {"mode": None, "fetched": 0, "inserted": 0, "updated": 0, "skipped": 0, "failed": 0},
+            "replay": {}, "readback": {}, "notes": [],
+        }
+        self.alpaca_payloads: list[dict] = []
+        self.sec_jobs: list[dict] = []
+
+    # -- step 1 ------------------------------------------------------------------
+    def verify_database(self) -> None:
+        info = self.db.require_database(self.db.settings.dbname)
+        self.summary["database"] = info.database
+        self.summary["pgvector_enabled"] = info.pgvector_installed
+        print(f"[1/8] {info.describe()}")
+        if not info.pgvector_installed:
+            self.summary["notes"].append(
+                "pgvector not enabled: news storage verified, vector setup is a separate concern"
+            )
+
+    # -- step 2 ------------------------------------------------------------------
+    def fetch_alpaca(self) -> None:
+        """Bounded historical REST fetch, so the test does not wait for a live event."""
+        if not self.live_alpaca:
+            self.summary["alpaca"]["mode"] = "skipped"
+            return
+        try:
+            auth = auth_from_env()
+        except AlpacaConfigError as error:
+            self.summary["alpaca"]["mode"] = "unavailable"
+            self.summary["notes"].append(f"Alpaca credentials missing, no live news fetched: {error}")
+            print(f"[2/8] Alpaca SKIPPED: {error}")
+            return
+        end = _utcnow()
+        start = end - timedelta(hours=self.lookback_hours)
+        try:
+            for payload, url in iter_news_pages(auth, [self.symbol], start=start, end=end, max_pages=1,
+                                                page_size=min(self.max_articles, 50),
+                                                timeout=self.settings.http_timeout_seconds):
+                for article in payload.get("news", [])[: self.max_articles]:
+                    self.alpaca_payloads.append({"article": article, "endpoint": url})
+                break
+        except Exception as error:
+            self.summary["alpaca"]["mode"] = "unavailable"
+            self.summary["notes"].append(f"Alpaca REST fetch failed: {error}")
+            print(f"[2/8] Alpaca FETCH FAILED: {error}")
+            return
+        self.summary["alpaca"]["mode"] = "live"
+        self.summary["alpaca"]["fetched"] = len(self.alpaca_payloads)
+        print(f"[2/8] Alpaca: fetched {len(self.alpaca_payloads)} real {self.symbol} article(s) "
+              f"from the last {self.lookback_hours}h")
+
+    # -- step 3 ------------------------------------------------------------------
+    def fetch_sec(self) -> None:
+        """One recent 8-K, with its primary document downloaded and extracted."""
+        if not self.live_sec:
+            self.summary["sec"]["mode"] = "skipped"
+            return
+        try:
+            agent = require_sec_user_agent(self.settings)
+        except ConfigurationError as error:
+            self.summary["sec"]["mode"] = "unavailable"
+            self.summary["notes"].append(f"SEC_USER_AGENT missing: {error}")
+            print(f"[3/8] SEC SKIPPED: {error}")
+            return
+        client = SecClient(agent, requests_per_second=self.settings.sec_requests_per_second,
+                           timeout=self.settings.http_timeout_seconds, max_retries=self.settings.sec_max_retries)
+        self.service.sec_client = client
+        cik10 = config.cik_for(self.symbol)
+        try:
+            submissions, result = client.fetch_submissions(cik10, self.settings.sec_max_submissions_bytes)
+        except SecFetchError as error:
+            self.summary["sec"]["mode"] = "unavailable"
+            self.summary["notes"].append(f"SEC submissions fetch failed: {error}")
+            print(f"[3/8] SEC FETCH FAILED: {error}")
+            return
+        rows, _info = unwrap_payload(submissions, provider="sec_edgar",
+                                     sec_forms=set(self.settings.sec_forms), cik=cik10)
+        if not rows:
+            self.summary["sec"]["mode"] = "unavailable"
+            self.summary["notes"].append("no 8-K filings found in submissions")
+            print("[3/8] SEC: no 8-K rows found")
+            return
+        ctx = sec_context_from_submissions(submissions, cik10)
+        newest = sorted(rows, key=lambda pair: pair[0].get("filingDate") or "", reverse=True)[0][0]
+        raw_ref = self.service.store.save_raw_submissions(cik10, result.body)
+        self.sec_jobs.append({
+            "identity": f"sec_edgar:{ctx.cik}:{newest['accessionNumber']}",
+            "row": newest, "context": ctx.model_dump(), "symbol": self.symbol,
+            "endpoint": result.url, "raw_ref": raw_ref,
+            "retrieved_at": result.retrieved_at.isoformat(), "transport": "rest",
+        })
+        self.summary["sec"]["mode"] = "live"
+        self.summary["sec"]["fetched"] = 1
+        print(f"[3/8] SEC: selected {newest['form']} {newest['accessionNumber']} "
+              f"filed {newest.get('filingDate')} (primary doc {newest.get('primaryDocument')})")
+
+    # -- step 4 ------------------------------------------------------------------
+    def persist_all(self) -> None:
+        """Store through IngestionService, i.e. the same path normal ingestion uses."""
+        self.service.startup()
+        for entry in self.alpaca_payloads:
+            article = entry["article"]
+            before = dict(self.service.stats)
+            outcome = self.service.process_alpaca({
+                "article": article, "fingerprint": _fingerprint(article), "transport": "rest",
+                "endpoint": entry["endpoint"], "retrieved_at": _utcnow().isoformat(), "raw_refs": [],
+            })
+            self._tally("alpaca", outcome, before)
+        for job in self.sec_jobs:
+            before = dict(self.service.stats)
+            outcome = self.service.process_sec(job)
+            self._tally("sec", outcome, before)
+        a, s = self.summary["alpaca"], self.summary["sec"]
+        print(f"[4/8] stored: alpaca inserted={a['inserted']} updated={a['updated']} "
+              f"skipped={a['skipped']} failed={a['failed']} | "
+              f"sec inserted={s['inserted']} updated={s['updated']} skipped={s['skipped']} failed={s['failed']}")
+
+    def _tally(self, source: str, outcome: str, before: dict) -> None:
+        bucket = self.summary[source]
+        if outcome == "failed":
+            bucket["failed"] += 1
+            return
+        if outcome == "skipped":
+            bucket["skipped"] += 1
+            return
+        delta = {k: self.service.stats[k] - before.get(k, 0) for k in ("db_inserted", "db_updated", "db_skipped")}
+        for key, label in (("db_inserted", "inserted"), ("db_updated", "updated"), ("db_skipped", "skipped")):
+            bucket[label] += delta.get(key, 0)
+
+    # -- step 5 ------------------------------------------------------------------
+    def read_back(self) -> None:
+        """Read every stored record back out and verify the fields that matter."""
+        checks: dict[str, Any] = {"alpaca": [], "sec": [], "problems": []}
+        with self.db.connection() as conn:
+            for entry in self.alpaca_payloads:
+                article_id = str(entry["article"].get("id"))
+                cur = conn.execute(
+                    """
+                    SELECT d.document_id, d.source_record_id, d.source_namespace, d.record_type,
+                           p.code AS api_provider, pub.name AS publisher_name,
+                           pub.credibility_tier, r.revision_id, r.title, r.original_url,
+                           r.published_at, r.source_updated_at, r.content_status, r.content_scope,
+                           length(coalesce(r.body_text, '')) AS body_chars,
+                           (SELECT count(*) FROM revision_company rc WHERE rc.revision_id = r.revision_id) AS links,
+                           (SELECT count(*) FROM document_revision_source s
+                             WHERE s.revision_id = r.revision_id) AS raw_rows
+                      FROM document d
+                      JOIN provider p ON p.provider_id = d.provider_id
+                      JOIN document_revision r ON r.revision_id = d.current_revision_id
+                      LEFT JOIN publisher pub ON pub.publisher_id = r.publisher_id
+                     WHERE p.code = 'alpaca' AND d.source_namespace = %s
+                       AND d.source_record_id = %s AND d.is_sample = false
+                    """,
+                    (ALPACA_NAMESPACE, article_id),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    checks["problems"].append(f"alpaca article {article_id} not found in the database")
+                    continue
+                if row["api_provider"] != "alpaca":
+                    checks["problems"].append(f"alpaca article {article_id} has provider {row['api_provider']}")
+                if int(row["raw_rows"]) != 1:
+                    checks["problems"].append(f"alpaca article {article_id} has no original payload stored")
+                checks["alpaca"].append({
+                    "document_id": row["document_id"], "revision_id": row["revision_id"],
+                    "source_record_id": row["source_record_id"], "publisher": row["publisher_name"],
+                    "credibility_tier": row["credibility_tier"], "title": (row["title"] or "")[:70],
+                    "original_url": row["original_url"], "body_chars": row["body_chars"],
+                    "content_status": row["content_status"], "content_scope": row["content_scope"],
+                    "company_links": int(row["links"]),
+                    "published_at": row["published_at"].isoformat() if row["published_at"] else None,
+                })
+            for job in self.sec_jobs:
+                accession = job["row"]["accessionNumber"]
+                cur = conn.execute(
+                    """
+                    SELECT d.document_id, d.source_namespace, r.revision_id, r.title,
+                           r.content_status, r.content_scope, r.original_url,
+                           length(coalesce(r.body_text, '')) AS body_chars,
+                           s.accession_number, s.form, s.cik, s.filing_date, s.accepted_at,
+                           s.item_codes, s.filing_index_url, s.primary_document_url,
+                           jsonb_array_length(s.exhibits) AS exhibits,
+                           c.name AS issuer,
+                           (SELECT count(*) FROM revision_company rc WHERE rc.revision_id = r.revision_id) AS links,
+                           (SELECT count(*) FROM document_revision_source src
+                             WHERE src.revision_id = r.revision_id
+                               AND src.raw_document IS NOT NULL) AS raw_html_rows
+                      FROM document d
+                      JOIN provider p ON p.provider_id = d.provider_id
+                      JOIN document_revision r ON r.revision_id = d.current_revision_id
+                      JOIN sec_filing_details s ON s.revision_id = r.revision_id
+                      JOIN company c ON c.company_id = s.issuer_company_id
+                     WHERE p.code = 'sec_edgar' AND d.source_record_id = %s AND d.is_sample = false
+                    """,
+                    (accession,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    checks["problems"].append(f"SEC filing {accession} not found in the database")
+                    continue
+                if int(row["raw_html_rows"]) != 1:
+                    checks["problems"].append(f"SEC filing {accession} has no original HTML stored")
+                if int(row["body_chars"]) == 0:
+                    checks["problems"].append(f"SEC filing {accession} stored no extracted text")
+                checks["sec"].append({
+                    "document_id": row["document_id"], "revision_id": row["revision_id"],
+                    "accession_number": row["accession_number"], "form": row["form"], "cik": row["cik"],
+                    "issuer": row["issuer"], "filing_date": str(row["filing_date"]),
+                    "accepted_at": row["accepted_at"].isoformat() if row["accepted_at"] else None,
+                    "items": list(row["item_codes"]), "exhibits": int(row["exhibits"]),
+                    "extracted_chars": int(row["body_chars"]), "content_status": row["content_status"],
+                    "content_scope": row["content_scope"], "company_links": int(row["links"]),
+                    "primary_document_url": row["primary_document_url"],
+                    "filing_index_url": row["filing_index_url"],
+                })
+        self.summary["readback"] = checks
+        print(f"[5/8] read back {len(checks['alpaca'])} article(s) and {len(checks['sec'])} filing(s); "
+              f"{len(checks['problems'])} problem(s)")
+        for problem in checks["problems"]:
+            print(f"        ! {problem}")
+
+    # -- steps 6 and 7 -----------------------------------------------------------
+    def replay(self) -> None:
+        """Replay the same payloads twice and prove nothing new is created.
+
+        (a) through IngestionService, which is what a repeated REST page or a
+            WebSocket redelivery of the same article looks like;
+        (b) straight into `persist_record`, bypassing the file ledger, so the
+            guarantee is shown to come from the database's unique constraints.
+        """
+        before = self._counts()
+        for entry in self.alpaca_payloads:
+            article = entry["article"]
+            self.service.process_alpaca({
+                "article": article, "fingerprint": _fingerprint(article), "transport": "rest",
+                "endpoint": entry["endpoint"], "retrieved_at": _utcnow().isoformat(), "raw_refs": [],
+            })
+        for job in self.sec_jobs:
+            self.service.process_sec(job)
+        after_service = self._counts()
+
+        direct = {"skipped": 0, "inserted": 0}
+        for record, raw_payload, raw_document in self._prepared_again():
+            with self.db.transaction() as conn:
+                result = persist_record(conn, record, raw_payload=raw_payload, raw_document=raw_document)
+            direct["skipped" if result.outcome == "skipped" else "inserted"] += 1
+        after_direct = self._counts()
+
+        self.summary["replay"] = {
+            "counts_before": before,
+            "counts_after_service_replay": after_service,
+            "counts_after_direct_replay": after_direct,
+            "service_replay_created_rows": {k: after_service[k] - before[k] for k in before},
+            "direct_replay_created_rows": {k: after_direct[k] - after_service[k] for k in before},
+            "direct_replay_outcomes": direct,
+            "no_duplicates": after_direct == before,
+        }
+        verdict = "no new rows" if after_direct == before else "ROWS CHANGED"
+        print("[6/8] replayed the same payloads through ingestion")
+        print(f"[7/8] replayed the same payloads directly into the persistence layer: {verdict} "
+              f"({direct['skipped']} reported as already stored)")
+
+    def _prepared_again(self):
+        """Re-prepare the fetched payloads to get identical PreparedRecords."""
+        from ..ingest.graph import run_prepare
+        from ..ingest.schema import SecContext, SourceEnvelope
+
+        for entry in self.alpaca_payloads:
+            records, _errors = run_prepare([{
+                "provider": "alpaca", "transport": "rest", "api_endpoint": entry["endpoint"],
+                "retrieved_at": _utcnow(), "requested_symbols": [self.symbol], "is_sample": False,
+                "raw_record": entry["article"], "raw_file_refs": [],
+            }])
+            if records:
+                yield records[0], entry["article"], None
+        for job in self.sec_jobs:
+            ctx = SecContext.model_validate(job["context"])
+            row = job["row"]
+            from .. import sec as sec_module
+
+            url = sec_module.primary_document_url(ctx.cik, row["accessionNumber"], row["primaryDocument"])
+            html = self.service.store.abs(
+                f"raw/sec/documents/{ctx.cik}/{row['accessionNumber']}/{row['primaryDocument']}"
+            )
+            if not html.exists():
+                continue
+            text = html.read_text(encoding="utf-8", errors="replace")
+            envelope = SourceEnvelope(
+                provider="sec_edgar", transport="rest", api_endpoint=job["endpoint"],
+                retrieved_at=datetime.fromisoformat(job["retrieved_at"]), requested_symbols=[self.symbol],
+                is_sample=False, raw_record=row, raw_file_refs=[job["raw_ref"]], sec_context=ctx,
+                primary_document_html=text, primary_document_url=url,
+            )
+            records, _errors = run_prepare([envelope])
+            if records:
+                yield records[0], row, text
+
+    def _counts(self) -> dict[str, int]:
+        with self.db.connection() as conn:
+            cur = conn.execute(
+                """
+                SELECT (SELECT count(*) FROM document WHERE is_sample = false) AS documents,
+                       (SELECT count(*) FROM document_revision r JOIN document d USING (document_id)
+                         WHERE d.is_sample = false) AS revisions,
+                       (SELECT count(*) FROM revision_company rc JOIN document_revision r USING (revision_id)
+                         JOIN document d USING (document_id) WHERE d.is_sample = false) AS company_links,
+                       (SELECT count(*) FROM sec_filing_details) AS sec_details,
+                       (SELECT count(*) FROM document_revision_source) AS raw_sources
+                """
+            )
+            row = cur.fetchone()
+        assert row is not None
+        return {k: int(v) for k, v in row.items()}
+
+    # -- step 8 ------------------------------------------------------------------
+    def report(self) -> int:
+        print("\n[8/8] summary")
+        print(json.dumps(self.summary, indent=2, default=str))
+        problems = list(self.summary["readback"].get("problems", []))
+        if not self.summary["replay"].get("no_duplicates", False):
+            problems.append("replay changed row counts: duplicate protection did not hold")
+        stored = len(self.summary["readback"].get("alpaca", [])) + len(self.summary["readback"].get("sec", []))
+        if stored == 0:
+            problems.append("no records were stored and read back")
+        print()
+        if problems:
+            for problem in problems:
+                print(f"FAIL: {problem}", file=sys.stderr)
+            return 1
+        print(f"PASS: {stored} real record(s) written to and read back from "
+              f"{self.summary['database']}; replay created no duplicates.")
+        return 0
+
+    def run(self) -> int:
+        self.verify_database()
+        self.fetch_alpaca()
+        self.fetch_sec()
+        self.persist_all()
+        self.read_back()
+        self.replay()
+        return self.report()
+
+
+def _fingerprint(article: dict) -> str:
+    from ..ingest.adapters import alpaca_fingerprint
+
+    return alpaca_fingerprint(article)
+
+
+def cmd_smoke(db: Database, args) -> int:
+    root = Path(args.output_root) if args.output_root else Path(tempfile.mkdtemp(prefix="datasources-smoke-"))
+    print(f"smoke test output root: {root}\n")
+    smoke = Smoke(db, args.symbol, max_articles=args.max_articles, lookback_hours=args.lookback_hours,
+                  root=root, live_alpaca=not args.no_alpaca, live_sec=not args.no_sec)
+    return smoke.run()
+
+
+# ------------------------------------------------------------------------- entry point
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="datasources-db", description=__doc__.split("\n\n")[0])
+    parser.add_argument("-v", "--verbose", action="store_true")
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("check", help="Report the database and whether pgvector is enabled")
+    sub.add_parser("migrate", help="Apply additive migrations (idempotent)")
+    sub.add_parser("inspect", help="Row counts per table")
+
+    p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
+    p_backfill.add_argument("--demo", action="store_true", help="Read output/demo instead")
+
+    p_smoke = sub.add_parser("smoke", help="Bounded live end-to-end test")
+    p_smoke.add_argument("--symbol", default="NVDA")
+    p_smoke.add_argument("--max-articles", type=int, default=5)
+    p_smoke.add_argument("--lookback-hours", type=int, default=72,
+                         help="Bounded historical window, so the test needs no live news event")
+    p_smoke.add_argument("--output-root", help="Where raw/processed files go (default: a temp directory)")
+    p_smoke.add_argument("--no-alpaca", action="store_true")
+    p_smoke.add_argument("--no-sec", action="store_true")
+
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
+                        format="%(levelname)s %(name)s %(message)s")
+    command = args.command or "check"
+    database: Database | None = None
+    try:
+        database = Database(load_db_settings())
+        if command == "check":
+            return cmd_check(database)
+        if command == "migrate":
+            return cmd_migrate(database)
+        if command == "inspect":
+            return cmd_inspect(database)
+        if command == "backfill":
+            return cmd_backfill(database, args)
+        if command == "smoke":
+            return cmd_smoke(database, args)
+        parser.print_help()
+        return 2
+    except (ConfigurationError, DatabaseError, AlpacaConfigError, KeyError) as error:
+        message = error.args[0] if isinstance(error, KeyError) and error.args else str(error)
+        sys.stderr.write(f"Configuration error: {message}\n")
+        return 2
+    finally:
+        if database is not None:
+            database.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
