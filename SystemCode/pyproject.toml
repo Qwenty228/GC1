@@ -7,6 +7,7 @@ authors = [
 ]
 requires-python = "==3.13.7"
 dependencies = [
+    "anthropic>=1.8.0",
     "beautifulsoup4>=4.15.0",
     "fastapi>=0.128.8",
     "filelock>=4.0.1",
@@ -20,12 +21,34 @@ dependencies = [
     "websockets>=15.0",
 ]
 
+[project.optional-dependencies]
+# Local CPU embedding backend for semantic event grouping. Optional because torch
+# is large; install with `uv sync --locked --extra local-embeddings`. The model
+# itself is never downloaded implicitly: run `datasources-similarity download-model`.
+local-embeddings = [
+    "sentence-transformers>=6.1.0",
+    "torch>=2.14.0",
+]
+
 [project.scripts]
 datasources = "datasources.cli:main"
 datasources-server = "datasources.server:main"
 datasources-news-stream = "alpaca_news.main:main"
 datasources-ingest = "datasources.ingest.cli:main"
 datasources-db = "datasources.db.cli:main"
+datasources-similarity = "datasources.similarity.cli:main"
+
+# CPU-only PyTorch on every platform (uv's documented configuration): the default
+# PyPI wheels pull CUDA libraries on Linux, which a CPU embedding model never uses.
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [dependency-groups]
 dev = [

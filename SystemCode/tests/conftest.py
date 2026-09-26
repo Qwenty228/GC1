@@ -97,6 +97,57 @@ def settings(tmp_path) -> IngestSettings:
                           sec_recovery_max_days=100000)
 
 
+TEST_PUBLISHER = "pytest-synthetic-wire"
+
+
+def cleanup_sample_rows(database) -> None:
+    """Delete every sample (is_sample) row the database tests may have written, and nothing else.
+
+    Live rows are never touched: every statement is restricted to sample
+    documents, their revisions and sample-partition events. Hashing-backend test
+    profiles are removed only when nothing references them any more.
+    """
+    with database.transaction() as conn:
+        present = conn.execute("SELECT to_regclass('public.news_event') IS NOT NULL AS ok").fetchone()["ok"]
+        conn.execute("CREATE TEMP TABLE sample_rev ON COMMIT DROP AS SELECT r.revision_id FROM document_revision r "
+                     "JOIN document d ON d.document_id = r.document_id WHERE d.is_sample")
+        if present:
+            conn.execute("CREATE TEMP TABLE sample_event ON COMMIT DROP AS "
+                         "SELECT event_id FROM news_event WHERE is_sample")
+            conn.execute("DELETE FROM event_membership_unit WHERE membership_id IN (SELECT membership_id FROM "
+                         "event_membership WHERE revision_id IN (SELECT revision_id FROM sample_rev) "
+                         "OR event_id IN (SELECT event_id FROM sample_event))")
+            conn.execute("DELETE FROM event_membership WHERE revision_id IN (SELECT revision_id FROM sample_rev) "
+                         "OR event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("DELETE FROM retrieval_candidate WHERE candidate_revision_id IN (SELECT revision_id FROM "
+                         "sample_rev) OR analysis_id IN (SELECT analysis_id FROM revision_analysis WHERE "
+                         "revision_id IN (SELECT revision_id FROM sample_rev))")
+            conn.execute("DELETE FROM event_comparison WHERE revision_id IN (SELECT revision_id FROM sample_rev) "
+                         "OR candidate_event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("UPDATE news_event SET superseded_by = NULL, status = 'provisional' "
+                         "WHERE is_sample AND superseded_by IS NOT NULL")
+            conn.execute("DELETE FROM news_event WHERE is_sample")
+            conn.execute("DELETE FROM revision_analysis WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("DELETE FROM embedding WHERE unit_id IN (SELECT unit_id FROM text_unit "
+                     "WHERE revision_id IN (SELECT revision_id FROM sample_rev))")
+        conn.execute("DELETE FROM text_unit WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("DELETE FROM document_revision_source WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("DELETE FROM revision_company WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("DELETE FROM sec_filing_details WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("UPDATE document SET current_revision_id = NULL WHERE is_sample = true")
+        conn.execute("DELETE FROM document_revision WHERE revision_id IN (SELECT revision_id FROM sample_rev)")
+        conn.execute("DELETE FROM document WHERE is_sample = true")
+        # Test publishers are named "pytest-..." (never a real outlet); only unreferenced ones go.
+        conn.execute("DELETE FROM publisher p WHERE p.canonical_key LIKE 'pytest-%%' AND NOT EXISTS "
+                     "(SELECT 1 FROM document_revision r WHERE r.publisher_id = p.publisher_id)")
+        referenced = ["SELECT 1 FROM text_unit t WHERE t.profile_id = p.profile_id"]
+        if present:
+            referenced += ["SELECT 1 FROM revision_analysis a WHERE a.profile_id = p.profile_id",
+                           "SELECT 1 FROM news_event e WHERE e.profile_id = p.profile_id"]
+        conn.execute("DELETE FROM embedding_profile p WHERE p.model_provider = 'datasources' AND "
+                     + " AND ".join(f"NOT EXISTS ({q})" for q in referenced))
+
+
 def synthetic_submissions(rows: list[dict], cik: str = "9999999", name: str = "EXAMPLE SYNTHETIC CORP") -> dict:
     """SYNTHETIC submissions JSON with aligned filings.recent arrays."""
     keys = ["accessionNumber", "filingDate", "reportDate", "acceptanceDateTime", "act", "form", "fileNumber",

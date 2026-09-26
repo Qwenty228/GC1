@@ -16,6 +16,13 @@ One asyncio process per output directory (enforced by a file lock) runs:
 Because exactly one writer makes every decision sequentially, a REST backfill
 and a WebSocket delivery of the same article revision can never be processed
 concurrently; an in-flight key set also keeps duplicates out of the queue.
+
+The graph (``graph.py``) prepares the record, runs the semantic comparison when
+similarity is enabled, and stores the result in PostgreSQL in one transaction.
+Only after that succeeds are the processed file and the ledger updated. Model
+calls run inline in the writer thread, so they bound throughput: a full queue
+blocks producers (it is never drained by dropping records) and is reported in
+the stats as queue pressure.
 """
 
 from __future__ import annotations
@@ -23,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -34,6 +42,7 @@ from filelock import FileLock, Timeout
 
 from .. import config, sec
 from ..alpaca import AlpacaAuth, iter_news_pages
+from ..similarity.pipeline import PipelineContext, RecordOutcome
 from .adapters import (
     alpaca_content_level,
     alpaca_fingerprint,
@@ -41,9 +50,9 @@ from .adapters import (
     sec_context_from_submissions,
     unwrap_payload,
 )
-from .graph import run_prepare
+from .graph import run_pipeline
 from .ledger import Ledger
-from .schema import SecContext, SourceEnvelope
+from .schema import RecordError, SecContext, SourceEnvelope
 from .sec_client import FetchResult, SecClient, SecFetchError
 from .settings import ConfigurationError, IngestSettings
 from .store import OutputStore
@@ -100,6 +109,7 @@ class IngestionService:
         alpaca_session=None,
         update_shared_cache: bool = True,
         database=None,
+        analyzer=None,
     ):
         self.settings = settings
         self.store = OutputStore(settings.root)
@@ -107,6 +117,9 @@ class IngestionService:
         # Optional `datasources.db.Database`. When None, ingestion behaves exactly
         # as before and writes files only.
         self.database = database
+        # Optional `similarity.pipeline.SimilarityRuntime`. When None, analysis is
+        # reported as "disabled" and records are stored without event grouping.
+        self.analyzer = analyzer
         self.sec_client = sec_client
         self.document_fetcher = document_fetcher or self._fetch_document_live
         self.alpaca_auth = alpaca_auth
@@ -121,6 +134,7 @@ class IngestionService:
         self._current: asyncio.Future | None = None
         self.stream_subscribed = False
         self._last_ws_ref: str | None = None
+        self._last_pressure_warning = 0.0
 
     # ------------------------------------------------------------------ lifecycle
     def startup(self) -> dict[str, int]:
@@ -144,7 +158,18 @@ class IngestionService:
                 item.done.set_result("in_flight")
             return False
         self.in_flight.add(item.key)
+        if self.queue.full():
+            # Bounded: producers wait for the writer; nothing is dropped. Report it.
+            self.stats["queue_full_waits"] += 1
+            now = time.monotonic()
+            if now - self._last_pressure_warning >= 60:
+                self._last_pressure_warning = now
+                LOGGER.warning("ingestion queue full (%d/%d): collectors are waiting for the writer; inline "
+                               "similarity analysis limits throughput", self.queue.qsize(), self.queue.maxsize)
+        started = time.monotonic()
         await self.queue.put(item)  # bounded: back-pressure on producers
+        self.stats["queue_wait_ms"] += int((time.monotonic() - started) * 1000)
+        self.stats["queue_max_depth"] = max(self.stats["queue_max_depth"], self.queue.qsize())
         return True
 
     async def writer(self) -> None:
@@ -178,28 +203,35 @@ class IngestionService:
             return self.process_sec(item.payload)
         return self.process_alpaca(item.payload)
 
-    # ------------------------------------------------------------------ persistence
-    def persist(self, record, *, raw_payload: dict | None = None, raw_document: str | None = None):
-        """Store one record in PostgreSQL, or return None when no database is configured.
+    # ------------------------------------------------------------------ graph
+    def pipeline_context(self) -> PipelineContext:
+        return PipelineContext(database=self.database, analyzer=self.analyzer, persist=True)
 
-        Called from `process_sec` / `process_alpaca`, which the writer already runs
-        off the event loop via `asyncio.to_thread`, so this synchronous driver call
-        never blocks asyncio. Everything for one record goes in one transaction, so
-        a failed related insert leaves no partial article behind.
+    def run_graph(self, envelope: SourceEnvelope | dict) -> tuple[RecordOutcome | None, RecordError | None]:
+        """Prepare, compare and store one record through the compiled graph.
 
-        Raises on failure: the caller then leaves the record unmarked in the ledger
-        so a later poll or delivery retries it, rather than silently losing it.
+        Called from `process_sec` / `process_alpaca`, which the writer runs off the
+        event loop via `asyncio.to_thread`, so neither the database driver nor a
+        model call blocks asyncio. The graph's `persist_result` writes the record
+        and its analysis in one transaction; a failure there comes back as
+        `outcome.error`, and the caller leaves the record unmarked in the ledger so a
+        later poll or delivery retries it.
         """
-        if self.database is None:
-            return None
-        from ..db import persist_record
-
-        with self.database.transaction() as conn:
-            result = persist_record(conn, record, raw_payload=raw_payload, raw_document=raw_document)
-        self.stats[f"db_{result.outcome}"] += 1
-        if result.unresolved_symbols:
-            self.stats["db_unresolved_symbols"] += len(result.unresolved_symbols)
-        return result
+        result = run_pipeline([envelope], self.pipeline_context())
+        if result.errors:
+            return None, result.errors[0]
+        outcome = result.outcomes[0]
+        if outcome.persist_outcome:
+            self.stats[f"db_{outcome.persist_outcome}"] += 1
+        if outcome.unresolved_symbols:
+            self.stats["db_unresolved_symbols"] += len(outcome.unresolved_symbols)
+        if outcome.error is None:
+            self.stats[f"analysis_{outcome.analysis_status.replace(':', '_')}"] += 1
+            analysis = outcome.analysis
+            for key in ("llm_calls", "events_created", "memberships_inserted", "comparisons_inserted"):
+                if analysis.get(key):
+                    self.stats[key] += int(analysis[key])
+        return outcome, None
 
     # ------------------------------------------------------------------ SEC collection
     def _sec_floor(self, cik10: str, today: date | None = None) -> str:
@@ -342,25 +374,23 @@ class IngestionService:
             primary_document_html=document.text(),
             primary_document_url=url,
         )
-        records, errors = run_prepare([envelope])
-        if errors:
-            error = errors[0]
+        # The graph stores the filing (and its analysis) before the file is written and
+        # the ledger is marked: a database failure leaves the filing pending for the
+        # next poll instead of marking it completed with nothing stored. A crash after
+        # the commit replays idempotently: the stored revision and analysis are reused.
+        outcome, error = self.run_graph(envelope)
+        if error is not None:
             return self._sec_failure(identity, stage=error.stage, kind=error.error_type, message=error.message,
                                      retryable=error.retryable, payload={**context, "raw_document": doc_ref})
-        record = records[0]
-        # Persist before writing the file and marking the ledger: a database failure
-        # then leaves the filing pending for the next poll instead of marking it
-        # completed with nothing stored. The insert is idempotent, so a crash between
-        # the commit and the file write cannot produce a duplicate on the retry.
-        try:
-            self.persist(record, raw_payload=row, raw_document=document.text())
-        except Exception as error:
-            return self._sec_failure(identity, stage="persist", kind="database_error", message=str(error),
+        if outcome.error is not None:
+            return self._sec_failure(identity, stage="persist", kind="database_error", message=outcome.error["message"],
                                      retryable=True, payload={**context, "raw_document": doc_ref})
+        record = outcome.record
         output_ref = self.store.write_processed(record)
         self.ledger.mark_sec_completed(identity, output_ref, record.provenance.dedup.content_fingerprint)
         self.stats["sec_saved"] += 1
-        LOGGER.info("saved SEC %s %s -> %s", record.sec_metadata.form if record.sec_metadata else "", identity, output_ref)
+        LOGGER.info("saved SEC %s %s -> %s (analysis %s)", record.sec_metadata.form if record.sec_metadata else "",
+                    identity, output_ref, outcome.analysis_status)
         return "saved"
 
     # ------------------------------------------------------------------ Alpaca
@@ -411,29 +441,27 @@ class IngestionService:
             "raw_record": article,
             "raw_file_refs": [*payload["raw_refs"], raw_ref],
         }
-        records, errors = run_prepare([envelope])
-        if errors:
-            error = errors[0]
+        outcome, error = self.run_graph(envelope)
+        if error is not None:
             self.store.write_error("alpaca", identity, {"identity": identity, **error.model_dump(), "raw_article": raw_ref})
             self.stats["alpaca_failed"] += 1
             LOGGER.warning("Alpaca %s rejected at %s: %s", identity, error.stage, error.message)
             return "failed"
-        record = records[0]
-        try:
-            self.persist(record, raw_payload=article)
-        except Exception as error:
+        if outcome.error is not None:
             self.store.write_error("alpaca", identity, {"identity": identity, "stage": "persist",
-                                                        "error_type": "database_error", "message": str(error),
+                                                        "error_type": "database_error",
+                                                        "message": outcome.error["message"],
                                                         "retryable": True, "raw_article": raw_ref})
             self.stats["alpaca_failed"] += 1
-            LOGGER.warning("Alpaca %s not stored in PostgreSQL: %s", identity, error)
+            LOGGER.warning("Alpaca %s not stored in PostgreSQL: %s", identity, outcome.error["message"])
             return "failed"
+        record = outcome.record
         output_ref = self.store.write_processed(record)
         self.ledger.mark_alpaca_saved(identity, updated_at=updated_at, fingerprint=fingerprint, level=level,
                                       output_ref=output_ref)
         self.stats["alpaca_saved"] += 1
-        LOGGER.info("saved Alpaca %s (%s, %s) -> %s", identity, payload["transport"],
-                    decision.reason if decision else "", output_ref)
+        LOGGER.info("saved Alpaca %s (%s, %s) -> %s (analysis %s)", identity, payload["transport"],
+                    decision.reason if decision else "", output_ref, outcome.analysis_status)
         if payload["transport"] == "websocket":
             self._advance_cursor(retrieved_at)
         return "saved"
@@ -559,4 +587,7 @@ class IngestionService:
     async def stats_reporter(self, interval: float = 300.0) -> None:
         while True:
             await asyncio.sleep(interval)
-            LOGGER.info("ingestion stats: %s | ledger %s", dict(self.stats), self.ledger.counts())
+            depth = self.queue.qsize() if self.queue else 0
+            capacity = self.queue.maxsize if self.queue else self.settings.queue_size
+            LOGGER.info("ingestion stats: queue %d/%d | %s | ledger %s", depth, capacity, dict(self.stats),
+                        self.ledger.counts())

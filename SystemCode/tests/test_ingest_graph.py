@@ -41,10 +41,29 @@ def alpaca_envelope(article: dict, transport: str = "websocket", **overrides) ->
     return envelope
 
 
-def test_graph_is_compiled_once_and_has_single_node():
+def test_graph_is_compiled_once_and_has_the_analysis_nodes():
     assert get_graph() is get_graph()
-    nodes = set(build_graph().get_graph().nodes)
-    assert nodes == {"__start__", "prepare_data", "__end__"}
+    drawn = build_graph().get_graph()
+    assert set(drawn.nodes) == {"__start__", "prepare_data", "create_text_units", "generate_embeddings",
+                                "retrieve_candidates", "route_candidates", "propose_new_event", "compare_with_llm",
+                                "resolve_event_memberships", "persist_result", "__end__"}
+    edges = {(e.source, e.target, e.conditional) for e in drawn.edges}
+    assert edges == {
+        ("__start__", "prepare_data", False),
+        ("prepare_data", "create_text_units", True),
+        ("prepare_data", "__end__", True),  # a batch with no valid record
+        ("create_text_units", "generate_embeddings", False),
+        ("generate_embeddings", "retrieve_candidates", False),
+        ("retrieve_candidates", "route_candidates", False),
+        ("route_candidates", "propose_new_event", True),  # no plausible candidates
+        ("route_candidates", "compare_with_llm", True),  # plausible candidates
+        ("route_candidates", "resolve_event_memberships", True),  # nothing to decide
+        ("propose_new_event", "resolve_event_memberships", False),
+        ("compare_with_llm", "resolve_event_memberships", False),
+        ("resolve_event_memberships", "persist_result", False),
+        ("persist_result", "create_text_units", True),  # next record of the batch, sequentially
+        ("persist_result", "__end__", True),
+    }
 
 
 def test_sec_record_common_schema_and_provenance():

@@ -1,6 +1,7 @@
 """Environment-driven configuration for the ingestion worker.
 
-Every setting has a documented default (see `.env.example`). No LLM key is used.
+Every setting has a documented default (see `.env.example`). Semantic comparison
+has its own settings (and its only AI credential) in ``datasources.similarity.settings``.
 Live and demo runs use different output roots so their records and tracking
 state can never mix: live -> ``INGEST_OUTPUT_DIR`` (default ``output/``),
 demo -> ``<INGEST_OUTPUT_DIR>/demo``.

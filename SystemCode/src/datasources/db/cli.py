@@ -7,9 +7,10 @@
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
 news from Alpaca and one recent NVIDIA 8-K from SEC EDGAR, stores them through
-the same persistence layer normal ingestion uses, reads them back, then replays
-the exact same payloads to prove nothing is duplicated. It never generates
-embeddings and never calls an LLM.
+the same ingestion graph and persistence layer normal ingestion uses, reads them
+back, then replays the exact same payloads to prove nothing is duplicated. It
+runs with semantic analysis disabled: no embeddings, no LLM calls. Semantic
+analysis has its own commands (`datasources-similarity`).
 """
 
 from __future__ import annotations
@@ -39,7 +40,8 @@ LOGGER = logging.getLogger("datasources.db")
 TABLES = (
     "provider", "company", "company_symbol", "publisher", "document", "document_revision",
     "document_revision_source", "revision_company", "sec_filing_details", "text_unit",
-    "embedding", "embedding_profile", "ingestion_state",
+    "embedding", "embedding_profile", "ingestion_state", "revision_analysis", "news_event",
+    "event_membership", "event_membership_unit", "event_comparison", "retrieval_candidate",
 )
 
 
@@ -62,8 +64,8 @@ def cmd_check(db: Database) -> int:
         "pgvector_version": info.pgvector_version,
     }, indent=2))
     if not info.pgvector_installed:
-        print("\nNote: pgvector is NOT enabled. News storage does not need it; "
-              "the later embedding stage does (CREATE EXTENSION vector;).", file=sys.stderr)
+        print("\nNote: pgvector is NOT enabled. News storage does not need it; semantic "
+              "comparison (SIMILARITY_ENABLED=true) does (CREATE EXTENSION vector;).", file=sys.stderr)
     return 0
 
 

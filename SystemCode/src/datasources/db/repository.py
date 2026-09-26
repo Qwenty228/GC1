@@ -23,9 +23,10 @@ nothing. `source_snapshot_hash` is the ingestion pipeline's existing
 `provenance.dedup.content_fingerprint` (a full SHA-256), so a payload that did
 not change produces the same hash and therefore no new revision.
 
-Deliberately NOT written here (left to the later embedding stage):
-`text_unit`, `embedding`, `embedding_profile`. No embeddings, no zero vectors,
-no LLM calls. `text_unit.embedding_status` already defaults to 'pending'.
+Not written here: `text_unit`, `embedding`, `embedding_profile` and the event
+tables. When semantic analysis is enabled, `datasources.similarity.store`
+writes them in the same transaction, right after this function, from the
+ingestion graph's `persist_result` node.
 """
 
 from __future__ import annotations

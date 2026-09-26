@@ -1,0 +1,156 @@
+{
+  "description": "SYNTHETIC labelled pairs for semantic event comparison. Companies, figures and dates are invented (Example Synthetic Corp, Northwind Chips, Contoso Cloud, Fabrikam Motors). 'candidate' is evidence already in an event; 'incoming' is the new article. Used offline with scripted responses (orchestration tests) and by `datasources-similarity evaluate` against the real backend.",
+  "examples": [
+    {
+      "id": "paraphrase_acquisition",
+      "category": "paraphrase",
+      "expected_label": "same_event_repeated",
+      "incoming": {
+        "title": "Example Synthetic Corp to buy Northwind Chips for $2.1 billion",
+        "text": "Example Synthetic Corp agreed on Monday to buy chip designer Northwind Chips for $2.1 billion in cash, the companies said. The deal is expected to close in the first quarter of 2027, pending regulatory approval.",
+        "source": "wire-a", "published": "2031-03-03T14:00:00Z"
+      },
+      "candidate": {
+        "title": "Northwind Chips agrees to be acquired by Example Synthetic Corp",
+        "text": "Northwind Chips will be acquired by Example Synthetic Corp in a $2.1 billion all-cash transaction announced Monday. Closing is expected in Q1 2027, subject to regulatory approvals.",
+        "source": "wire-b", "published": "2031-03-03T13:10:00Z"
+      }
+    },
+    {
+      "id": "missing_price_is_not_a_conflict",
+      "category": "missing_information",
+      "expected_label": "same_event_repeated",
+      "incoming": {
+        "title": "Example Synthetic Corp strikes deal for Northwind Chips",
+        "text": "Example Synthetic Corp said on Monday it will acquire Northwind Chips. The companies did not say how much Example Synthetic Corp would pay.",
+        "source": "wire-c", "published": "2031-03-03T16:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp to buy Northwind Chips for $2.1 billion",
+        "text": "Example Synthetic Corp agreed on Monday to buy Northwind Chips for $2.1 billion in cash. The deal is expected to close in the first quarter of 2027.",
+        "source": "wire-a", "published": "2031-03-03T14:00:00Z"
+      }
+    },
+    {
+      "id": "different_fiscal_quarters",
+      "category": "recurring_occurrence",
+      "expected_label": "different_event",
+      "incoming": {
+        "title": "Example Synthetic Corp second-quarter revenue rises 12%",
+        "text": "Example Synthetic Corp reported revenue of $4.1 billion for the second quarter of fiscal 2032, up 12% from a year earlier.",
+        "source": "wire-a", "published": "2031-08-20T20:30:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp first-quarter revenue beats estimates",
+        "text": "Example Synthetic Corp reported first-quarter fiscal 2032 revenue of $3.7 billion, ahead of analyst expectations.",
+        "source": "wire-b", "published": "2031-05-21T20:30:00Z"
+      }
+    },
+    {
+      "id": "completion_is_an_update",
+      "category": "temporal_development",
+      "expected_label": "same_event_update",
+      "incoming": {
+        "title": "Example Synthetic Corp completes Northwind Chips acquisition",
+        "text": "Example Synthetic Corp said on Tuesday it has completed its $2.1 billion acquisition of Northwind Chips after receiving all regulatory approvals. Northwind Chips is now a wholly owned subsidiary.",
+        "source": "wire-a", "published": "2031-03-09T12:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp to buy Northwind Chips for $2.1 billion",
+        "text": "Example Synthetic Corp agreed to buy Northwind Chips for $2.1 billion in cash. The deal is expected to close in the first quarter of 2027, pending regulatory approval.",
+        "source": "wire-b", "published": "2031-03-03T14:00:00Z"
+      }
+    },
+    {
+      "id": "cancellation_is_not_a_conflict",
+      "category": "temporal_development",
+      "expected_label": "same_event_update",
+      "incoming": {
+        "title": "Example Synthetic Corp scraps Northwind Chips deal",
+        "text": "Example Synthetic Corp terminated its agreement to acquire Northwind Chips on Friday after regulators signalled they would block the $2.1 billion transaction. Example Synthetic Corp will pay a $90 million termination fee.",
+        "source": "wire-c", "published": "2031-03-07T21:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp to buy Northwind Chips for $2.1 billion",
+        "text": "Example Synthetic Corp agreed to buy Northwind Chips for $2.1 billion in cash, expecting the deal to close in the first quarter of 2027.",
+        "source": "wire-a", "published": "2031-03-03T14:00:00Z"
+      }
+    },
+    {
+      "id": "comparable_figures_conflict",
+      "category": "conflict",
+      "expected_label": "same_event_conflict",
+      "incoming": {
+        "title": "Example Synthetic Corp data center sales slip in second quarter",
+        "text": "Example Synthetic Corp's data center revenue for the second quarter of fiscal 2032 fell 4% to $2.3 billion, the company reported on Wednesday.",
+        "source": "wire-c", "published": "2031-08-20T21:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp second-quarter results",
+        "text": "Example Synthetic Corp said on Wednesday that second-quarter fiscal 2032 data center revenue rose 18% to $2.9 billion.",
+        "source": "wire-a", "published": "2031-08-20T20:30:00Z"
+      }
+    },
+    {
+      "id": "different_metric_same_results",
+      "category": "additional_information",
+      "expected_label": "same_event_update",
+      "incoming": {
+        "title": "Example Synthetic Corp gaming sales dip even as quarter beats",
+        "text": "In its second-quarter fiscal 2032 results released Wednesday, Example Synthetic Corp said gaming revenue fell 3% to $610 million while total revenue rose 12% to $4.1 billion.",
+        "source": "wire-d", "published": "2031-08-20T22:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp second-quarter revenue rises 12%",
+        "text": "Example Synthetic Corp reported revenue of $4.1 billion for the second quarter of fiscal 2032, up 12% from a year earlier.",
+        "source": "wire-a", "published": "2031-08-20T20:30:00Z"
+      }
+    },
+    {
+      "id": "vague_headline_is_uncertain",
+      "category": "limited_evidence",
+      "expected_label": "uncertain",
+      "incoming": {
+        "title": "Example Synthetic Corp shares jump on deal chatter",
+        "text": "",
+        "evidence": "limited: headline_only",
+        "source": "wire-e", "published": "2031-03-02T15:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp to buy Northwind Chips for $2.1 billion",
+        "text": "Example Synthetic Corp agreed on Monday to buy Northwind Chips for $2.1 billion in cash.",
+        "source": "wire-a", "published": "2031-03-03T14:00:00Z"
+      }
+    },
+    {
+      "id": "different_partner",
+      "category": "different_participants",
+      "expected_label": "different_event",
+      "incoming": {
+        "title": "Example Synthetic Corp partners with Fabrikam Motors on autonomous trucks",
+        "text": "Example Synthetic Corp and Fabrikam Motors announced a multi-year partnership to develop self-driving truck software, the companies said on Thursday.",
+        "source": "wire-a", "published": "2031-04-10T13:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp partners with Contoso Cloud on data centers",
+        "text": "Example Synthetic Corp and Contoso Cloud announced a partnership on Thursday to build AI data centers in three countries.",
+        "source": "wire-b", "published": "2031-04-10T12:00:00Z"
+      }
+    },
+    {
+      "id": "denial_conflicts_with_report",
+      "category": "conflict",
+      "expected_label": "same_event_conflict",
+      "incoming": {
+        "title": "Example Synthetic Corp denies it is in talks to buy Northwind Chips",
+        "text": "Example Synthetic Corp said on Tuesday that it is not in talks to acquire Northwind Chips, rejecting a report published earlier in the day.",
+        "source": "wire-c", "published": "2031-02-24T18:00:00Z"
+      },
+      "candidate": {
+        "title": "Example Synthetic Corp in advanced talks to buy Northwind Chips, sources say",
+        "text": "Example Synthetic Corp is in advanced talks to acquire Northwind Chips, according to people familiar with the matter, who asked not to be named.",
+        "source": "wire-b", "published": "2031-02-24T11:00:00Z"
+      }
+    }
+  ]
+}
