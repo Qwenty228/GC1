@@ -99,10 +99,14 @@ class IngestionService:
         alpaca_auth: AlpacaAuth | None = None,
         alpaca_session=None,
         update_shared_cache: bool = True,
+        database=None,
     ):
         self.settings = settings
         self.store = OutputStore(settings.root)
         self.ledger = Ledger(self.store)
+        # Optional `datasources.db.Database`. When None, ingestion behaves exactly
+        # as before and writes files only.
+        self.database = database
         self.sec_client = sec_client
         self.document_fetcher = document_fetcher or self._fetch_document_live
         self.alpaca_auth = alpaca_auth
@@ -173,6 +177,29 @@ class IngestionService:
         if item.kind == "sec":
             return self.process_sec(item.payload)
         return self.process_alpaca(item.payload)
+
+    # ------------------------------------------------------------------ persistence
+    def persist(self, record, *, raw_payload: dict | None = None, raw_document: str | None = None):
+        """Store one record in PostgreSQL, or return None when no database is configured.
+
+        Called from `process_sec` / `process_alpaca`, which the writer already runs
+        off the event loop via `asyncio.to_thread`, so this synchronous driver call
+        never blocks asyncio. Everything for one record goes in one transaction, so
+        a failed related insert leaves no partial article behind.
+
+        Raises on failure: the caller then leaves the record unmarked in the ledger
+        so a later poll or delivery retries it, rather than silently losing it.
+        """
+        if self.database is None:
+            return None
+        from ..db import persist_record
+
+        with self.database.transaction() as conn:
+            result = persist_record(conn, record, raw_payload=raw_payload, raw_document=raw_document)
+        self.stats[f"db_{result.outcome}"] += 1
+        if result.unresolved_symbols:
+            self.stats["db_unresolved_symbols"] += len(result.unresolved_symbols)
+        return result
 
     # ------------------------------------------------------------------ SEC collection
     def _sec_floor(self, cik10: str, today: date | None = None) -> str:
@@ -321,6 +348,15 @@ class IngestionService:
             return self._sec_failure(identity, stage=error.stage, kind=error.error_type, message=error.message,
                                      retryable=error.retryable, payload={**context, "raw_document": doc_ref})
         record = records[0]
+        # Persist before writing the file and marking the ledger: a database failure
+        # then leaves the filing pending for the next poll instead of marking it
+        # completed with nothing stored. The insert is idempotent, so a crash between
+        # the commit and the file write cannot produce a duplicate on the retry.
+        try:
+            self.persist(record, raw_payload=row, raw_document=document.text())
+        except Exception as error:
+            return self._sec_failure(identity, stage="persist", kind="database_error", message=str(error),
+                                     retryable=True, payload={**context, "raw_document": doc_ref})
         output_ref = self.store.write_processed(record)
         self.ledger.mark_sec_completed(identity, output_ref, record.provenance.dedup.content_fingerprint)
         self.stats["sec_saved"] += 1
@@ -383,6 +419,15 @@ class IngestionService:
             LOGGER.warning("Alpaca %s rejected at %s: %s", identity, error.stage, error.message)
             return "failed"
         record = records[0]
+        try:
+            self.persist(record, raw_payload=article)
+        except Exception as error:
+            self.store.write_error("alpaca", identity, {"identity": identity, "stage": "persist",
+                                                        "error_type": "database_error", "message": str(error),
+                                                        "retryable": True, "raw_article": raw_ref})
+            self.stats["alpaca_failed"] += 1
+            LOGGER.warning("Alpaca %s not stored in PostgreSQL: %s", identity, error)
+            return "failed"
         output_ref = self.store.write_processed(record)
         self.ledger.mark_alpaca_saved(identity, updated_at=updated_at, fingerprint=fingerprint, level=level,
                                       output_ref=output_ref)

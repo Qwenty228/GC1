@@ -2,8 +2,9 @@
 
 Node 1 of the pipeline collects **SEC EDGAR 8-K filings** and **Alpaca news** for a
 configurable list of symbols (default `NVDA`), preprocesses them with a small
-deterministic **LangGraph** graph, and writes one versioned JSON record per
-filing / article revision under `output/`. No database, no LLM calls, no
+deterministic **LangGraph** graph, writes one versioned JSON record per
+filing / article revision under `output/`, and stores every record in the local
+**PostgreSQL** `stock_news` database. No LLM calls, no embeddings, no
 summarisation, sentiment or recommendations.
 
 The original pieces still work as before:
@@ -176,6 +177,160 @@ inspected, not only the latest 10 the UI shows.
   upper-cased without damaging `BRK.B` / `BTC/USD`. Timestamps are converted to
   UTC; invalid or offset-less timestamps become `null` with a warning, never guessed.
 * `publisher` is the article's `source` (e.g. `benzinga`), never `alpaca_live`.
+
+## PostgreSQL storage
+
+Ingested records are also stored in the local **`stock_news`** database. The
+schema already existed (it is the project ERD); ingestion was mapped onto it
+rather than the other way round.
+
+```powershell
+uv run datasources-db check      # which database, and is pgvector enabled
+uv run datasources-db migrate    # apply additive migrations (idempotent)
+uv run datasources-db inspect    # row counts per table
+uv run datasources-db backfill   # store existing output/processed records (idempotent)
+uv run datasources-db smoke      # bounded live end-to-end test (see Tests)
+```
+
+Configuration uses the standard libpq variable names, so `psql`, pgAdmin and
+this project share one `.env`. `PGPASSWORD` belongs in `.env` only, which is
+git-ignored; `.env.example` carries placeholders. `DATASOURCES_DB_ENABLED=false`
+runs ingestion to files only.
+
+```text
+PGHOST=localhost
+PGPORT=5432
+PGDATABASE=stock_news
+PGUSER=postgres
+PGPASSWORD=<set locally>
+```
+
+### Table mapping
+
+| Table | Holds | Alpaca | SEC EDGAR |
+| --- | --- | --- | --- |
+| `provider` | the API we fetched from | looked up by `code='alpaca'` | `code='sec_edgar'` |
+| `document` | one row per **source record** | `source_namespace='news'`, `source_record_id`=article id | `source_namespace`=CIK10, `source_record_id`=accession |
+| `document_revision` | one row per distinct payload | title, author, summary, body, `analysis_text`, timestamps, `provenance` | generated title, extracted text, `analysis_text` |
+| `document_revision_source` | original payload + original HTML | article JSON as received | submissions row + primary-document HTML |
+| `revision_company` | company links | resolved from `symbols` via `company_symbol` | issuer via `company.cik`, plus tickers |
+| `sec_filing_details` | filing metadata | — | CIK, accession, form, dates, items, index/document URLs, exhibits |
+| `publisher` | the **original publisher** | article `source` (e.g. `benzinga`) | not set (filings have an issuer, not a publisher) |
+
+`provider` and `publisher` stay distinct: `alpaca` is where the article came
+from, `benzinga` is who wrote it. `publisher.credibility_tier` keeps its
+`unreviewed` default — no credibility score is invented, and an existing tier is
+never overwritten.
+
+The pipeline's content flags are mapped onto the schema's constrained values, so
+a metadata-only record never looks like a fully extracted document:
+
+| Pipeline | `content_status` | `content_scope` |
+| --- | --- | --- |
+| Alpaca, body present | `available` | `full_article` |
+| Alpaca, summary only | `partial` | `title_summary_only` |
+| Alpaca, headline only | `missing` | `title_summary_only` |
+| Alpaca, nothing | `missing` | `metadata_only` |
+| SEC, extraction ok | `available` | `primary_document_only` |
+| SEC, extraction failed | `extraction_failed` | `primary_document_only` |
+
+### Duplicate prevention in the database
+
+Idempotency is enforced by the database, not by application logic:
+
+| Constraint | Prevents |
+| --- | --- |
+| `document (provider_id, source_namespace, source_record_id, is_sample)` | a second row for the same source record |
+| `document_revision (document_id, source_snapshot_hash, preprocessing_version)` | a second revision of an unchanged payload |
+| `revision_company (revision_id, company_id)` primary key | duplicate company links |
+| `sec_filing_details (revision_id)` primary key | duplicate filing details |
+
+`source_snapshot_hash` is the pipeline's existing
+`provenance.dedup.content_fingerprint` (a full SHA-256), so replaying an
+unchanged payload conflicts and inserts nothing. A genuinely changed payload
+inserts a **new revision** and `document.current_revision_id` moves to it; the
+old revision is kept, and `document_revision` is immutable by trigger. An 8-K/A
+has its own accession, so it is its own `document`. There is no semantic or
+similarity matching here.
+
+### Transactions and async safety
+
+Everything for one record — document, revision, company links, SEC details and
+raw source — is written in **one transaction**, so a failed related insert leaves
+no partial article (`tests/test_db_persistence.py` proves this with a real check
+violation). All SQL is parameterised.
+
+The worker persists from `IngestionService.process_sec` / `process_alpaca`, which
+the writer already runs off the event loop via `asyncio.to_thread`, so the
+synchronous driver never blocks asyncio. Persistence happens **before** the
+processed file is written and before the ledger is marked, so a database failure
+leaves the record pending for the next poll instead of marked done with nothing
+stored.
+
+### Inspecting stored news (pgAdmin / psql)
+
+```sql
+-- Everything currently stored, newest first (this view hides is_sample rows).
+SELECT source_time, source_badge, api_provider, publisher_name, filing_issuer,
+       title, content_status, original_url
+  FROM current_live_document
+ ORDER BY source_time DESC NULLS LAST
+ LIMIT 50;
+
+-- Stored NVIDIA 8-K filings with their extracted text length.
+SELECT s.accession_number, s.form, s.filing_date, s.accepted_at, s.item_codes,
+       length(r.body_text) AS extracted_chars,
+       jsonb_array_length(s.exhibits) AS exhibit_links,
+       s.primary_document_url
+  FROM sec_filing_details s
+  JOIN document_revision r ON r.revision_id = s.revision_id
+  JOIN company c ON c.company_id = s.issuer_company_id
+ WHERE c.cik = '0001045810'
+ ORDER BY s.filing_date DESC;
+
+-- Articles per publisher, with the credibility tier as stored (never invented).
+SELECT p.name AS publisher, p.credibility_tier, count(*) AS articles
+  FROM document_revision r
+  JOIN publisher p ON p.publisher_id = r.publisher_id
+ GROUP BY 1, 2 ORDER BY articles DESC;
+
+-- DUPLICATE CHECK 1: two rows for the same source record. Must return 0 rows.
+SELECT p.code, d.source_namespace, d.source_record_id, count(*) AS rows
+  FROM document d JOIN provider p USING (provider_id)
+ GROUP BY 1, 2, 3 HAVING count(*) > 1;
+
+-- DUPLICATE CHECK 2: the same payload stored twice. Must return 0 rows.
+SELECT document_id, source_snapshot_hash, preprocessing_version, count(*) AS rows
+  FROM document_revision
+ GROUP BY 1, 2, 3 HAVING count(*) > 1;
+
+-- Documents that have more than one revision (a genuinely updated article).
+SELECT d.source_record_id, count(*) AS revisions,
+       min(r.retrieved_at) AS first_seen, max(r.retrieved_at) AS last_seen
+  FROM document d JOIN document_revision r USING (document_id)
+ GROUP BY 1 HAVING count(*) > 1 ORDER BY revisions DESC;
+
+-- The original payload kept for one article, alongside the cleaned text.
+SELECT d.source_record_id, r.title, left(r.body_text, 200) AS cleaned_text,
+       s.raw_payload, s.raw_file_refs
+  FROM document d
+  JOIN document_revision r ON r.revision_id = d.current_revision_id
+  JOIN document_revision_source s ON s.revision_id = r.revision_id
+ WHERE d.record_type = 'news_article'
+ LIMIT 1;
+
+-- Embeddings are a later stage: all three must be 0 for now.
+SELECT (SELECT count(*) FROM text_unit) AS text_units,
+       (SELECT count(*) FROM embedding) AS embeddings,
+       (SELECT count(*) FROM embedding_profile) AS profiles;
+```
+
+### Embeddings are a later stage
+
+No embeddings are generated and no LLM is called. `text_unit`, `embedding` and
+`embedding_profile` are left empty; `text_unit.embedding_status` already defaults
+to `pending` for whatever creates them. pgvector availability is reported by
+`datasources-db check` and is independent of news storage working.
 
 ## Duplicate tracking
 
@@ -372,9 +527,28 @@ requested symbols, adapter, dedup identity/fingerprint), `raw_file_refs`,
 ## Tests
 
 ```powershell
-uv run pytest                                      # offline: fixtures + mocked network
+uv run pytest                                      # offline fixtures + mocked network, plus
+                                                   # database tests when stock_news is reachable
 $env:RUN_LIVE_TESTS = "1"; uv run pytest -m live   # opt-in: real SEC + Alpaca (needs .env)
+
+# Bounded live end-to-end test: real NVDA news + one real 8-K -> PostgreSQL -> read back -> replay
+uv run datasources-db smoke --symbol NVDA --max-articles 5 --lookback-hours 72
 ```
+
+`datasources-db smoke` uses a **bounded historical** REST window, so it does not
+wait for a live news event, and it writes its files to a temporary directory
+while keeping the real records in the database. It fails loudly if it is pointed
+at the wrong database, if a record cannot be read back, or if replaying the same
+payloads changes any row count. When Alpaca or SEC is unreachable it says so and
+does not report an unavailable API as a successful live test.
+
+`tests/test_db_persistence.py` covers the mapping offline and, against a real
+database, the round trip, replay idempotency, the revision model for changed
+payloads, 8-K/A staying a separate filing, identical text under different ids
+staying separate, unknown tickers being reported rather than invented, no
+embeddings being created, and a **rollback test**: a related insert that violates
+a real check constraint must leave no document or revision behind. Every record
+it writes is `is_sample = true` and is deleted afterwards.
 
 Offline tests cover SEC array parsing and URL generation, primary 8-K
 extraction (tables, visible inline XBRL, hidden content), download and
@@ -402,6 +576,15 @@ process lock, and clean shutdown.
   request budget (they are cached for 12 h and triggered manually).
 * `langgraph`'s dependencies cap `websockets` below 17, so the lock resolves
   `websockets` 16.1.1 (the project only requires `>=15`).
+* **Tickers other than the configured symbols are not linked.** An article that
+  also mentions `AAPL` links only the companies present in `company_symbol`;
+  unknown tickers are counted (`db_unresolved_symbols`) and kept in
+  `provenance.requested_symbols` rather than guessed into new `company` rows.
+* Records completed in the file ledger **before** the database existed are not
+  re-persisted by a normal run (the ledger already calls them done). Run
+  `uv run datasources-db backfill` once for those.
+* Collection cursors stay in `output/state/ledger.json`; the `ingestion_state`
+  table is left empty so there is one source of truth for them.
 
 ## Postman WebSocket check
 

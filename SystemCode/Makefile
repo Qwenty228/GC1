@@ -6,13 +6,15 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
+#   make db-check          report the PostgreSQL connection and pgvector
+#   make db-smoke          bounded live end-to-end test into PostgreSQL
 
 UV := uv
 T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
-.PHONY: help sync run test companies edgar alpaca ingest ingest-once ingest-demo clean clean-cache
+.PHONY: help sync run test companies edgar alpaca ingest ingest-once ingest-demo \n	db-check db-migrate db-inspect db-backfill db-smoke clean clean-cache
 
 help: ## Show this help
 	@echo "Node 1 — Data Sources"
@@ -49,6 +51,21 @@ ingest-once: sync ## One SEC poll + one Alpaca REST backfill, then exit
 
 ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 	$(UV) run datasources-ingest demo
+
+db-check: sync ## Report the database and whether pgvector is enabled
+	$(UV) run datasources-db check
+
+db-migrate: sync ## Apply the additive SQL migrations (idempotent)
+	$(UV) run datasources-db migrate
+
+db-inspect: sync ## Row counts per table
+	$(UV) run datasources-db inspect
+
+db-backfill: sync ## Store existing output/processed records (idempotent)
+	$(UV) run datasources-db backfill
+
+db-smoke: sync ## Bounded live end-to-end test into PostgreSQL
+	$(UV) run datasources-db smoke --symbol $(T) --max-articles 5 --lookback-hours 72
 
 clean: ## Remove Python and test caches
 	find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
