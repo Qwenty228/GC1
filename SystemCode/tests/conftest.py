@@ -99,21 +99,96 @@ def settings(tmp_path) -> IngestSettings:
 
 TEST_PUBLISHER = "pytest-synthetic-wire"
 
+# Never the target of destructive test setup: it holds live data and retained sample records.
+PROTECTED_DATABASES = frozenset({"stock_news"})
+
+
+class UnsafeTestDatabase(RuntimeError):
+    """The connected database is not an isolated test database; nothing destructive may run against it."""
+
+
+def verify_isolated_database(database) -> str:
+    """The server-reported name of an isolated test database, or raise UnsafeTestDatabase.
+
+    Checked on the live connection rather than trusted from PGDATABASE, since other
+    connection settings could route it elsewhere. Refuses a protected database (by the
+    configured name or the name the server reports), a server-reported name that differs
+    from the configured one, a name without "test", and any database holding live
+    (non-sample) documents.
+    """
+    configured = database.settings.dbname
+    with database.connection() as conn:
+        row = conn.execute("SELECT current_database() AS name, "
+                           "to_regclass('public.document') IS NOT NULL AS has_documents").fetchone()
+        live = bool(row["has_documents"]) and conn.execute(
+            "SELECT EXISTS (SELECT 1 FROM document WHERE NOT is_sample) AS live").fetchone()["live"]
+    actual = row["name"]
+    problems = []
+    if actual in PROTECTED_DATABASES or configured in PROTECTED_DATABASES:
+        problems.append(f"{actual!r} is a protected database")
+    if actual != configured:
+        problems.append(f"connected to {actual!r} although {configured!r} is configured")
+    if "test" not in actual.lower():
+        problems.append(f"{actual!r} is not named as a test database")
+    if live:
+        problems.append(f"{actual!r} holds live (non-sample) documents")
+    if problems:
+        raise UnsafeTestDatabase("refusing destructive test setup: " + "; ".join(problems)
+                                 + ". Point PGDATABASE at an isolated test database, e.g. "
+                                   "$env:PGDATABASE = \"stock_news_conflict_test\"")
+    return actual
+
+
+def isolated_test_database():
+    """For module fixtures: an open Database on a verified isolated test database, or skip the module."""
+    from datasources.db import Database, load_db_settings
+
+    try:
+        database = Database(load_db_settings())
+        database.check()
+    except Exception as error:  # ConfigurationError, DatabaseError, OperationalError
+        pytest.skip(f"no test database available: {error}")
+    try:
+        verify_isolated_database(database)
+    except UnsafeTestDatabase as error:
+        database.close()
+        pytest.skip(str(error))
+    return database
+
 
 def cleanup_sample_rows(database) -> None:
     """Delete every sample (is_sample) row the database tests may have written, and nothing else.
 
     Live rows are never touched: every statement is restricted to sample
     documents, their revisions and sample-partition events. Hashing-backend test
-    profiles are removed only when nothing references them any more.
+    profiles are removed only when nothing references them any more. Refuses to
+    run at all unless the database is a verified isolated test database, because
+    stock_news keeps retained sample records that must survive test runs.
     """
+    verify_isolated_database(database)
     with database.transaction() as conn:
         present = conn.execute("SELECT to_regclass('public.news_event') IS NOT NULL AS ok").fetchone()["ok"]
         conn.execute("CREATE TEMP TABLE sample_rev ON COMMIT DROP AS SELECT r.revision_id FROM document_revision r "
                      "JOIN document d ON d.document_id = r.document_id WHERE d.is_sample")
+        summaries = conn.execute("SELECT to_regclass('public.event_summary_job') IS NOT NULL AS ok").fetchone()["ok"]
         if present:
             conn.execute("CREATE TEMP TABLE sample_event ON COMMIT DROP AS "
                          "SELECT event_id FROM news_event WHERE is_sample")
+        if present and summaries:
+            # Summary and review rows of sample events (migration 004), children first.
+            conn.execute("DELETE FROM event_summary_citation WHERE summary_id IN (SELECT summary_id FROM "
+                         "event_summary WHERE event_id IN (SELECT event_id FROM sample_event)) OR unit_id IN "
+                         "(SELECT unit_id FROM text_unit WHERE revision_id IN (SELECT revision_id FROM sample_rev))")
+            conn.execute("DELETE FROM event_summary_attempt WHERE event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("DELETE FROM event_summary_job WHERE event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("DELETE FROM event_summary WHERE event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("CREATE TEMP TABLE sample_review ON COMMIT DROP AS SELECT v.review_id "
+                         "FROM event_conflict_review v JOIN event_comparison c ON c.comparison_id = v.comparison_id "
+                         "WHERE c.revision_id IN (SELECT revision_id FROM sample_rev) "
+                         "OR c.candidate_event_id IN (SELECT event_id FROM sample_event)")
+            conn.execute("DELETE FROM event_review_decision WHERE review_id IN (SELECT review_id FROM sample_review)")
+            conn.execute("DELETE FROM event_conflict_review WHERE review_id IN (SELECT review_id FROM sample_review)")
+        if present:
             conn.execute("DELETE FROM event_membership_unit WHERE membership_id IN (SELECT membership_id FROM "
                          "event_membership WHERE revision_id IN (SELECT revision_id FROM sample_rev) "
                          "OR event_id IN (SELECT event_id FROM sample_event))")

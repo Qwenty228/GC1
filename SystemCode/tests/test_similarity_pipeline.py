@@ -17,11 +17,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from conftest import FIXTURES, TEST_PUBLISHER, cleanup_sample_rows
+from conftest import FIXTURES, TEST_PUBLISHER, cleanup_sample_rows, isolated_test_database
 
 psycopg = pytest.importorskip("psycopg")
 
-from datasources.db import Database, load_db_settings  # noqa: E402
 from datasources.ingest.graph import get_graph, run_pipeline, run_reanalysis  # noqa: E402
 from datasources.ingest.service import IngestionService  # noqa: E402
 from datasources.similarity import store  # noqa: E402
@@ -38,11 +37,7 @@ _windows = itertools.count()
 
 @pytest.fixture(scope="module")
 def db():
-    try:
-        database = Database(load_db_settings())
-        database.check()
-    except Exception as error:
-        pytest.skip(f"no stock_news database available: {error}")
+    database = isolated_test_database()  # refuses stock_news and anything not verified as a test DB
     with database.connection() as conn:
         missing = store.missing_schema(conn)
     if missing:
@@ -152,7 +147,8 @@ def test_first_article_takes_the_no_candidate_path_without_calling_the_model(db)
     rt = runtime(db, model)
     nodes = trace(db, rt, article(*ACQ, anchor()))
     assert nodes == ["prepare_data", "create_text_units", "generate_embeddings", "retrieve_candidates",
-                     "route_candidates", "propose_new_event", "resolve_event_memberships", "persist_result"]
+                     "route_candidates", "propose_new_event", "resolve_event_memberships", "persist_result",
+                     "route_event_summary"]  # summaries are off here: no event to route
     assert model.calls == []  # no plausible candidate, no comparison call
 
 

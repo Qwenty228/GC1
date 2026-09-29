@@ -46,7 +46,9 @@ def test_graph_is_compiled_once_and_has_the_analysis_nodes():
     drawn = build_graph().get_graph()
     assert set(drawn.nodes) == {"__start__", "prepare_data", "create_text_units", "generate_embeddings",
                                 "retrieve_candidates", "route_candidates", "propose_new_event", "compare_with_llm",
-                                "resolve_event_memberships", "persist_result", "__end__"}
+                                "resolve_event_memberships", "persist_result", "route_event_summary",
+                                "generate_event_summary", "validate_event_summary", "persist_event_summary",
+                                "flag_conflict_review", "skip_summary", "__end__"}
     edges = {(e.source, e.target, e.conditional) for e in drawn.edges}
     assert edges == {
         ("__start__", "prepare_data", False),
@@ -61,8 +63,17 @@ def test_graph_is_compiled_once_and_has_the_analysis_nodes():
         ("propose_new_event", "resolve_event_memberships", False),
         ("compare_with_llm", "resolve_event_memberships", False),
         ("resolve_event_memberships", "persist_result", False),
-        ("persist_result", "create_text_units", True),  # next record of the batch, sequentially
-        ("persist_result", "__end__", True),
+        ("persist_result", "route_event_summary", False),  # after the record's commit
+        ("route_event_summary", "generate_event_summary", True),  # first summary / new information / retry
+        ("route_event_summary", "flag_conflict_review", True),  # open conflict: keep the published summary
+        ("route_event_summary", "skip_summary", True),  # repeated / uncertain: nothing to summarize
+        ("route_event_summary", "create_text_units", True),  # every affected event done: next record
+        ("route_event_summary", "__end__", True),
+        ("generate_event_summary", "validate_event_summary", False),
+        ("validate_event_summary", "persist_event_summary", False),
+        ("persist_event_summary", "route_event_summary", False),  # next affected event (multi-Item filings)
+        ("flag_conflict_review", "route_event_summary", False),
+        ("skip_summary", "route_event_summary", False),
     }
 
 

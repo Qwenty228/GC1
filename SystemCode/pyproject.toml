@@ -37,6 +37,7 @@ datasources-news-stream = "alpaca_news.main:main"
 datasources-ingest = "datasources.ingest.cli:main"
 datasources-db = "datasources.db.cli:main"
 datasources-similarity = "datasources.similarity.cli:main"
+datasources-summary = "datasources.summary.cli:main"
 
 # CPU-only PyTorch on every platform (uv's documented configuration): the default
 # PyPI wheels pull CUDA libraries on Linux, which a CPU embedding model never uses.

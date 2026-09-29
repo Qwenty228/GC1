@@ -1,4 +1,4 @@
-"""LangGraph ingestion graph: preparation, semantic comparison, event grouping, persistence.
+"""LangGraph ingestion graph: preparation, semantic comparison, event grouping, persistence, summaries.
 
     START -> prepare_data --(no valid record)--> END
                  |
@@ -9,8 +9,20 @@
         route_candidates --(nothing to decide: analysis                             |
                             disabled / skipped / failed /                           v
                             reused / exact-content match)-----------> resolve_event_memberships
-    resolve_event_memberships -> persist_result --(more records in the batch)--> create_text_units
-                                                --(done)--> END
+    resolve_event_memberships -> persist_result -> route_event_summary
+        route_event_summary --(generate)--> generate_event_summary -> validate_event_summary
+                                                -> persist_event_summary -> route_event_summary
+        route_event_summary --(open conflict)--> flag_conflict_review --> route_event_summary
+        route_event_summary --(nothing new)----> skip_summary ----------> route_event_summary
+        route_event_summary --(every affected event done; more records)--> create_text_units
+                            --(every affected event done; last record)--> END
+
+* ``route_event_summary`` runs once per event the committed record is linked
+  to (a multi-Item filing can touch several), then moves on. The record and
+  its grouping are already committed, so a summary failure never rolls them
+  back; unfinished summary work stays in ``event_summary_job``. With
+  summarization disabled (no ``summarizer`` in the context) it has no events to
+  route and passes straight to the next record.
 
 * ``prepare_data`` validates each ``SourceEnvelope`` (or loads a stored revision
   for retry/backfill) and isolates per-record errors: a malformed record never
@@ -45,12 +57,16 @@ from pydantic import ValidationError
 from ..similarity import pipeline
 from ..similarity.models import RecordWork
 from ..similarity.pipeline import PipelineContext, RecordOutcome, WorkInput
+from ..summary import pipeline as summaries
+from ..summary.models import CONFLICT, GENERATE, SummaryTask
 from .adapters import ADAPTERS, AdapterError
 from .schema import PreparedRecord, RecordError, SourceEnvelope
 
 LOGGER = logging.getLogger(__name__)
 NODES = ("prepare_data", "create_text_units", "generate_embeddings", "retrieve_candidates", "route_candidates",
-         "propose_new_event", "compare_with_llm", "resolve_event_memberships", "persist_result")
+         "propose_new_event", "compare_with_llm", "resolve_event_memberships", "persist_result",
+         "route_event_summary", "generate_event_summary", "validate_event_summary", "persist_event_summary",
+         "flag_conflict_review", "skip_summary")
 
 
 class PipelineState(TypedDict, total=False):
@@ -61,6 +77,8 @@ class PipelineState(TypedDict, total=False):
     cursor: int
     current: RecordWork | None
     outcomes: list[RecordOutcome]
+    summary_tasks: list[SummaryTask] | None  # events of the last committed record still to route (None = not read)
+    summary_task: SummaryTask | None
 
 
 def _ctx(runtime: Runtime[PipelineContext] | None) -> PipelineContext:
@@ -177,7 +195,67 @@ def resolve_event_memberships(state: PipelineState, runtime: Runtime[PipelineCon
 def persist_result(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     work = state["current"]
     outcome = pipeline.persist(work, _ctx(runtime))
-    return {"outcomes": [*state.get("outcomes", []), outcome], "cursor": state["cursor"] + 1, "current": None}
+    return {"outcomes": [*state.get("outcomes", []), outcome], "cursor": state["cursor"] + 1, "current": None,
+            "summary_tasks": None, "summary_task": None}
+
+
+# ----------------------------------------------------------------------------- summary nodes
+def _summary_ctx(runtime: Runtime[PipelineContext] | None):
+    return summaries.context_from(_ctx(runtime))
+
+
+def route_event_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    ctx = _ctx(runtime)
+    sctx = summaries.context_from(ctx)
+    tasks = state.get("summary_tasks")
+    if tasks is None:
+        outcome = state["outcomes"][-1] if state.get("outcomes") else None
+        analyzer = ctx.analyzer
+        tasks = summaries.targets(outcome, sctx, profile_id=getattr(analyzer, "profile_id", None),
+                                  pipeline_version=getattr(analyzer, "pipeline_version", None))
+    if not tasks:
+        return {"summary_tasks": [], "summary_task": None}
+    task, rest = tasks[0], list(tasks[1:])
+    summaries.route(task, sctx)
+    return {"summary_tasks": rest, "summary_task": task}
+
+
+def _report(state: PipelineState, task: SummaryTask) -> None:
+    if state.get("outcomes"):
+        state["outcomes"][-1].summaries.append(task.report())
+
+
+def generate_event_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    task = state["summary_task"]
+    summaries.generate(task, _summary_ctx(runtime))
+    return {"summary_task": task}
+
+
+def validate_event_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    task = state["summary_task"]
+    summaries.validate(task)
+    return {"summary_task": task}
+
+
+def persist_event_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    task = state["summary_task"]
+    summaries.persist(task, _summary_ctx(runtime))
+    _report(state, task)
+    return {"summary_task": None}
+
+
+def flag_conflict_review(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    task = state["summary_task"]
+    summaries.flag_conflict_review(task, _summary_ctx(runtime))
+    _report(state, task)
+    return {"summary_task": None}
+
+
+def skip_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
+    task = state["summary_task"]
+    summaries.skip_summary(task)
+    _report(state, task)
+    return {"summary_task": None}
 
 
 # ----------------------------------------------------------------------------- edges
@@ -194,8 +272,19 @@ def _after_route(state: PipelineState) -> str:
     return "resolve_event_memberships"
 
 
-def _after_persist(state: PipelineState) -> str:
+def _next_record(state: PipelineState) -> str:
     return "create_text_units" if state["cursor"] < len(state.get("items", [])) else END
+
+
+def _after_summary_route(state: PipelineState) -> str:
+    task = state.get("summary_task")
+    if task is None:
+        return _next_record(state)
+    if task.route == GENERATE:
+        return "generate_event_summary"
+    if task.route == CONFLICT:
+        return "flag_conflict_review"
+    return "skip_summary"
 
 
 def build_graph():
@@ -209,6 +298,12 @@ def build_graph():
     builder.add_node("compare_with_llm", compare_with_llm)
     builder.add_node("resolve_event_memberships", resolve_event_memberships)
     builder.add_node("persist_result", persist_result)
+    builder.add_node("route_event_summary", route_event_summary)
+    builder.add_node("generate_event_summary", generate_event_summary)
+    builder.add_node("validate_event_summary", validate_event_summary)
+    builder.add_node("persist_event_summary", persist_event_summary)
+    builder.add_node("flag_conflict_review", flag_conflict_review)
+    builder.add_node("skip_summary", skip_summary)
     builder.add_edge(START, "prepare_data")
     builder.add_conditional_edges("prepare_data", _after_prepare, {"create_text_units": "create_text_units", END: END})
     builder.add_edge("create_text_units", "generate_embeddings")
@@ -222,7 +317,19 @@ def build_graph():
     builder.add_edge("propose_new_event", "resolve_event_memberships")
     builder.add_edge("compare_with_llm", "resolve_event_memberships")
     builder.add_edge("resolve_event_memberships", "persist_result")
-    builder.add_conditional_edges("persist_result", _after_persist, {"create_text_units": "create_text_units", END: END})
+    builder.add_edge("persist_result", "route_event_summary")
+    builder.add_conditional_edges("route_event_summary", _after_summary_route, {
+        "generate_event_summary": "generate_event_summary",
+        "flag_conflict_review": "flag_conflict_review",
+        "skip_summary": "skip_summary",
+        "create_text_units": "create_text_units",
+        END: END,
+    })
+    builder.add_edge("generate_event_summary", "validate_event_summary")
+    builder.add_edge("validate_event_summary", "persist_event_summary")
+    builder.add_edge("persist_event_summary", "route_event_summary")
+    builder.add_edge("flag_conflict_review", "route_event_summary")
+    builder.add_edge("skip_summary", "route_event_summary")
     return builder.compile()
 
 
@@ -244,7 +351,10 @@ class PipelineResult:
 
 
 def _invoke(state: dict, context: PipelineContext, size: int) -> PipelineResult:
-    result = get_graph().invoke(state, context=context, config={"recursion_limit": 20 + 12 * max(size, 1)})
+    # Per record: ~12 grouping steps, plus up to 4 summary steps per affected event
+    # (at most summary.pipeline.MAX_EVENTS_PER_RECORD events inline).
+    per_record = 14 + 4 * summaries.MAX_EVENTS_PER_RECORD
+    result = get_graph().invoke(state, context=context, config={"recursion_limit": 20 + per_record * max(size, 1)})
     return PipelineResult(result.get("outcomes", []), result.get("errors", []))
 
 

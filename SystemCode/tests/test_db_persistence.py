@@ -28,10 +28,9 @@ from datasources.ingest.schema import (
 
 psycopg = pytest.importorskip("psycopg")
 
-from conftest import TEST_PUBLISHER, cleanup_sample_rows
+from conftest import TEST_PUBLISHER, cleanup_sample_rows, isolated_test_database
 from datasources.db import Database, PersistResult, map_content, persist_record
 from datasources.db.repository import ALPACA_NAMESPACE, publisher_key
-from datasources.db.settings import load_db_settings
 
 NVDA_CIK = "0001045810"
 
@@ -40,11 +39,7 @@ NVDA_CIK = "0001045810"
 @pytest.fixture(scope="module")
 def db():
     """A live database, or skip. Removes only the sample rows the tests created."""
-    try:
-        database = Database(load_db_settings())
-        database.check()
-    except Exception as error:  # ConfigurationError, DatabaseError, OperationalError
-        pytest.skip(f"no stock_news database available: {error}")
+    database = isolated_test_database()  # refuses stock_news and anything not verified as a test DB
     try:
         yield database
     finally:

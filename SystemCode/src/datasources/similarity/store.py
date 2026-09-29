@@ -593,26 +593,32 @@ def persist_analysis(conn: Connection, work: RecordWork, *, profile_id: str, pip
         summary["events_superseded"] += 1 if updated else 0
         touched.add(new_id)
 
-    if touched:
-        conn.execute(
-            f"""
-            UPDATE news_event e
-               SET first_source_time = x.first_time, last_source_time = x.last_time, updated_at = now(),
-                   status = CASE WHEN e.status = 'superseded' THEN e.status
-                                 WHEN x.documents >= 2 THEN 'corroborated' ELSE 'provisional' END
-              FROM (SELECT m.event_id, min({SOURCE_TIME}) AS first_time, max({SOURCE_TIME}) AS last_time,
-                           count(DISTINCT m.document_id) AS documents
-                      FROM event_membership m
-                      JOIN document_revision r ON r.revision_id = m.revision_id
-                      LEFT JOIN sec_filing_details s ON s.revision_id = m.revision_id
-                     WHERE m.event_id = ANY(%s::uuid[]) AND m.state = 'active'
-                     GROUP BY m.event_id) x
-             WHERE e.event_id = x.event_id
-            """,
-            (list(touched),),
-        )
+    refresh_event_stats(conn, list(touched))
     summary["event_ids"] = sorted(touched)
     return summary
+
+
+def refresh_event_stats(conn: Connection, event_ids: list[str]) -> None:
+    """Recompute first/last source time and provisional/corroborated status from active memberships."""
+    if not event_ids:
+        return
+    conn.execute(
+        f"""
+        UPDATE news_event e
+           SET first_source_time = x.first_time, last_source_time = x.last_time, updated_at = now(),
+               status = CASE WHEN e.status = 'superseded' THEN e.status
+                             WHEN x.documents >= 2 THEN 'corroborated' ELSE 'provisional' END
+          FROM (SELECT m.event_id, min({SOURCE_TIME}) AS first_time, max({SOURCE_TIME}) AS last_time,
+                       count(DISTINCT m.document_id) AS documents
+                  FROM event_membership m
+                  JOIN document_revision r ON r.revision_id = m.revision_id
+                  LEFT JOIN sec_filing_details s ON s.revision_id = m.revision_id
+                 WHERE m.event_id = ANY(%s::uuid[]) AND m.state = 'active'
+                 GROUP BY m.event_id) x
+         WHERE e.event_id = x.event_id
+        """,
+        (list(event_ids),),
+    )
 
 
 # ----------------------------------------------------------------------------- maintenance queries

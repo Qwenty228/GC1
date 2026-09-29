@@ -1,0 +1,169 @@
+{
+  "_comment": [
+    "SYNTHETIC. The fictional NVIDIA / Veltrani Photonics acquisition from the bounded end-to-end run e2e-20260929-842a7f.",
+    "Veltrani Photonics, the publishers and every URL are fictional; no such transaction exists.",
+    "articles a-d, the judgments for b-d and summaries v1/v2 are copied from that run's stored records (article text,",
+    "comparison labels, differences and verbatim evidence quotes; published summary statements and their quotes).",
+    "Article e, its judgment and summary v3_confirmed are additional fictional test material for multi-dispute and",
+    "post-review cases. offset_minutes is relative to each test's own time window."
+  ],
+  "articles": {
+    "a": {
+      "offset_minutes": 0,
+      "source": "Example Newswire",
+      "headline": "NVIDIA signs agreement to acquire Veltrani Photonics for USD 250 million",
+      "paragraphs": [
+        "NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash.",
+        "The companies said the transaction is expected to close in December 2026, subject to regulatory approval. The acquisition has not yet closed. Until closing, Veltrani Photonics will continue to operate as an independent company."
+      ],
+      "url": "https://example.com/fictional-test/e2e-20260929-842a7f/a-initial-report"
+    },
+    "b": {
+      "offset_minutes": 275,
+      "source": "Sample Markets Daily",
+      "headline": "Veltrani Photonics to be bought by NVIDIA in USD 250 million cash deal",
+      "paragraphs": [
+        "Veltrani Photonics, a private company that makes optical interconnect parts used in data center networks, has agreed to be acquired by NVIDIA. Under the definitive agreement the two companies signed, NVIDIA will pay USD 250 million in cash.",
+        "The deal still requires regulatory approval and has not been completed. The companies expect it to close in December 2026, and Veltrani Photonics will keep operating independently until then."
+      ],
+      "url": "https://example.net/fictional-test/e2e-20260929-842a7f/b-repeated-report"
+    },
+    "c": {
+      "offset_minutes": 1085,
+      "source": "Example Newswire",
+      "headline": "NVIDIA's Veltrani Photonics acquisition receives regulatory approval",
+      "paragraphs": [
+        "NVIDIA's planned acquisition of Veltrani Photonics, the privately held optical interconnect developer, has received regulatory approval, the companies said.",
+        "The approval satisfies the regulatory condition in the definitive agreement. The purchase price is unchanged at USD 250 million in cash.",
+        "The acquisition has not closed yet. NVIDIA and Veltrani Photonics said they still expect the transaction to close in December 2026."
+      ],
+      "url": "https://example.com/fictional-test/e2e-20260929-842a7f/c-regulatory-approval"
+    },
+    "d": {
+      "offset_minutes": 1215,
+      "source": "Fixture Finance Journal",
+      "headline": "NVIDIA's signed agreement for Veltrani Photonics set the price at USD 300 million, not USD 250 million",
+      "paragraphs": [
+        "The definitive agreement NVIDIA signed to acquire Veltrani Photonics, the privately held optical interconnect developer, specified cash consideration of USD 300 million, according to people familiar with the signed agreement.",
+        "That figure refers to the same original agreement and the same all-cash purchase price that other outlets reported as USD 250 million. Fixture Finance Journal is not reporting an amended, revised or additional payment: its sources said USD 300 million was the price in the agreement as originally signed.",
+        "The transaction is expected to close in December 2026."
+      ],
+      "url": "https://example.org/fictional-test/e2e-20260929-842a7f/d-price-conflict"
+    },
+    "e": {
+      "offset_minutes": 1300,
+      "source": "Example Business Review",
+      "headline": "Veltrani Photonics agreement sets March 2027 closing date, not December 2026",
+      "paragraphs": [
+        "The definitive agreement NVIDIA signed to acquire Veltrani Photonics sets an expected closing date of March 2027, according to a copy reviewed by Example Business Review.",
+        "Other outlets reported that the companies expect the transaction to close in December 2026. Example Business Review said the March 2027 date appears in the agreement as originally signed."
+      ],
+      "url": "https://example.org/fictional-test/conflict-notice/e-closing-date"
+    }
+  },
+  "judgments": {
+    "b": {
+      "label": "same_event_repeated",
+      "matching_facts": ["participants: NVIDIA and Veltrani Photonics", "acquisition price: USD 250 million in cash"],
+      "differences": [],
+      "incoming": [
+        "NVIDIA will pay USD 250 million in cash",
+        "The companies expect it to close in December 2026, and Veltrani Photonics will keep operating independently until then",
+        "The deal still requires regulatory approval and has not been completed"
+      ],
+      "candidate": [
+        "NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash",
+        "The companies said the transaction is expected to close in December 2026, subject to regulatory approval",
+        "The acquisition has not yet closed. Until closing, Veltrani Photonics will continue to operate as an independent company"
+      ]
+    },
+    "c": {
+      "label": "same_event_update",
+      "matching_facts": ["participants: NVIDIA and Veltrani Photonics", "purchase price: USD 250 million in cash"],
+      "differences": [
+        {"kind": "temporal_development", "aspect": "regulatory approval",
+         "incoming": "has received regulatory approval, satisfies regulatory condition",
+         "candidate": "transaction subject to regulatory approval"},
+        {"kind": "temporal_development", "aspect": "transaction status",
+         "incoming": "regulatory condition satisfied, still awaiting closing",
+         "candidate": "awaiting regulatory approval and closing"}
+      ],
+      "incoming": [
+        "NVIDIA's planned acquisition of Veltrani Photonics, the privately held optical interconnect developer, has received regulatory approval, the companies said.",
+        "The approval satisfies the regulatory condition in the definitive agreement. The purchase price is unchanged at USD 250 million in cash.",
+        "The acquisition has not closed yet. NVIDIA and Veltrani Photonics said they still expect the transaction to close in December 2026."
+      ],
+      "candidate": [
+        "NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash.",
+        "The companies said the transaction is expected to close in December 2026, subject to regulatory approval. The acquisition has not yet closed.",
+        "Under the definitive agreement the two companies signed, NVIDIA will pay USD 250 million in cash. The deal still requires regulatory approval and has not been completed."
+      ]
+    },
+    "d": {
+      "label": "same_event_conflict",
+      "matching_facts": ["participants: NVIDIA and Veltrani Photonics", "expected closing date: December 2026"],
+      "differences": [
+        {"kind": "conflict", "aspect": "purchase price", "incoming": "USD 300 million", "candidate": "USD 250 million"}
+      ],
+      "incoming": [
+        "The definitive agreement NVIDIA signed to acquire Veltrani Photonics, the privately held optical interconnect developer, specified cash consideration of USD 300 million",
+        "That figure refers to the same original agreement and the same all-cash purchase price that other outlets reported as USD 250 million"
+      ],
+      "candidate": [
+        "NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash",
+        "Under the definitive agreement the two companies signed, NVIDIA will pay USD 250 million in cash"
+      ]
+    },
+    "e": {
+      "label": "same_event_conflict",
+      "matching_facts": ["participants: NVIDIA and Veltrani Photonics"],
+      "differences": [
+        {"kind": "conflict", "aspect": "expected closing date", "incoming": "March 2027", "candidate": "December 2026"}
+      ],
+      "incoming": [
+        "The definitive agreement NVIDIA signed to acquire Veltrani Photonics sets an expected closing date of March 2027"
+      ],
+      "candidate": [
+        "The companies said the transaction is expected to close in December 2026, subject to regulatory approval"
+      ]
+    }
+  },
+  "summaries": {
+    "v1": [
+      {"id": "H1", "text": "NVIDIA signs definitive agreement to acquire Veltrani Photonics for USD 250 million in cash",
+       "quotes": ["NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash."]},
+      {"id": "O1", "text": "NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash, according to Example Newswire.",
+       "quotes": ["NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash."]},
+      {"id": "O2", "text": "The companies said the transaction is expected to close in December 2026, subject to regulatory approval; the acquisition has not yet closed.",
+       "quotes": ["The companies said the transaction is expected to close in December 2026, subject to regulatory approval. The acquisition has not yet closed."]},
+      {"id": "K1", "text": "Until closing, Veltrani Photonics will continue to operate as an independent company, the report said.",
+       "quotes": ["Until closing, Veltrani Photonics will continue to operate as an independent company."]}
+    ],
+    "v2": [
+      {"id": "H1", "text": "NVIDIA's USD 250 million Veltrani Photonics acquisition clears regulatory approval, closing still pending",
+       "quotes": ["NVIDIA's planned acquisition of Veltrani Photonics, the privately held optical interconnect developer, has received regulatory approval, the companies said."]},
+      {"id": "O1", "text": "NVIDIA's planned acquisition of Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, has received regulatory approval, the companies said, according to Example Newswire.",
+       "quotes": ["NVIDIA's planned acquisition of Veltrani Photonics, the privately held optical interconnect developer, has received regulatory approval, the companies said.",
+                  "a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash"]},
+      {"id": "O2", "text": "The approval satisfies the regulatory condition in the definitive agreement, the purchase price is unchanged at USD 250 million in cash, and the acquisition has not closed yet, with both companies still expecting it to close in December 2026.",
+       "quotes": ["The approval satisfies the regulatory condition in the definitive agreement. The purchase price is unchanged at USD 250 million in cash.",
+                  "The acquisition has not closed yet. NVIDIA and Veltrani Photonics said they still expect the transaction to close in December 2026."]},
+      {"id": "K1", "text": "Under the definitive agreement signed by the two companies, NVIDIA will pay USD 250 million in cash for Veltrani Photonics, which makes optical interconnect parts used in data center networks, according to Sample Markets Daily.",
+       "quotes": ["Under the definitive agreement the two companies signed, NVIDIA will pay USD 250 million in cash."]},
+      {"id": "K2", "text": "Earlier reports said Veltrani Photonics will continue to operate as an independent company until closing.",
+       "quotes": ["Until closing, Veltrani Photonics will continue to operate as an independent company.",
+                  "Veltrani Photonics will keep operating independently until then"]}
+    ],
+    "v3_confirmed": [
+      {"id": "H1", "text": "Reports differ on the price of NVIDIA's Veltrani Photonics deal: USD 250 million or USD 300 million",
+       "quotes": ["for USD 250 million in cash", "specified cash consideration of USD 300 million"]},
+      {"id": "O1", "text": "Example Newswire and Sample Markets Daily reported that NVIDIA agreed to pay USD 250 million in cash for Veltrani Photonics.",
+       "quotes": ["NVIDIA Corporation has signed a definitive agreement to acquire Veltrani Photonics, a privately held developer of optical interconnect components for data center networks, for USD 250 million in cash.",
+                  "Under the definitive agreement the two companies signed, NVIDIA will pay USD 250 million in cash."]},
+      {"id": "O2", "text": "Fixture Finance Journal reported that the signed agreement specified cash consideration of USD 300 million, citing people familiar with the agreement.",
+       "quotes": ["specified cash consideration of USD 300 million, according to people familiar with the signed agreement."]},
+      {"id": "K1", "text": "The companies said the transaction is expected to close in December 2026.",
+       "quotes": ["The companies said the transaction is expected to close in December 2026, subject to regulatory approval."]}
+    ]
+  }
+}

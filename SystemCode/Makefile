@@ -10,6 +10,9 @@
 #   make db-smoke          bounded live end-to-end test into PostgreSQL
 #   make graph             print the compiled ingestion graph
 #   make similarity-status semantic analysis / event grouping status
+#   make summary-status    event summary jobs, versions and reviews
+#   make summary-pending   summary work that backfill/retry would do (no model calls)
+#   make summary-reviews   open conflict reviews
 
 UV := uv
 T  ?= NVDA
@@ -18,7 +21,8 @@ LIMIT ?= 10
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings run test companies edgar alpaca ingest ingest-once ingest-demo graph \
 	db-check db-migrate db-inspect db-backfill db-smoke similarity-check similarity-download-model \
-	similarity-backfill similarity-retry similarity-status clean clean-cache
+	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
+	summary-reviews clean clean-cache
 
 help: ## Show this help
 	@echo "Node 1 — Data Sources"
@@ -91,6 +95,18 @@ similarity-retry: ## Retry pending / partial analyses (LIMIT=<n>)
 
 similarity-status: ## Analysis status, events and index coverage
 	$(UV) run datasources-similarity status
+
+summary-check: ## Validate the event-summary configuration (no writes, no model calls)
+	$(UV) run datasources-summary check
+
+summary-status: ## Summary jobs, versions, attempts and reviews
+	$(UV) run datasources-summary status
+
+summary-pending: ## Summary work backfill/retry would do (no model calls)
+	$(UV) run datasources-summary pending --limit $(LIMIT)
+
+summary-reviews: ## Open conflict reviews
+	$(UV) run datasources-summary review list
 
 clean: ## Remove Python and test caches
 	find . -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true

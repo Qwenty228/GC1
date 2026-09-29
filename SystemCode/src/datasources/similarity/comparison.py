@@ -44,11 +44,17 @@ DifferenceKind = Literal["new_information", "temporal_development", "conflict", 
 Label = Literal["same_event_repeated", "same_event_update", "same_event_conflict", "different_event", "uncertain"]
 
 
-class ComparisonError(RuntimeError):
+class LLMCallError(RuntimeError):
+    """A model call that produced no usable result (shared by comparison and summarization)."""
+
     def __init__(self, message: str, *, kind: str, retryable: bool):
         super().__init__(message)
         self.kind = kind
         self.retryable = retryable
+
+
+class ComparisonError(LLMCallError):
+    pass
 
 
 # ----------------------------------------------------------------------------- response model
@@ -444,54 +450,74 @@ class AnthropicComparisonBackend:
         }
 
     def compare(self, request: ComparisonRequest) -> ComparisonCall:
-        import anthropic
-
-        params = self._params(request)
-        started = time.monotonic()
+        result = call_json_model(self.client(), self._params(request),
+                                 fallbacks=self.settings.comparison_fallbacks == "default", model=self.model,
+                                 purpose="comparison", max_tokens_setting="SIMILARITY_LLM_MAX_OUTPUT_TOKENS",
+                                 error=ComparisonError)
         try:
-            client = self.client()
-            if self.settings.comparison_fallbacks == "default":
-                response = client.beta.messages.create(**params, betas=[FALLBACK_BETA], fallbacks="default")
-            else:
-                response = client.messages.create(**params)
-        except anthropic.APITimeoutError as error:
-            raise ComparisonError(f"comparison timed out: {error}", kind="timeout", retryable=True) from error
-        except anthropic.APIConnectionError as error:
-            raise ComparisonError(f"cannot reach the API: {error}", kind="connection", retryable=True) from error
-        except anthropic.RateLimitError as error:
-            raise ComparisonError("rate limited", kind="rate_limited", retryable=True) from error
-        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as error:
-            raise ComparisonError(f"API credentials rejected ({error.status_code})", kind="authentication",
-                                  retryable=False) from error
-        except anthropic.NotFoundError as error:
-            raise ComparisonError(f"model {self.model!r} not found", kind="model_not_found",
-                                  retryable=False) from error
-        except anthropic.BadRequestError as error:
-            raise ComparisonError(f"request rejected: {error.message}", kind="bad_request", retryable=False) from error
-        except anthropic.APIStatusError as error:
-            raise ComparisonError(f"API error {error.status_code}", kind=f"http_{error.status_code}",
-                                  retryable=error.status_code >= 500) from error
-        latency = time.monotonic() - started
-        usage = _usage_dict(response)
-        if response.stop_reason == "refusal":
-            details = getattr(response, "stop_details", None)
-            category = getattr(details, "category", None) if details is not None else None
-            raise ComparisonError(f"model declined the comparison (category={category})", kind="refusal",
-                                  retryable=False)
-        if response.stop_reason == "max_tokens":
-            raise ComparisonError("comparison output was cut off at max_tokens; raise "
-                                  "SIMILARITY_LLM_MAX_OUTPUT_TOKENS", kind="max_tokens", retryable=True)
-        text = next((block.text for block in response.content if getattr(block, "type", None) == "text"), None)
-        if text is None:
-            raise ComparisonError("response contained no JSON text block", kind="empty_response", retryable=True)
-        try:
-            output = ComparisonOutput.model_validate_json(text)
+            output = ComparisonOutput.model_validate_json(result.text)
         except ValidationError as error:
             raise ComparisonError(f"response did not match the schema: {error.error_count()} error(s)",
                                   kind="invalid_response", retryable=True) from error
-        return ComparisonCall(output, getattr(response, "model", self.model), usage,
-                              request_id=getattr(response, "_request_id", None), latency_seconds=round(latency, 3),
-                              stop_reason=response.stop_reason)
+        return ComparisonCall(output, result.model, result.usage, request_id=result.request_id,
+                              latency_seconds=result.latency_seconds, stop_reason=result.stop_reason)
+
+
+@dataclass
+class JsonModelResult:
+    text: str  # the JSON text block, not yet parsed
+    model: str | None
+    usage: dict[str, Any]
+    request_id: str | None
+    latency_seconds: float
+    stop_reason: str | None
+
+
+def call_json_model(client, params: dict[str, Any], *, fallbacks: bool, model: str, purpose: str,
+                    max_tokens_setting: str, error: type[LLMCallError]) -> JsonModelResult:
+    """One Messages API request with a JSON-schema ``output_config``, shared by comparison and summarization.
+
+    Maps SDK exceptions onto ``error(kind=..., retryable=...)`` and checks
+    ``stop_reason`` before reading content: a refusal or a truncated answer is an
+    error, never a result. Timeouts and retries are the client's own settings.
+    """
+    import anthropic
+
+    started = time.monotonic()
+    try:
+        if fallbacks:
+            response = client.beta.messages.create(**params, betas=[FALLBACK_BETA], fallbacks="default")
+        else:
+            response = client.messages.create(**params)
+    except anthropic.APITimeoutError as exc:
+        raise error(f"{purpose} timed out: {exc}", kind="timeout", retryable=True) from exc
+    except anthropic.APIConnectionError as exc:
+        raise error(f"cannot reach the API: {exc}", kind="connection", retryable=True) from exc
+    except anthropic.RateLimitError as exc:
+        raise error("rate limited", kind="rate_limited", retryable=True) from exc
+    except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as exc:
+        raise error(f"API credentials rejected ({exc.status_code})", kind="authentication", retryable=False) from exc
+    except anthropic.NotFoundError as exc:
+        raise error(f"model {model!r} not found", kind="model_not_found", retryable=False) from exc
+    except anthropic.BadRequestError as exc:
+        raise error(f"request rejected: {exc.message}", kind="bad_request", retryable=False) from exc
+    except anthropic.APIStatusError as exc:
+        raise error(f"API error {exc.status_code}", kind=f"http_{exc.status_code}",
+                    retryable=exc.status_code >= 500) from exc
+    latency = time.monotonic() - started
+    usage = _usage_dict(response)
+    if response.stop_reason == "refusal":
+        details = getattr(response, "stop_details", None)
+        category = getattr(details, "category", None) if details is not None else None
+        raise error(f"model declined the {purpose} (category={category})", kind="refusal", retryable=False)
+    if response.stop_reason == "max_tokens":
+        raise error(f"{purpose} output was cut off at max_tokens; raise {max_tokens_setting}", kind="max_tokens",
+                    retryable=True)
+    text = next((block.text for block in response.content if getattr(block, "type", None) == "text"), None)
+    if text is None:
+        raise error("response contained no JSON text block", kind="empty_response", retryable=True)
+    return JsonModelResult(text, getattr(response, "model", model), usage, getattr(response, "_request_id", None),
+                           round(latency, 3), response.stop_reason)
 
 
 def _usage_dict(response) -> dict[str, Any]:

@@ -129,6 +129,9 @@ class PipelineContext:
     # their candidates had no embeddings yet.
     index_only: bool = False
     now: Any = None  # callable returning an aware datetime (tests)
+    # Event summarization after persist_result (`summary.pipeline.SummaryRuntime`); None = off.
+    summarizer: Any = None
+    summary_budget: Any = None  # per-run request cap, created on first use
 
     def clock(self) -> datetime:
         return self.now() if self.now else datetime.now(timezone.utc)
@@ -156,6 +159,7 @@ class RecordOutcome:
     analysis_status: str = "disabled"
     analysis: dict[str, Any] = field(default_factory=dict)
     error: dict[str, Any] | None = None
+    summaries: list[dict[str, Any]] = field(default_factory=list)  # one report per affected event
 
 
 def _runnable(work: RecordWork) -> bool:

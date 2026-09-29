@@ -74,6 +74,7 @@ uv run datasources-ingest run --no-sec
 # Offline demo over bundled fixtures -> output/demo (is_sample = true)
 uv run datasources-ingest demo
 # ...also stored in PostgreSQL as sample rows, grouped into events if SIMILARITY_ENABLED=true
+# (and summarized if SUMMARY_ENABLED=true: that calls the summary model)
 uv run datasources-ingest demo --with-database
 
 # Print the compiled LangGraph (Mermaid diagram + edge list)
@@ -103,7 +104,9 @@ directories and across `datasources-similarity backfill` / `retry`, so stop the
 worker before running those. It is released automatically if the process dies.
 
 Makefile shortcuts: `make ingest`, `make ingest-once`, `make ingest-demo`, `make graph`, `make test`,
-`make similarity-status`, `make similarity-backfill LIMIT=100`, `make similarity-retry LIMIT=100`.
+`make similarity-status`, `make similarity-backfill LIMIT=100`, `make similarity-retry LIMIT=100`,
+`make summary-check`, `make summary-status`, `make summary-pending`, `make summary-reviews` (no paid calls;
+the paid `datasources-summary` commands have no shortcut on purpose).
 
 ## How it works
 
@@ -131,9 +134,17 @@ Alpaca REST backfill (startup,   │                        1. ledger decision (
   route_candidates --(no plausible candidate)--> propose_new_event ---------> resolve_event_memberships
   route_candidates --(plausible candidates)----> compare_with_llm ----------> resolve_event_memberships
   route_candidates --(nothing to decide)-------------------------------------> resolve_event_memberships
-  resolve_event_memberships -> persist_result --(next record in the batch)--> create_text_units
-                                              --(done)---------------------> END
+  resolve_event_memberships -> persist_result -> route_event_summary
+  route_event_summary --(generate)--> generate_event_summary -> validate_event_summary
+                                          -> persist_event_summary -> route_event_summary
+  route_event_summary --(open conflict)--> flag_conflict_review -> route_event_summary
+  route_event_summary --(nothing new)----> skip_summary ---------> route_event_summary
+  route_event_summary --(all affected events done)--> create_text_units (next record) | END
   ```
+
+  The summary nodes run per affected event after the record's commit; see
+  [Event summaries](#event-summaries). With summaries disabled,
+  `route_event_summary` has nothing to route and passes straight on.
 
   `prepare_data` validates each `SourceEnvelope` with Pydantic, picks the adapter
   from the envelope's explicit `provider`, and isolates per-record errors: one
@@ -705,6 +716,235 @@ SELECT a.status, a.attempts, a.next_retry_at, a.last_error, r.title
  WHERE a.status IN ('pending', 'partial') ORDER BY a.next_retry_at NULLS FIRST;
 ```
 
+## Event summaries
+
+Off unless `SUMMARY_ENABLED=true` (which also needs `SIMILARITY_ENABLED=true`).
+The website shows **one summary per event**, written from the event's original
+articles and SEC filings, with every statement citing the passages it came
+from. Summaries are generated **after** a record and its grouping are
+committed, never on a page view; the API only reads what is stored.
+
+```powershell
+uv run datasources-db migrate                 # migration 004 (see below)
+uv run datasources-summary check              # configuration, schema, credentials; no writes, no calls
+uv run datasources-summary pending            # what would be summarized (no calls)
+uv run datasources-summary run-event --event-id <event uuid> --confirm-paid-calls   # ONE event, at most one request
+# then, when the output reads well: SUMMARY_ENABLED=true in .env, and the worker summarizes inline
+```
+
+### The summary nodes
+
+```
+persist_result -> route_event_summary
+   route_event_summary --(generate)--> generate_event_summary -> validate_event_summary -> persist_event_summary --+
+   route_event_summary --(conflict)--> flag_conflict_review -------------------------------------------------------+
+   route_event_summary --(skip)------> skip_summary ---------------------------------------------------------------+
+   (back to route_event_summary for the record's next event; when none is left: next record or END)
+```
+
+`route_event_summary` runs once for **every event the record is linked to** (a
+multi-Item 8-K can touch several; each is summarized only from its own
+evidence). A record's summary work finishes, or is durably queued, before the
+next record is analysed. With summaries disabled the node has nothing to route.
+
+| Situation (checked in this order) | Route |
+| --- | --- |
+| The record's relation is a pending `uncertain` one | skip: unresolved evidence never enters a summary |
+| An open (or not yet reviewed) `same_event_conflict` on the event | `flag_conflict_review`: one review per comparison, the published summary stays up with an under-review flag, no replacement is published; with no summary yet the event shows `awaiting_review` |
+| Another process holds the event's summary lease | skip |
+| No published summary | generate the first summary, even for a single article |
+| `same_event_update` | generate a new version |
+| Summary work already pending (an earlier failure, a review resolution, a deferral) | generate, even when the new record is only a repeat |
+| `same_event_repeated` or an exact-content copy | skip: the existing summary is retained |
+
+`different_event` needs no rule: grouping gives the record its own event, which
+has no summary and is summarized as a new event. Routing reuses grouping's
+stored labels; no model call decides anything here.
+
+### Evidence, output and validation
+
+* **Evidence** comes only from the event's **active** memberships on **current**
+  revisions (`current_event_membership`) and the text units that support them,
+  shown as the original source passages. Pending relations, detached members and
+  superseded revisions are excluded. Passages are never cut; selection takes the
+  best passage of every source first (origin, then the update/conflict passages
+  the comparison cited, then repeats), gives syndicated duplicates once, and
+  records what did not fit `SUMMARY_MAX_INPUT_CHARS` / `SUMMARY_MAX_PASSAGES` as a
+  limitation on the summary.
+* The prompt also carries each source's type (an SEC filing is labelled a
+  company disclosure, not verified by the SEC), grouping's comparison notes, any
+  resolved reviews, and the previous version when updating. Everything copied
+  from sources, earlier model output or reviewer notes is escaped and described
+  as untrusted data. The previous summary and comparison notes are context;
+  every statement must cite passages.
+* **Output** (structured JSON): a headline `H1`, an overview of one to three
+  sentences `O1`..`O3`, up to three key points `K1`..`K3`, each with passage refs
+  and verbatim quotes; plus facts the sources do not state (`evidence_gaps`).
+* **Validation** establishes traceability, not truth: schema and ids; every
+  statement cited; every ref was provided (so it belongs to this event's active
+  members, in its sample/live partition, re-checked in SQL at publication and by
+  a trigger); every quote occurs in its passage after normalization (HTML
+  entities unescaped, curly quotes / dashes / non-breaking spaces folded,
+  whitespace collapsed, case-folded; nothing fuzzier); every number in a statement
+  occurs in its cited passages; no investment-advice phrasing; and for a
+  reviewer-confirmed conflict, passages from both sides are cited. It does not
+  prove a statement is entailed by its quotes. Invalid output is stored as an
+  `invalid` attempt and never published.
+* **Citations kept:** every distinct verified quote, each as its own row (never
+  joined into one quotation). A statement may cite one text unit with several
+  quotes; they are numbered `quote_index` 1, 2, ... in the order the model gave
+  them. Quotes identical after the normalization above are stored once.
+
+### Publication, versions and recovery
+
+* Publishing is one transaction that locks the event row, re-checks the evidence
+  fingerprint, open conflicts and the published version, then supersedes the old
+  version and inserts the new one with its citations. A draft whose event changed
+  during generation is `stale` and requeued; one overtaken by a new conflict is
+  `blocked`. No transaction is open during the model request. Old versions and
+  their citations are kept; summary content is immutable (trigger).
+* **Fingerprints.** A summary whose input fingerprint (evidence + prompt version +
+  model + limits) matches the published one is not regenerated (`unchanged`, no
+  call). Replays of an already-stored record therefore cost nothing.
+* **Durable jobs** (`event_summary_job`, one per event and language) are
+  independent of the ingestion ledger: pending / running (with a lease that
+  expires if the process dies) / completed / failed / awaiting_review, with
+  attempts, backoff (`SUMMARY_RETRY_BASE_MINUTES`, doubling) and the last error.
+  `SUMMARY_MAX_ATTEMPTS` failures make a job `failed`; new evidence resets it.
+* **Cost limits:** `SUMMARY_MAX_REQUESTS_PER_RUN` caps model requests per graph
+  run (one ingested record) and per CLI command; work beyond it is queued, not
+  dropped. Commands that can call the model need `--confirm-paid-calls`.
+* If the process stops after an article is committed but before its summary job
+  is written, `datasources-summary pending` / `backfill` still find the event:
+  it has no summary, or its summary predates an origin/update member.
+
+### Conflict review (CLI only)
+
+```powershell
+uv run datasources-summary review list                       # open reviews (--all includes resolved)
+uv run datasources-summary review show --review-id <uuid>    # both claims, quoted evidence, every source
+uv run datasources-summary review decide --review-id <uuid> --reviewer <name> `
+    --decision not_a_conflict --explanation "the $3.4bn figure includes assumed debt"
+```
+
+| Decision | Effect |
+| --- | --- |
+| `not_a_conflict` | Review resolved; the summary reports the facts normally |
+| `confirmed_conflict` | Review resolved; the regenerated summary must state both claims, each attributed, citing both sides; no winner is chosen |
+| `different_events` | In the same transaction: the incoming revision's membership is **detached** (kept for audit), its segment gets its own provisional event, event statistics are recomputed; only then is regeneration queued for both events |
+| `insufficient_evidence` | Nothing decided: the review moves to `in_review` and keeps blocking publication |
+
+Every decision is appended to `event_review_decision` (reviewer, explanation,
+resulting status, membership corrections, queued jobs); a resolved review
+cannot be decided again. Once an event has no open review, its summary is
+queued (`review_resolution`); it runs when a later record touches the event or
+with `datasources-summary retry`. There is no HTTP write endpoint for reviews.
+
+### Commands
+
+```powershell
+uv run datasources-summary status                  # jobs, versions, attempts (+ token totals), reviews
+uv run datasources-summary pending --limit 20      # missing / behind / due / failed / awaiting review (no calls)
+uv run datasources-summary show --event-id <uuid>  # every version, citation, attempt and review decision
+uv run datasources-summary run-event --event-id <uuid> --confirm-paid-calls [--refresh]
+uv run datasources-summary backfill --limit 10 --confirm-paid-calls   # events without a summary, or behind their members
+uv run datasources-summary retry --limit 10 --confirm-paid-calls [--include-failed] [--all] [--event-id <uuid>]
+```
+
+Add `--sample` for sample data. These commands use job leases rather than the
+graph-writer lock, so they can run next to the worker without generating the
+same summary twice.
+
+### Read API
+
+`GET /api/events?limit=20&offset=0&state=<summary_state>` and
+`GET /api/events/{event_id}` read persisted rows only. Sample events are hidden
+unless `include_sample=true`. The detail response has the current headline,
+overview and key points with statement-level citations (every quote with its
+`quote_index` and source link, in the order the statement cites its units),
+the version, `published_at`, `generation_reason` and limitations; the
+`summary_state` (`published`, `awaiting_review`, `pending`, `failed`,
+`not_available`, `not_requested`), `under_review` and `update_pending` flags; the
+version history; open/resolved reviews; and every current source with whether
+it was cited, given to the model, or added after the current version (a repeat
+that arrived later is listed but never shown as evidence of an older version).
+The existing `/api/edgar` and `/api/alpaca` endpoints are unchanged.
+
+### Conflict notices
+
+A published summary stays up while a conflict review is open, so both endpoints
+also say when sources disagree. Everything comes from stored records
+(`event_conflict_review`, `event_comparison.differences` and `.evidence`,
+`event_membership`, `event_review_decision`); no model is called and no new
+table was needed (`summary/conflicts.py`).
+
+* **List**: each event has `conflict: {status, count, reviews}`: `count` is the
+  number of disputes that still need a notice, `reviews` all reviews ever opened.
+* **Detail**: `conflict` adds `summary_published_at`,
+  `summary_not_updated_for_conflict` (true only when every active dispute was
+  detected after the summary was published), `pending_update` (a final review
+  decision is newer than the published summary and its regeneration is
+  `queued` / `generating` / `failed` / `blocked_by_review`), and `disputes`
+  (active first). A dispute has its review id and status, `detected_at`, the
+  outcome (`decision`, `decided_at`; for `different_events` also
+  `correction_complete` and `moved_to_event_id`), and `sources`: each with
+  publisher, title, publication time, validated `http(s)` URL, its verbatim
+  quotes and, for a precise claim pair, its claim (`{aspect, value}`).
+
+A dispute is a precise `claim_pair` only when a well-formed `kind: "conflict"`
+difference exists and both sides have a quote attributed to a source. The event
+side's quotes are attributed by finding each quote in the compared units' text
+(the refs stored in `evidence` are prompt-local); a quote found nowhere is
+returned as `unattributed_quotes`. Otherwise the dispute is `quotes_only` with a
+generic notice and no claim is attributed. Raw prompts, model explanations,
+reviewer names and reviewer notes are never returned.
+
+| Review | Display status | Notice |
+| --- | --- | --- |
+| `open`, `in_review` (incl. `insufficient_evidence`) | `under_review` | "Conflicting reports—under review" |
+| `confirmed_conflict` | `disputed` | "Sources disagree" stays after the review closes; it does not say which source is right |
+| `different_events`, report still an active member (or in the published summary) | `correction_pending` | correction not complete |
+| `different_events`, report detached | `separated` | history only |
+| `not_a_conflict` | `cleared` | history only |
+
+An event takes the most urgent status of all its reviews
+(`under_review` > `correction_pending` > `disputed` > `resolved` > `none`), so
+closing one review never hides another. The web page (`web/events.js`, section
+"Event summaries") shows the badge on event cards and, on the detail view, the
+notice above the unchanged summary with each source's claim, quotes and link,
+when the conflict was detected and when the summary was published. Open an event
+directly with `http://127.0.0.1:8000/#event=<event_id>&sample=1` (`sample=1`
+only for sample events).
+
+### Schema (migration 004, additive)
+
+The database already recorded `003_event_match_routing.sql` from a reverted
+branch, which had created `event_summary`, `event_summary_citation`,
+`event_conflict_review` and `current_event_summary`. Migration 004 reuses those
+unchanged (and creates them with the same definitions on a database without
+003), then adds only:
+
+| Object | Why |
+| --- | --- |
+| `event_summary.statements`, `.input_manifest`, `.limitations` | Stable statement ids and text; which revisions/units were given to the model (and which were omitted); evidence-selection limitations |
+| `event_summary_job` | Durable, lease-protected summary work and retry state, independent of the ledger |
+| `event_summary_attempt` | Every attempt with its output, including invalid/stale/blocked output that was never published (immutable) |
+| `event_review_decision` | Audit of every review decision and membership correction (immutable) |
+| `event_membership.state = 'detached'` | Widened check so a `different_events` correction keeps the row instead of deleting it |
+| Triggers | Summary content immutable; citations immutable and in the event's sample/live partition; a resolved review is final |
+
+`document_revision.summary_text` is not used: it belongs to one source revision.
+
+**Migration 005** (`005_event_summary_citation_quote_index.sql`) adds
+`event_summary_citation.quote_index` (default 1, `>= 1`) and replaces the key
+`(summary_id, statement_key, unit_id)` with
+`(summary_id, statement_key, unit_id, quote_index)`, so one statement can keep
+several quotes from the same text unit. Every step is conditional: on
+stock_news, where the change was first applied by hand, it only adds comments.
+Existing citations keep their content with `quote_index = 1`; the immutability
+triggers are untouched. Summaries published earlier keep the one quote per unit
+they were stored with (their other quotes remain in `event_summary_attempt.output`).
+
 ## Duplicate tracking
 
 Tracking uses source identity only. Different accessions and different article
@@ -900,14 +1140,34 @@ requested symbols, adapter, dedup identity/fingerprint), `raw_file_refs`,
 ## Tests
 
 ```powershell
-uv run pytest                                      # offline fixtures + mocked network, plus
-                                                   # database tests when stock_news is reachable
-                                                   # (semantic-grouping DB tests also need migration 002)
+uv run pytest                                      # offline fixtures + mocked network; database tests are
+                                                   # skipped unless PGDATABASE names an isolated test database
+$env:PGDATABASE = "stock_news_conflict_test"; uv run pytest   # database tests too (needs migrations 002-005)
 $env:RUN_LIVE_TESTS = "1"; uv run pytest -m live   # opt-in: real SEC + Alpaca (needs .env)
 
 # Bounded live end-to-end test: real NVDA news + one real 8-K -> PostgreSQL -> read back -> replay
 uv run datasources-db smoke --symbol NVDA --max-articles 5 --lookback-hours 72
 ```
+
+Database tests delete every sample row they may have written, so they never run
+against `stock_news` (which keeps retained sample records). Before any setup,
+`conftest.verify_isolated_database` checks the database the **server** reports
+(`current_database()`, not just `PGDATABASE`) and refuses a protected name, a
+name without `test`, a mismatch with the configured name, or any database that
+holds live (non-sample) documents; `cleanup_sample_rows` repeats the check. To
+create an empty test database with the full schema, copy a migrated empty one
+(`CREATE DATABASE stock_news_conflict_test TEMPLATE stock_news_test_fresh`) or
+create one and run `uv run datasources-db migrate` against it.
+
+`tests/test_conflict_notice.py` replays the fictional Veltrani Photonics
+acquisition (`tests/fixtures/synthetic_conflict_notice_veltrani.json`: the
+recorded comparison judgments and summary statements) through the real graph
+with scripted backends and checks the notice for every review outcome, several
+disputes, a pending regeneration, missing summaries, incomplete evidence, sample
+filtering, that reads make no model call (model clients and non-loopback
+sockets fail the test), and, in headless Edge/Chrome when available, that the
+page renders the notice and shows hostile article text and `javascript:` links
+as inert text.
 
 `datasources-db smoke` uses a **bounded historical** REST window, so it does not
 wait for a live news event, and it writes its files to a temporary directory
@@ -955,6 +1215,34 @@ database, with no model download and no API call:
 * `tests/test_similarity_cli.py` — `backfill`, `retry`, `status` and `inspect`
   end-to-end on sample data, the lock refusal, and `evaluate` refusing to spend
   money without `--confirm-paid-calls`.
+
+Event summaries are tested the same way, offline apart from the local
+database, with scripted model output:
+
+* `tests/test_summary_offline.py` — settings (off by default, separate model),
+  every routing rule, validation (unknown refs, fabricated quotes, missing
+  citations, wrong ids, altered figures, advice, one-sided confirmed conflicts,
+  the documented quote normalization), prompt escaping and filing attribution,
+  the Anthropic adapter's request shape and typed errors, bounded evidence
+  selection (every source first, whole passages, recorded omissions, duplicates
+  once) and fingerprints.
+* `tests/test_event_summary.py` — through the real graph and PostgreSQL: a
+  first summary for a single article; an update making version 2 while version 1
+  and its citations stay intact; repeats and exact copies making no call yet
+  appearing as sources; a two-Item filing summarized per event from its own
+  evidence (and cross-event evidence refused at publication); a conflict blocking
+  publication (also on an event with no summary) and replays not duplicating the
+  review; every review decision including the membership correction and
+  regeneration; uncertain relations excluded; failures and invalid output
+  keeping the article and grouping; replay, crash recovery and a failed update
+  retried on a later repeat without duplicate calls; stale drafts, a rival
+  publisher and a held lease; the per-run request cap; the partition trigger; the
+  read endpoints' published / pending / review states; and the CLI, including the
+  paid-call consent check.
+
+These are workflow tests. They say nothing about summary quality: that needs a
+real run on a real event (`run-event ... --confirm-paid-calls`) read by a
+person against its cited sources.
 
 The scripted model proves orchestration, not accuracy. The real backend is
 evaluated separately and explicitly:
@@ -1031,6 +1319,21 @@ process lock, and clean shutdown.
 * Inline model calls bound ingestion throughput (see [Throughput](#throughput)).
 * `demo --with-database` rows are sample data; the database tests delete all
   sample rows when they finish.
+* **Event summaries are validated for traceability, not truth.** Quotes must
+  occur in the cited passages and numbers must appear there, but whether a
+  statement is fully supported by its quotes is not checked automatically.
+  Summary quality has only been exercised with scripted output here.
+* The figures check is strict: a statement that rewrites "first quarter" as "Q1"
+  or "three" as "3" is rejected and retried, and a retry does not tell the model
+  why the previous output was rejected.
+* Only English summaries are generated; there is no translation.
+* Summary work queued by a review decision, a deferral or a failure runs when a
+  later record touches the event or with `datasources-summary retry`; the
+  worker has no periodic summary sweep.
+* A conflict review is created per comparison; a later revision of the same
+  article does not close an older revision's open review automatically.
+* Reprocessing through `datasources-similarity retry`/`backfill` does not
+  summarize inline; `datasources-summary backfill` picks those events up.
 
 ## Postman WebSocket check
 
