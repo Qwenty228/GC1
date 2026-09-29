@@ -13,11 +13,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from conftest import cleanup_sample_rows
+from conftest import cleanup_sample_rows, isolated_test_database
 
 pytest.importorskip("psycopg")
 
-from datasources.db import Database, load_db_settings  # noqa: E402
 from datasources.ingest.graph import run_pipeline  # noqa: E402
 from datasources.similarity import cli, store  # noqa: E402
 from datasources.similarity.pipeline import PipelineContext  # noqa: E402
@@ -28,11 +27,7 @@ AT = datetime(2039, 6, 1, 12, tzinfo=timezone.utc)
 
 @pytest.fixture(scope="module")
 def db():
-    try:
-        database = Database(load_db_settings())
-        database.check()
-    except Exception as error:
-        pytest.skip(f"no stock_news database available: {error}")
+    database = isolated_test_database()  # refuses stock_news and anything not verified as a test DB
     with database.connection() as conn:
         if store.missing_schema(conn):
             database.close()

@@ -88,8 +88,9 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     if enable_alpaca:
         auth = auth_from_env()  # AlpacaConfigError when credentials are missing
     database = open_database()
+    analyzer = open_similarity(database)
     return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth,
-                            database=database, analyzer=open_similarity(database))
+                            database=database, analyzer=analyzer, summarizer=open_summary(database, analyzer))
 
 
 def open_similarity(database):
@@ -109,6 +110,20 @@ def open_similarity(database):
         return None
     runtime = build_runtime(database, settings)
     LOGGER.info("similarity enabled: %s", runtime.describe())
+    return runtime
+
+
+def open_summary(database, analyzer):
+    """Build the event-summary runtime when SUMMARY_ENABLED=true (it needs event grouping)."""
+    from ..summary.pipeline import build_summary_runtime
+    from ..summary.settings import load_summary_settings
+
+    settings = load_summary_settings()
+    if not settings.enabled:
+        LOGGER.info("event summaries disabled (SUMMARY_ENABLED=false): grouped events are not summarized inline")
+        return None
+    runtime = build_summary_runtime(database, settings, grouping_enabled=analyzer is not None)
+    LOGGER.info("event summaries enabled: %s", runtime.describe())
     return runtime
 
 
@@ -250,15 +265,16 @@ def _load_payloads(path: Path) -> list:
     return [json.loads(text)]
 
 
-def run_demo(settings: IngestSettings, *, database=None, analyzer=None) -> IngestionService:
+def run_demo(settings: IngestSettings, *, database=None, analyzer=None, summarizer=None) -> IngestionService:
     """Offline end-to-end run over bundled fixtures into output/demo (is_sample=true).
 
     Files only by default. With a database the records are stored as sample rows
-    (never mixed with live data) and, when an analyzer is given, grouped into events.
+    (never mixed with live data) and, when an analyzer is given, grouped into events
+    (and summarized when a summarizer is given).
     """
     settings = settings.with_overrides(demo=True)
     service = IngestionService(settings, document_fetcher=fixture_document_fetcher(FIXTURE_8K_DIR),
-                               database=database, analyzer=analyzer)
+                               database=database, analyzer=analyzer, summarizer=summarizer)
     service.startup()
     submissions = json.loads(FIXTURE_SUBMISSIONS.read_text(encoding="utf-8"))
     _process_sec_payload(service, submissions, source=FIXTURE_SUBMISSIONS, symbol="NVDA", only_available=FIXTURE_8K_DIR)
@@ -362,14 +378,15 @@ def main(argv: list[str] | None = None) -> int:
                 except KeyboardInterrupt:
                     LOGGER.info("interrupted")
             elif command == "demo":
-                analyzer = None
+                analyzer = summarizer = None
                 if args.with_database:
                     demo_database = open_database()
                     if demo_database is None:
                         raise ConfigurationError("--with-database needs DATASOURCES_DB_ENABLED=true")
                     writer_lock = GraphWriterLock(demo_database, is_sample=True, purpose="demo").acquire()
                     analyzer = open_similarity(demo_database)
-                service = run_demo(settings, database=demo_database, analyzer=analyzer)
+                    summarizer = open_summary(demo_database, analyzer)
+                service = run_demo(settings, database=demo_database, analyzer=analyzer, summarizer=summarizer)
             else:
                 service = run_process_file(settings, args.path, args.provider, args.sec_html_dir, args.symbol)
             print(json.dumps({"root": str(settings.root), "stats": dict(service.stats),

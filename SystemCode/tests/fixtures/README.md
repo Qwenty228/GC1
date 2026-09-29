@@ -11,6 +11,7 @@ used as real data.
 | `synthetic_alpaca_ws_batch.json` | Alpaca WebSocket frame (JSON array) | Operational frames mixed with `T="n"` news messages |
 | `synthetic_alpaca_rest_page1.json`, `synthetic_alpaca_rest_page2.json` | Alpaca REST `/v1beta1/news` pages | Pagination via `next_page_token`, an article without `content` |
 | `synthetic_similarity_labelled_examples.json` | Pairs of news passages with an expected comparison label | Paraphrase, missing information, different fiscal quarters, completion and cancellation updates, comparable-figure and denial conflicts, a vague headline, different partners. Drives the orchestration tests (with scripted model responses) and `datasources-similarity evaluate` (real backend). Fictional companies. |
+| `synthetic_conflict_notice_veltrani.json` | The fictional NVIDIA / Veltrani Photonics acquisition from the bounded run `e2e-20260929-842a7f` | Four articles (USD 250 million vs USD 300 million), the recorded comparison judgments (labels, differences, verbatim evidence quotes) and published summary statements, replayed by scripted backends in `test_conflict_notice.py`; plus one extra fictional article (closing-date conflict) and a post-review summary for multi-dispute and regeneration cases. Fictional company, publishers and URLs. |
 
 Real (non-synthetic) fixtures used by the tests live in `data/`:
 

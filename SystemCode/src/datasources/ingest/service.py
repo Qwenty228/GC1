@@ -110,6 +110,7 @@ class IngestionService:
         update_shared_cache: bool = True,
         database=None,
         analyzer=None,
+        summarizer=None,
     ):
         self.settings = settings
         self.store = OutputStore(settings.root)
@@ -120,6 +121,9 @@ class IngestionService:
         # Optional `similarity.pipeline.SimilarityRuntime`. When None, analysis is
         # reported as "disabled" and records are stored without event grouping.
         self.analyzer = analyzer
+        # Optional `summary.pipeline.SummaryRuntime`. When None, grouped events are not
+        # summarized inline (`datasources-summary backfill` can still do it later).
+        self.summarizer = summarizer
         self.sec_client = sec_client
         self.document_fetcher = document_fetcher or self._fetch_document_live
         self.alpaca_auth = alpaca_auth
@@ -205,7 +209,8 @@ class IngestionService:
 
     # ------------------------------------------------------------------ graph
     def pipeline_context(self) -> PipelineContext:
-        return PipelineContext(database=self.database, analyzer=self.analyzer, persist=True)
+        return PipelineContext(database=self.database, analyzer=self.analyzer, persist=True,
+                               summarizer=self.summarizer)
 
     def run_graph(self, envelope: SourceEnvelope | dict) -> tuple[RecordOutcome | None, RecordError | None]:
         """Prepare, compare and store one record through the compiled graph.
@@ -231,6 +236,8 @@ class IngestionService:
             for key in ("llm_calls", "events_created", "memberships_inserted", "comparisons_inserted"):
                 if analysis.get(key):
                     self.stats[key] += int(analysis[key])
+            for summary in outcome.summaries:
+                self.stats[f"summary_{summary.get('result') or 'unknown'}"] += 1
         return outcome, None
 
     # ------------------------------------------------------------------ SEC collection
