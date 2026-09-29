@@ -240,6 +240,7 @@ async def run_forever(
     on_articles: Callable[[list[dict[str, Any]]], Awaitable[None]] | None = None,
     on_subscribed: Callable[[], Awaitable[None]] | None = None,
     on_frame: Callable[[str | bytes], None] | None = None,
+    on_disconnected: Callable[[], None] | None = None,
     message_archive: Path = DEFAULT_MESSAGE_ARCHIVE,
 ) -> None:
     """Reconnect after unexpected disconnects with capped exponential backoff.
@@ -247,6 +248,8 @@ async def run_forever(
     The backoff resets once a connection is subscribed again. Non-transient
     rejections (auth failure, connection limit, insufficient subscription)
     wait NON_TRANSIENT_RETRY_SECONDS to avoid a reconnect storm.
+    ``on_disconnected`` is called each time a connection ends (not on cancellation),
+    so a caller can stop treating the stream as live until it is subscribed again.
     """
     seen_article_ids: set[str] = set()
     delay_seconds = 1
@@ -273,12 +276,16 @@ async def run_forever(
         except asyncio.CancelledError:
             raise
         except StreamRejectedError as error:
+            if on_disconnected is not None:
+                on_disconnected()
             LOGGER.error("%s; retrying in %s seconds", error, NON_TRANSIENT_RETRY_SECONDS)
             await asyncio.sleep(NON_TRANSIENT_RETRY_SECONDS)
             continue
         except Exception as error:
             LOGGER.warning("Alpaca news stream disconnected: %s", error)
 
+        if on_disconnected is not None:
+            on_disconnected()
         if subscribed:
             delay_seconds = 1
         LOGGER.info("Reconnecting to Alpaca news stream in %s seconds", delay_seconds)

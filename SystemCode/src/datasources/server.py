@@ -1,24 +1,30 @@
 """Detachable web layer: a thin FastAPI wrapper over the backend core.
 
 The EDGAR and Alpaca endpoints only call the pure functions in `sec` and
-`alpaca`. The event endpoints only READ persisted summaries and sources from
-PostgreSQL (`summary.read`): they never write, never call a model, and never
-summarize on a page view. Review decisions are recorded with the
-`datasources-summary review` CLI, not over HTTP. The frontend can be replaced
-or removed without touching the backend modules.
+`alpaca`. The event and article endpoints only READ persisted records, summaries
+and sources from PostgreSQL (`summary.read`, `db.read`): they never write, never
+call a model, and never summarize on a page view. `/api/status` reads the
+ingestion worker's status file; it never starts or contacts a collector.
+Review decisions are recorded with the `datasources-summary review` CLI, not over
+HTTP. The frontend can be replaced or removed without touching the backend modules.
 
 Run:  uv run datasources-server   ->  http://127.0.0.1:8000
+      (or `uv run datasources-dev` for the server plus the ingestion worker)
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import re
 import threading
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Literal
 
-from fastapi import Depends, FastAPI, Query
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import alpaca, config, sec
@@ -54,6 +60,24 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Node 1 - Data Sources", version="0.1.0", lifespan=lifespan)
+SYMBOL_RE = re.compile(r"^[A-Z0-9.\-]{1,12}$")
+
+
+@app.middleware("http")
+async def _cache_headers(request: Request, call_next):
+    """The page polls the API, so API responses are never cached; static files are revalidated."""
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store" if request.url.path.startswith("/api/") else "no-cache")
+    return response
+
+
+def _symbol(value: str | None) -> str | None:
+    if value is None or not value.strip():
+        return None
+    symbol = value.strip().upper()
+    if not SYMBOL_RE.match(symbol):
+        raise ValueError("symbol must be a ticker such as NVDA")
+    return symbol
 
 
 @app.get("/api/companies")
@@ -107,6 +131,7 @@ def _database_unavailable(exc: Exception) -> JSONResponse:
 @app.get("/api/events")
 def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                state: str | None = Query(None, description="Filter by summary_state"),
+               symbol: str | None = Query(None, description="Only events with a source linked to this ticker"),
                include_sample: bool = False, database=Depends(get_database)) -> JSONResponse:
     """Grouped events, newest first, each with its current summary (or pending / review state) and a
     compact `conflict` status and count from the stored conflict reviews.
@@ -120,12 +145,98 @@ def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0
     if state is not None and state not in SUMMARY_STATES:
         return JSONResponse({"error": f"state must be one of {', '.join(SUMMARY_STATES)}"}, status_code=422)
     try:
+        ticker = _symbol(symbol)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    try:
         with database.connection() as conn:
             events = list_events(conn, include_sample=include_sample, language=_summary_language(), limit=limit,
-                                 offset=offset, state=state)
+                                 offset=offset, state=state, symbol=ticker)
     except Exception as exc:
         return _database_unavailable(exc)
     return JSONResponse(jsonable_encoder({"events": events, "limit": limit, "offset": offset}))
+
+
+@app.get("/api/articles")
+def api_articles(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                 source: Literal["all", "news", "sec"] = "all",
+                 symbol: str | None = Query(None, description="Only records linked to this ticker"),
+                 include_sample: bool = False, database=Depends(get_database)) -> JSONResponse:
+    """Stored news articles and SEC filings (current revision of each), newest first by source time.
+
+    Each item has the original headline, publisher (news) or issuer (SEC), the source's own
+    timestamps, the excerpt supplied with the article (never a generated summary), the original
+    link (http/https only), revision count, grouping status and the events it belongs to.
+    Sample records are excluded unless `include_sample=true`.
+    """
+    from fastapi.encoders import jsonable_encoder
+
+    from .db.read import list_articles
+
+    try:
+        ticker = _symbol(symbol)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=422)
+    try:
+        with database.connection() as conn:
+            page = list_articles(conn, include_sample=include_sample, limit=limit, offset=offset, source=source,
+                                 symbol=ticker)
+    except Exception as exc:
+        return _database_unavailable(exc)
+    return JSONResponse(jsonable_encoder(page))
+
+
+def optional_database() -> tuple[object | None, str | None]:
+    """(pool, None), or (None, reason) when there is no database: /api/status reports it instead of failing."""
+    try:
+        return get_database(), None
+    except LookupError as exc:
+        return None, str(exc)
+
+
+def _configured_flag(loader) -> bool | None:
+    try:
+        return bool(loader().enabled)
+    except Exception:  # invalid settings are reported by the worker and the launcher, not here
+        return None
+
+
+@app.get("/api/status")
+def api_status(include_sample: bool = False, pool=Depends(optional_database)) -> JSONResponse:
+    """What the page header shows: collector state from the ingestion worker's own status file
+    (never inferred from this request succeeding), the configured feature flags, and stored counts."""
+    from fastapi.encoders import jsonable_encoder
+
+    from .ingest.settings import load_settings
+    from .ingest.status import collector_status, load_status_file
+    from .similarity.settings import load_similarity_settings
+    from .summary.settings import load_summary_settings
+
+    body: dict = {"server_time": datetime.now(timezone.utc), "symbols": [],
+                  "collector": {"state": "unknown", "updated_at": None},
+                  "features": {"similarity_enabled": _configured_flag(load_similarity_settings),
+                               "summary_enabled": _configured_flag(load_summary_settings)},
+                  "database": {"available": False, "error": None}, "counts": None}
+    try:
+        settings = load_settings()
+        body["symbols"] = list(settings.symbols)
+        body["collector"] = collector_status(load_status_file(settings.root))
+    except Exception as exc:
+        LOGGER.warning("status endpoint could not read the ingestion settings: %s", type(exc).__name__)
+    database, reason = pool
+    if database is None:
+        body["database"]["error"] = reason
+        return JSONResponse(jsonable_encoder(body))
+    try:
+        from .db.read import stored_counts
+
+        with database.connection() as conn:
+            body["counts"] = stored_counts(conn, include_sample=include_sample)
+        body["database"] = {"available": True, "error": None}
+    except Exception as exc:
+        LOGGER.warning("status endpoint database error: %s", exc)
+        body["database"]["error"] = f"database unavailable: {type(exc).__name__}"
+    return JSONResponse(jsonable_encoder(body))
 
 
 @app.get("/api/events/{event_id}")
@@ -153,14 +264,43 @@ def _lookup_error(_request, exc: LookupError) -> JSONResponse:
     return JSONResponse({"error": str(exc)}, status_code=503)
 
 
+_ASSET_REF = re.compile(r'(?P<attr>src|href)="(?P<name>[\w.-]+\.(?:js|css))"')
+
+
+def _index_html() -> str:
+    """index.html with every local script and stylesheet URL versioned by its content (app.js?v=<hash>).
+
+    Earlier versions of this server sent no Cache-Control header, so browsers may still hold an
+    old app.js they consider fresh and reuse without asking. Mixed with a newer page it throws
+    during startup and leaves the page unresponsive. A new URL per content version rules that out.
+    """
+    html = (config.WEB_DIR / "index.html").read_text(encoding="utf-8")
+
+    def versioned(match: re.Match) -> str:
+        try:
+            digest = hashlib.sha256((config.WEB_DIR / match["name"]).read_bytes()).hexdigest()[:12]
+        except OSError:
+            return match[0]
+        return f'{match["attr"]}="{match["name"]}?v={digest}"'
+
+    return _ASSET_REF.sub(versioned, html)
+
+
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+def index_page() -> HTMLResponse:
+    return HTMLResponse(_index_html(), headers={"Cache-Control": "no-cache"})
+
+
 # Serve the static frontend at the root. Mounted last so /api/* wins.
 app.mount("/", StaticFiles(directory=str(config.WEB_DIR), html=True), name="web")
 
 
-def main() -> None:
+def main(host: str = "127.0.0.1", port: int = 8000) -> None:
     import uvicorn
 
-    uvicorn.run("datasources.server:app", host="127.0.0.1", port=8000, reload=False)
+    # reload stays off: a reloader would start extra processes, and collectors never run in this server anyway.
+    uvicorn.run("datasources.server:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from collections import Counter
 from collections.abc import Callable
@@ -55,7 +56,8 @@ from .ledger import Ledger
 from .schema import RecordError, SecContext, SourceEnvelope
 from .sec_client import FetchResult, SecClient, SecFetchError
 from .settings import ConfigurationError, IngestSettings
-from .store import OutputStore
+from .status import HEARTBEAT_SECONDS, STATUS_VERSION, status_path
+from .store import OutputStore, atomic_write_json
 
 LOGGER = logging.getLogger(__name__)
 ALPACA_CURSOR = "alpaca_synced_through"
@@ -139,6 +141,12 @@ class IngestionService:
         self.stream_subscribed = False
         self._last_ws_ref: str | None = None
         self._last_pressure_warning = 0.0
+        # Collector health for the status file (see `status.py`): times of the last
+        # successes and failures, as observed by this process.
+        self.started_at = utcnow()
+        self.health: dict[str, Any] = {"subscribed_at": None, "disconnected_at": None, "last_article_at": None,
+                                       "backfill_ok_at": None, "backfill_error_at": None,
+                                       "sec_poll_ok_at": {}, "sec_poll_error_at": {}}
 
     # ------------------------------------------------------------------ lifecycle
     def startup(self) -> dict[str, int]:
@@ -510,6 +518,7 @@ class IngestionService:
     async def _backfill_window(self, reason: str) -> None:
         assert self.alpaca_auth is not None
         start, end = self.backfill_window()
+        began = time.monotonic()
         LOGGER.info("Alpaca REST backfill (%s): %s -> %s", reason, start.isoformat(), end.isoformat())
         pages = iter_news_pages(self.alpaca_auth, self.settings.symbols, start=start, end=end,
                                 max_pages=self.settings.alpaca_backfill_max_pages,
@@ -524,6 +533,7 @@ class IngestionService:
             except Exception as error:
                 LOGGER.warning("Alpaca REST backfill failed after %d page(s): %s", page_count, error)
                 self.stats["alpaca_backfill_errors"] += 1
+                self.health["backfill_error_at"] = utcnow()
                 return  # cursor not advanced; next backfill retries the window
             if page is None:
                 break
@@ -543,9 +553,13 @@ class IngestionService:
             await asyncio.gather(*futures)
         self.stats["alpaca_backfill_pages"] += page_count
         self._advance_cursor(end)
+        self.health["backfill_ok_at"] = utcnow()
+        LOGGER.info("Alpaca REST backfill (%s) done in %.1f s: %d page(s), %d new record(s) processed", reason,
+                    time.monotonic() - began, page_count, len(futures))
 
     async def on_ws_articles(self, articles: list[dict]) -> None:
         received_at = utcnow()
+        self.health["last_article_at"] = received_at
         refs = [self._last_ws_ref] if self._last_ws_ref else []
         for item in self.alpaca_items(articles, transport="websocket", endpoint=WS_ENDPOINT,
                                       retrieved_at=received_at, raw_refs=refs):
@@ -553,8 +567,15 @@ class IngestionService:
 
     async def on_ws_subscribed(self) -> None:
         self.stream_subscribed = True
+        self.health["subscribed_at"] = utcnow()
         # Recovery runs as its own task so frame reading is never blocked by it.
         asyncio.create_task(self.alpaca_backfill("websocket_subscribed"))
+
+    def on_ws_disconnected(self) -> None:
+        # Until the next subscription nothing is being received, so the heartbeat must
+        # not advance the synced-through cursor; the resubscription backfill covers the gap.
+        self.stream_subscribed = False
+        self.health["disconnected_at"] = utcnow()
 
     def on_ws_frame(self, raw_message: str | bytes) -> None:
         self._last_ws_ref = self.store.append_ws_frame(raw_message, utcnow())
@@ -575,21 +596,65 @@ class IngestionService:
         while True:
             try:
                 items = await asyncio.to_thread(self.sec_poll_once, symbol)
+                self.health["sec_poll_ok_at"][symbol] = utcnow()
                 for item in items:
                     await self.enqueue(item)
             except KeyError as error:
                 LOGGER.error("SEC poller for %s stopped: %s", symbol, error)
+                self.health["sec_poll_error_at"][symbol] = utcnow()
                 return
             except SecFetchError as error:
                 LOGGER.warning("SEC poll for %s failed (%s): %s", symbol, error.kind, error)
                 self.stats["sec_poll_errors"] += 1
+                self.health["sec_poll_error_at"][symbol] = utcnow()
                 if error.kind == "access_denied":
                     await asyncio.sleep(max(self.settings.sec_poll_interval_seconds, 600))
                     continue
             except Exception:
                 LOGGER.exception("SEC poll for %s failed", symbol)
                 self.stats["sec_poll_errors"] += 1
+                self.health["sec_poll_error_at"][symbol] = utcnow()
             await asyncio.sleep(self.settings.sec_poll_interval_seconds)
+
+    # ------------------------------------------------------------------ status file
+    def status_snapshot(self, state: str) -> dict[str, Any]:
+        """What the worker reports about itself: states, times and flags, never credentials or messages."""
+
+        def iso(value: datetime | None) -> str | None:
+            return value.isoformat() if value else None
+
+        health = self.health
+        return {
+            "version": STATUS_VERSION, "state": state, "pid": os.getpid(),
+            "started_at": iso(self.started_at), "updated_at": iso(utcnow()),
+            "heartbeat_seconds": HEARTBEAT_SECONDS, "symbols": list(self.settings.symbols),
+            "alpaca": {"enabled": self.alpaca_auth is not None,
+                       "stream_connected": self.stream_subscribed and state == "running",
+                       "subscribed_at": iso(health["subscribed_at"]),
+                       "disconnected_at": iso(health["disconnected_at"]),
+                       "last_article_at": iso(health["last_article_at"]),
+                       "backfill_ok_at": iso(health["backfill_ok_at"]),
+                       "backfill_error_at": iso(health["backfill_error_at"]),
+                       "synced_through": iso(self.ledger.get_cursor(ALPACA_CURSOR))},
+            "sec": {"enabled": self.sec_client is not None,
+                    "poll_interval_seconds": self.settings.sec_poll_interval_seconds,
+                    "last_poll_ok_at": {s: iso(t) for s, t in health["sec_poll_ok_at"].items()},
+                    "last_poll_error_at": {s: iso(t) for s, t in health["sec_poll_error_at"].items()}},
+            "processing": {"database": self.database is not None, "similarity": self.analyzer is not None,
+                           "summaries": self.summarizer is not None},
+            "queue_depth": self.queue.qsize() if self.queue else 0,
+        }
+
+    def write_status(self, state: str) -> None:
+        try:
+            atomic_write_json(status_path(self.store.root), self.status_snapshot(state))
+        except OSError as error:  # a status file must never stop ingestion
+            LOGGER.warning("could not write the worker status file: %s", error)
+
+    async def status_heartbeat(self, interval: float = HEARTBEAT_SECONDS) -> None:
+        while True:
+            self.write_status("running")
+            await asyncio.sleep(interval)
 
     async def stats_reporter(self, interval: float = 300.0) -> None:
         while True:

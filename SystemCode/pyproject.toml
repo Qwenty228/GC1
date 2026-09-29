@@ -33,6 +33,7 @@ local-embeddings = [
 [project.scripts]
 datasources = "datasources.cli:main"
 datasources-server = "datasources.server:main"
+datasources-dev = "datasources.launcher:main"
 datasources-news-stream = "alpaca_news.main:main"
 datasources-ingest = "datasources.ingest.cli:main"
 datasources-db = "datasources.db.cli:main"

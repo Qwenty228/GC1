@@ -3,138 +3,96 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Node 1 — Data Sources Explorer</title>
-  <style>
-    :root { --bg:#0f1115; --panel:#171a21; --border:#2a2f3a; --text:#e6e6e6;
-            --muted:#9aa4b2; --accent:#4c8bf5; --edgar:#f5a623; --alpaca:#4cc38a; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif;
-           background:var(--bg); color:var(--text); }
-    header { padding:20px 24px; border-bottom:1px solid var(--border); }
-    h1 { font-size:18px; margin:0 0 4px; }
-    .sub { color:var(--muted); font-size:13px; }
-    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap;
-                padding:16px 24px; border-bottom:1px solid var(--border); }
-    select, button { font-size:14px; padding:8px 12px; border-radius:8px;
-                     border:1px solid var(--border); background:var(--panel);
-                     color:var(--text); cursor:pointer; }
-    button:hover { border-color:var(--accent); }
-    button.alpaca { border-color:var(--alpaca); }
-    button.edgar { border-color:var(--edgar); }
-    label { color:var(--muted); font-size:13px; }
-    main { padding:16px 24px; display:grid; gap:20px; }
-    .section { border:1px solid var(--border); border-radius:10px;
-               background:var(--panel); overflow:hidden; }
-    .section h2 { font-size:15px; margin:0; padding:12px 16px;
-                  border-bottom:1px solid var(--border); display:flex;
-                  justify-content:space-between; align-items:center; }
-    .badge { font-size:11px; padding:2px 8px; border-radius:999px;
-             background:#2a2f3a; color:var(--muted); }
-    .badge.live { color:var(--alpaca); }
-    .badge.sample { color:var(--edgar); }
-    .section-body { padding:0; display:none; }
-    .section.open .section-body { display:block; }
-    .panel-title { font-size:12px; text-transform:uppercase; letter-spacing:.05em;
-                   color:var(--muted); padding:12px 16px 4px; }
-    table { width:100%; border-collapse:collapse; font-size:12.5px; }
-    th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border);
-             vertical-align:top; }
-    th { color:var(--muted); font-weight:600; }
-    td.field { color:var(--accent); font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
-    td.type { color:var(--edgar); font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
-    td.example { color:var(--muted); font-family:ui-monospace,Menlo,monospace;
-                 max-width:340px; overflow:hidden; text-overflow:ellipsis; }
-    .records { padding:8px 16px 16px; }
-    .record { border:1px solid var(--border); border-radius:8px; margin-top:10px; }
-    .record summary { cursor:pointer; padding:10px 12px; font-size:13px; }
-    .record pre { margin:0; padding:12px; background:#0c0e12; overflow:auto;
-                  font-size:12px; border-top:1px solid var(--border); }
-    .hint { color:var(--muted); font-size:12px; padding:10px 16px; }
-    .error { color:#ff6b6b; padding:12px 16px; }
-    a { color:var(--accent); }
-    /* Event summaries: colour is never the only signal (every flag has an icon and text). */
-    .event-controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:12px 16px;
-                      border-bottom:1px solid var(--border); }
-    .event-controls label { display:flex; gap:6px; align-items:center; }
-    .event-list { list-style:none; margin:0; padding:8px 16px 16px; display:grid; gap:10px; }
-    .event-card { border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
-    .event-title { font-size:14px; font-weight:600; }
-    .flags { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
-    .flag { display:inline-flex; gap:4px; align-items:center; font-size:12px; font-weight:600;
-            padding:2px 8px; border-radius:6px; border:1px solid; }
-    .flag-review, .flag-disputed { color:#ffd27a; border-color:#ffd27a; background:#2e2616; }
-    .flag-info { color:#a9c7ff; border-color:#a9c7ff; background:#172238; }
-    .meta, .muted { color:var(--muted); font-size:12.5px; }
-    .small { font-size:11.5px; }
-    .event-detail { padding:8px 16px 20px; overflow-wrap:anywhere; }
-    .event-detail h3 { font-size:17px; margin:8px 0 4px; }
-    .event-detail h4 { font-size:15px; margin:0 0 8px; }
-    .conflict-notice { border:2px solid #ffd27a; border-left-width:8px; border-radius:8px;
-                       background:#241f14; padding:12px 14px; margin:14px 0; }
-    .conflict-notice h4 { color:#ffd27a; }
-    .dispute { border-top:1px dashed var(--border); padding-top:8px; margin-top:8px; }
-    .dispute:first-of-type { border-top:0; padding-top:0; margin-top:0; }
-    .dispute-sources { list-style:none; padding:0; margin:8px 0; display:grid; gap:10px; }
-    .dispute-source { border-left:3px solid var(--border); padding-left:10px; }
-    .claim { margin:0 0 4px; font-weight:600; }
-    .quote { margin:4px 0; padding:4px 10px; border-left:3px solid var(--muted); color:var(--text);
-             font-style:italic; }
-    .source-line, .dispute-meta, .notice-summary-time { margin:4px 0; font-size:13px; }
-    .update-notice { border:2px dashed #a9c7ff; border-radius:8px; background:#172238; padding:10px 14px;
-                     margin:14px 0; font-size:13.5px; }
-    .review-history { margin:10px 0; font-size:13px; }
-    .review-history summary { cursor:pointer; }
-    .summary { border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin:14px 0; }
-    .summary.empty { border-style:dashed; }
-    .summary p { line-height:1.5; }
-    .cites { font-size:12.5px; color:var(--muted); margin:0 0 8px; }
-    .cites summary { cursor:pointer; }
-    .sources ul { padding-left:18px; font-size:13px; display:grid; gap:6px; }
-    .icon { font-style:normal; }
-    @media (max-width: 600px) {
-      header, .controls, main { padding-left:12px; padding-right:12px; }
-      .event-detail, .event-list { padding-left:10px; padding-right:10px; }
-      .conflict-notice { padding:10px; }
-    }
-  </style>
+  <title>Stock News</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
-    <h1>Node 1 — Data Sources Explorer</h1>
-    <div class="sub">Inspect raw data + generated data dictionary for Alpaca news and SEC EDGAR 8-K filings.</div>
-  </header>
-
-  <div class="controls">
-    <label for="ticker">Company</label>
-    <select id="ticker"></select>
-    <label for="limit">Limit</label>
-    <select id="limit">
-      <option>5</option><option selected>10</option><option>20</option>
-    </select>
-    <button class="alpaca" id="btn-alpaca">Load Alpaca News</button>
-    <button class="edgar" id="btn-edgar">Load EDGAR 8-K Filings</button>
-  </div>
-
-  <main>
-    <section class="section" id="sec-alpaca">
-      <h2><span>Alpaca News <span class="badge" id="alpaca-badge"></span></span></h2>
-      <div class="section-body" id="alpaca-body"></div>
-    </section>
-    <section class="section" id="sec-edgar">
-      <h2><span>SEC EDGAR — 8-K Filings <span class="badge" id="edgar-badge"></span></span></h2>
-      <div class="section-body" id="edgar-body"></div>
-    </section>
-    <section class="section" id="sec-events">
-      <h2><span>Event summaries <span class="badge" id="events-badge"></span></span></h2>
-      <div class="event-controls">
-        <button id="btn-events">Load events</button>
-        <label for="events-sample"><input type="checkbox" id="events-sample" /> Include sample events</label>
+  <a class="sr-only" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div class="brand">
+        <h1>Stock News</h1>
+        <span class="company" id="company"><label for="company-select">Company</label>
+          <select id="company-select"><option value="NVDA" selected>NVDA</option></select></span>
       </div>
-      <div class="section-body" id="events-body"></div>
+      <div class="header-status">
+        <p id="refresh-status" class="status-off"><span class="icon" aria-hidden="true">…</span> Loading…</p>
+        <p id="collector-status" class="status-off"><span class="icon" aria-hidden="true">…</span> Collector status loading…</p>
+        <p id="processing-status" class="muted small"></p>
+      </div>
+    </div>
+  </header>
+  <div id="sample-banner" class="banner sample" hidden>
+    <div class="wrap"><strong>Sample mode.</strong> Fictional demo and test records are included and marked
+      <span class="badge sample">Sample</span>. They are never mixed into the default view.</div>
+  </div>
+  <div id="refresh-alert" class="banner alert" hidden><div class="wrap" id="refresh-alert-text"></div></div>
+  <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <div class="toolbar">
+      <div class="tabs" role="tablist" aria-label="Views">
+        <button type="button" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="true">Events</button>
+        <button type="button" role="tab" id="tab-articles" aria-controls="panel-articles" aria-selected="false" tabindex="-1">All articles</button>
+        <button type="button" role="tab" id="tab-explorer" aria-controls="panel-explorer" aria-selected="false" tabindex="-1">Source explorer</button>
+      </div>
+      <div class="controls">
+        <label id="source-filter-label" hidden>Show
+          <select id="source-filter">
+            <option value="all">All sources</option>
+            <option value="news">News articles</option>
+            <option value="sec">SEC filings</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="sample-toggle" /> Include sample data</label>
+        <button type="button" class="button secondary" id="refresh-now">Refresh now</button>
+      </div>
+    </div>
+
+    <section id="panel-events" class="panel" role="tabpanel" aria-labelledby="tab-events">
+      <h2 class="sr-only">Events</h2>
+      <p class="panel-intro">Each event groups reports about the same development. Event summaries are
+        AI-generated from the linked sources; open an event to see the quotes each statement is based on.</p>
+      <div id="events-state"></div>
+      <div id="events-list" class="card-list" aria-busy="false"></div>
+      <div class="list-footer" id="events-footer"></div>
+    </section>
+
+    <section id="panel-articles" class="panel" role="tabpanel" aria-labelledby="tab-articles" hidden>
+      <h2 class="sr-only">All articles</h2>
+      <p class="panel-intro">Every stored news article and SEC filing, newest first, as published by its source.
+        News arrives from the publisher through Alpaca (the data provider); filings come from SEC EDGAR.</p>
+      <div id="articles-state"></div>
+      <div id="articles-list" class="card-list" aria-busy="false"></div>
+      <div class="list-footer" id="articles-footer"></div>
+    </section>
+
+    <section id="panel-explorer" class="panel" role="tabpanel" aria-labelledby="tab-explorer" hidden>
+      <h2 class="sr-only">Source explorer</h2>
+      <p class="panel-intro">Fetch recent records straight from the Alpaca and SEC EDGAR APIs with their data
+        dictionaries. These are live requests made only when you press a button; they are not the stored database
+        and nothing here is saved.</p>
+      <div class="explorer-controls">
+        <label for="explorer-ticker">Company</label>
+        <select id="explorer-ticker"></select>
+        <label for="explorer-limit">Records</label>
+        <select id="explorer-limit"><option>5</option><option selected>10</option><option>20</option></select>
+        <button type="button" class="button secondary" id="explorer-alpaca">Load Alpaca news</button>
+        <button type="button" class="button secondary" id="explorer-edgar">Load EDGAR 8-K filings</button>
+      </div>
+      <div id="explorer-output" aria-live="polite"></div>
     </section>
   </main>
 
+  <footer class="wrap site-footer">
+    <p>Source labels say who published a record; they are not a judgement of its accuracy. SEC filings are company
+      disclosures, not statements verified by the SEC. AI-generated summaries cite their sources: check the originals
+      before relying on them.</p>
+  </footer>
+
+  <noscript><p class="wrap">This page needs JavaScript to load the news.</p></noscript>
+  <script src="render.js"></script>
   <script src="app.js"></script>
-  <script src="events.js"></script>
+  <script src="explorer.js"></script>
 </body>
 </html>
