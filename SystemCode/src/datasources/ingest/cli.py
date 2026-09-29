@@ -22,6 +22,7 @@ import logging
 import logging.handlers
 import os
 import sys
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from .adapters import unwrap_payload
 from .sec_client import FetchResult, SecClient, SecFetchError
 from .service import IngestionService, ProcessLock
 from .settings import ConfigurationError, IngestSettings, load_settings, parse_symbol_list, require_sec_user_agent
+from .status import StartupReporter
 
 LOGGER = logging.getLogger("datasources.ingest")
 FIXTURE_SUBMISSIONS = config.DATA_DIR / "submissions_CIK0001045810.json"
@@ -74,7 +76,8 @@ def configure_logging(root: Path, verbose: bool = False) -> None:
 
 
 # ---------------------------------------------------------------------- live run
-def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alpaca: bool) -> IngestionService:
+def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alpaca: bool,
+                       stage: Callable[[str], None] = lambda _description: None) -> IngestionService:
     if settings.demo:
         raise ConfigurationError("`run` is live-only; use `datasources-ingest demo` for sample data")
     sec_client = None
@@ -87,10 +90,14 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     auth: AlpacaAuth | None = None
     if enable_alpaca:
         auth = auth_from_env()  # AlpacaConfigError when credentials are missing
+    stage("connecting to the database")
     database = open_database()
+    stage("loading the embedding model and grouping settings (local files; no model API call)")
     analyzer = open_similarity(database)
+    stage("preparing event summaries (no model API call)")
+    summarizer = open_summary(database, analyzer)
     return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth,
-                            database=database, analyzer=analyzer, summarizer=open_summary(database, analyzer))
+                            database=database, analyzer=analyzer, summarizer=summarizer)
 
 
 def open_similarity(database):
@@ -155,16 +162,21 @@ def _news_settings(settings: IngestSettings, auth: AlpacaAuth):
     return NewsSettings(api_key=auth.api_key or "", secret_key=auth.secret_key or "", symbols=settings.symbols)
 
 
-async def run_service(service: IngestionService, *, enable_sec: bool, enable_alpaca: bool, once: bool) -> None:
+async def run_service(service: IngestionService, *, enable_sec: bool, enable_alpaca: bool, once: bool,
+                      startup: StartupReporter | None = None) -> None:
     from alpaca_news.client import run_forever
 
     settings = service.settings
+    if startup:
+        startup.stage("reconciling the ingestion ledger")
     service.startup()
     service._ensure_async_state()
     writer = asyncio.create_task(service.writer(), name="writer")
     producers: list[asyncio.Task] = []
     try:
         if once:
+            if startup:
+                startup.finish("--once: one collection pass, then exit")
             if enable_sec:
                 for symbol in settings.symbols:
                     try:
@@ -191,9 +203,16 @@ async def run_service(service: IngestionService, *, enable_sec: bool, enable_alp
                 on_articles=service.on_ws_articles,
                 on_subscribed=service.on_ws_subscribed,
                 on_frame=service.on_ws_frame,
+                on_disconnected=service.on_ws_disconnected,
             ), name="alpaca:websocket"))
             producers.append(asyncio.create_task(service.stream_heartbeat(), name="alpaca:heartbeat"))
         producers.append(asyncio.create_task(service.stats_reporter(), name="stats"))
+        if startup:
+            # Preparation ends here. Collectors connect and backlog recovery (the startup backfill) runs in
+            # the background from now on; readiness never waits for either, nor for any model call.
+            startup.finish("collectors starting; backlog recovery runs in the background")
+        # output/state/worker_status.json: the collector state the web page and `datasources-dev` show.
+        producers.append(asyncio.create_task(service.status_heartbeat(), name="status"))
         await asyncio.gather(*producers)
     finally:
         LOGGER.info("shutting down: stopping collectors, finishing the current record")
@@ -203,6 +222,8 @@ async def run_service(service: IngestionService, *, enable_sec: bool, enable_alp
         writer.cancel()
         await asyncio.gather(writer, return_exceptions=True)
         pending = service.queue.qsize() if service.queue else 0
+        if not once:
+            service.write_status("stopped")
         LOGGER.info("stopped; %d queued item(s) left unprocessed and retryable; stats %s", pending, dict(service.stats))
 
 
@@ -342,6 +363,7 @@ def main(argv: list[str] | None = None) -> int:
     writer_lock = None
     service = None
     demo_database = None
+    startup: StartupReporter | None = None
     try:
         demo = command == "demo" or bool(getattr(args, "demo", False))
         settings = load_settings(demo=demo)
@@ -365,16 +387,21 @@ def main(argv: list[str] | None = None) -> int:
             if command == "run":
                 enable_sec = not args.no_sec
                 enable_alpaca = not args.no_alpaca
-                service = build_live_service(settings, enable_sec=enable_sec, enable_alpaca=enable_alpaca)
+                startup = StartupReporter(settings.root, settings.symbols)
+                startup.stage("checking collector settings")
+                service = build_live_service(settings, enable_sec=enable_sec, enable_alpaca=enable_alpaca,
+                                             stage=startup.stage)
                 if service.database is not None:
                     # One graph writer per database partition, across output directories and
                     # the backfill / retry commands (the file lock above only covers one directory).
+                    startup.stage("acquiring the graph-writer lock")
                     writer_lock = GraphWriterLock(service.database, is_sample=False,
                                                   purpose="ingestion worker").acquire()
                 LOGGER.info("starting ingestion: symbols=%s root=%s sec=%s alpaca=%s", settings.symbols,
                             settings.root, enable_sec, enable_alpaca)
                 try:
-                    asyncio.run(run_service(service, enable_sec=enable_sec, enable_alpaca=enable_alpaca, once=args.once))
+                    asyncio.run(run_service(service, enable_sec=enable_sec, enable_alpaca=enable_alpaca, once=args.once,
+                                            startup=startup))
                 except KeyboardInterrupt:
                     LOGGER.info("interrupted")
             elif command == "demo":
@@ -397,6 +424,8 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"Configuration error: {message}\n")
         return 2
     finally:
+        if startup is not None:
+            startup.abort()  # no-op once collectors started; otherwise the file says "stopped", not "starting"
         if writer_lock is not None:
             writer_lock.release()
         database = getattr(service, "database", None) or demo_database

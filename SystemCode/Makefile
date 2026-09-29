@@ -1,7 +1,9 @@
 # Node 1 — Data Sources. Everything runs through `uv`; no manual venv activation.
 #
 #   make sync              install dependencies into .venv
-#   make run               serve the UI + API on http://127.0.0.1:8000
+#   make dev               web app + API + collectors in one command (datasources-dev)
+#   make dev-check         the launcher's startup checks only; starts nothing
+#   make run               serve the UI + API on http://127.0.0.1:8000 (no collectors)
 #   make test              run the offline test suite
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
@@ -19,7 +21,7 @@ T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
-.PHONY: help sync sync-local-embeddings run test companies edgar alpaca ingest ingest-once ingest-demo graph \
+.PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
 	db-check db-migrate db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
@@ -38,7 +40,13 @@ sync: ## Create/refresh .venv from pyproject.toml + uv.lock
 sync-local-embeddings: ## Also install the local CPU embedding backend (torch + sentence-transformers)
 	$(UV) sync --locked --extra local-embeddings
 
-run: sync ## Serve the web UI and API at http://127.0.0.1:8000
+dev: ## Start the web app, API and collectors (Ctrl-C stops everything)
+	$(UV) run datasources-dev
+
+dev-check: ## Run the launcher's startup checks without starting anything
+	$(UV) run datasources-dev --check
+
+run: sync ## Serve the web UI and API at http://127.0.0.1:8000 (no collectors)
 	@echo "Open http://127.0.0.1:8000 — Ctrl-C to stop"
 	$(UV) run datasources-server
 

@@ -81,18 +81,25 @@ def _in_citation_order(rows: list[dict], cited: list[dict]) -> list[dict]:
 
 
 def list_events(conn: Connection, *, include_sample: bool, language: str, limit: int, offset: int,
-                state: str | None = None) -> list[dict[str, Any]]:
+                state: str | None = None, symbol: str | None = None) -> list[dict[str, Any]]:
+    """``symbol`` keeps events with at least one current source linked to that company symbol."""
     rows = conn.execute(
         f"""
         SELECT * FROM (
             SELECT {_EVENT_COLUMNS} {_EVENT_FROM}
              WHERE e.status <> 'superseded' AND (%(sample)s OR NOT e.is_sample)
-               AND EXISTS (SELECT 1 FROM current_event_membership m WHERE m.event_id = e.event_id)) x
+               AND EXISTS (SELECT 1 FROM current_event_membership m WHERE m.event_id = e.event_id)
+               AND (%(symbol)s::text IS NULL OR EXISTS (
+                    SELECT 1 FROM current_event_membership m
+                      JOIN revision_company rc ON rc.revision_id = m.revision_id
+                      JOIN company_symbol cs ON cs.company_id = rc.company_id
+                     WHERE m.event_id = e.event_id AND cs.symbol = %(symbol)s::text))) x
          WHERE %(state)s::text IS NULL OR {_STATE_SQL} = %(state)s::text
          ORDER BY x.last_source_time DESC NULLS LAST, x.event_id
          LIMIT %(limit)s OFFSET %(offset)s
         """,
-        {"lang": language, "sample": include_sample, "limit": limit, "offset": offset, "state": state},
+        {"lang": language, "sample": include_sample, "limit": limit, "offset": offset, "state": state,
+         "symbol": symbol},
     ).fetchall()
     conflict_status = conflicts.list_status(conn, [{**r, "input_manifest": r["input_manifest"] if r["summary_id"]
                                                      else None} for r in rows])

@@ -608,6 +608,7 @@ def live_server(db):
     from datasources import server
 
     server.app.dependency_overrides[server.get_database] = lambda: db
+    server.app.dependency_overrides[server.optional_database] = lambda: (db, None)  # the page also reads /api/status
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
@@ -625,6 +626,7 @@ def live_server(db):
     finally:
         srv.should_exit = True
         thread.join(10)
+        server.app.dependency_overrides.pop(server.optional_database, None)
 
 
 def rendered_dom(browser: str, url: str, attempts: int = 3) -> str:
@@ -680,10 +682,11 @@ def test_page_renders_the_notice_and_escapes_hostile_source_text(db):
         cards = rendered_dom(browser, f"{base}/#events&sample=1")
 
     assert 'data-events-ready="detail"' in page and 'data-events-ready="list"' in cards
+    # The event card shows the retained summary under a warning; the full notice is in the opened details.
     for text in ("Conflicting reports—under review", "Sources disagree about the purchase price.",
                  "Fixture Finance Journal reports USD 300 million.", "Example Newswire reports USD 250 million.",
                  "This summary has not yet been updated to reflect the disagreement.", "Conflict detected",
-                 "The summary below was published", ARTICLES["d"]["url"]):
+                 "The summary shown above was published", ARTICLES["d"]["url"]):
         assert text in page, text
     assert published(db, s.event_id)["headline"] in page  # the published summary is shown unchanged
     assert "Conflicting reports—under review" in cards and 'aria-hidden="true">⚠' in cards
@@ -697,4 +700,4 @@ def test_page_renders_the_notice_and_escapes_hostile_source_text(db):
             assert value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") in hostile
     assert "<script>document.title" not in hostile
     assert 'href="javascript' not in hostile.lower() and "(no valid link)" in hostile
-    assert "<title>Node 1 — Data Sources Explorer</title>" in hostile and "pwned</title>" not in hostile
+    assert "<title>Stock News</title>" in hostile and "pwned</title>" not in hostile

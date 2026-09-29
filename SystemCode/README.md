@@ -13,9 +13,12 @@ it, and groups the records into *events*. See
 [Semantic comparison and event grouping](#semantic-comparison-and-event-grouping).
 No summarisation, sentiment or recommendations.
 
+**Daily use:** `uv run datasources-dev` starts the web page, the API and the
+collectors together; see [Local application](#local-application-one-command).
+
 The original pieces still work as before:
 
-* `uv run datasources-server`: web UI + `/api/edgar`, `/api/alpaca`, `/api/companies`
+* `uv run datasources-server`: web UI + read API only (no collectors)
 * `uv run datasources edgar NVDA`: backend CLI
 * `uv run datasources-news-stream`: standalone Alpaca WebSocket printer
 
@@ -57,6 +60,107 @@ not been exercised against a live Broker account.
 
 Missing credentials are a **configuration error**, not a silent fallback. Sample
 data is served only in explicit demo mode (see below).
+
+## Local application: one command
+
+After the one-time prerequisites below, daily startup is one command in PowerShell:
+
+```powershell
+uv run datasources-dev
+```
+
+Then open **http://127.0.0.1:8000**. Ctrl+C in that window stops everything.
+
+The launcher runs two child processes and prefixes every log line with its name:
+
+| Service | What runs |
+| --- | --- |
+| `[web]` | FastAPI serving the page and the read-only API on 127.0.0.1 (no auto-reload). It never starts collectors or calls a model. |
+| `[ingest]` | The existing worker, `datasources-ingest run`: Alpaca WebSocket with REST recovery at startup and after every reconnect, SEC EDGAR polling, and whichever inline steps `.env` enables (event grouping with `SIMILARITY_ENABLED`, event summaries with `SUMMARY_ENABLED`). |
+
+Before it starts anything, the launcher checks the configuration, the database
+connection and schema, the port, and whether another launcher, ingestion worker
+or graph writer is already running. It then prints a summary of what will run,
+including whether paid model calls are possible with the current settings. It
+never prints credentials (only whether they are present), installs anything,
+changes the schema, applies migrations or runs a backfill: when something is
+missing, it names the command that fixes it and does not start.
+
+### One-time prerequisites
+
+1. PostgreSQL with pgvector and the `stock_news` database (see [PostgreSQL storage](#postgresql-storage)).
+2. Dependencies, including the local embedding backend used by event grouping:
+   ```powershell
+   uv sync --locked --extra local-embeddings
+   ```
+3. `Copy-Item .env.example .env`, then fill in the Alpaca credentials, `SEC_USER_AGENT`, the `PG*` settings and,
+   if grouping or summaries use Anthropic, `ANTHROPIC_API_KEY`.
+4. The schema: `uv run datasources-db migrate` (additive and idempotent; the launcher only checks it).
+5. When `SIMILARITY_ENABLED=true` with the sentence-transformers backend: `uv run datasources-similarity download-model`.
+6. `uv run datasources-dev --check` runs every startup check and prints the summary without starting anything.
+
+### Model calls and cost
+
+Page views, API polling and extra browser tabs never call a model and never start
+collectors: the page only reads what is stored. Model calls happen only inside
+the ingestion worker, for records it ingests:
+
+* `SIMILARITY_ENABLED=true` with `SIMILARITY_COMPARISON_BACKEND=anthropic`: each new article or filing can send
+  up to `SIMILARITY_LLM_MAX_CALLS_PER_RECORD` comparison requests (default 3). Each request can be retried by
+  the SDK up to `SIMILARITY_LLM_MAX_RETRIES` times.
+* `SUMMARY_ENABLED=true`: each new record can send up to `SUMMARY_MAX_REQUESTS_PER_RUN` summary requests
+  (default 5), each retried up to `SUMMARY_LLM_MAX_RETRIES` times.
+* At startup the worker recovers Alpaca news since its last sync (at most `ALPACA_RECOVERY_MAX_HOURS`) and SEC
+  filings from its lookback window that are not stored yet. Recovered records go through the same steps, so
+  the first start after a long break can make many more calls than a normal hour.
+
+To run without paid calls, set `SIMILARITY_ENABLED=false` and `SUMMARY_ENABLED=false`, or use
+`uv run datasources-dev --no-collectors` to browse stored data only.
+
+**Deferred work is not scheduled.** The launcher adds no retry loop. Records whose grouping is still pending
+wait for `uv run datasources-similarity retry` (run it with the worker stopped). Queued or failed summaries wait
+for `uv run datasources-summary retry --confirm-paid-calls`, or for a later record that touches the same
+event. Both commands can make paid calls.
+
+### Options
+
+| Option | Effect |
+| --- | --- |
+| `--check` | Run the startup checks and print the summary; start nothing |
+| `--no-collectors` | Web app and API only |
+| `--no-sec` / `--no-alpaca` | Leave one collector out |
+| `--port 8001` | Serve the page on another port |
+
+### Duplicates, failures and shutdown
+
+* A second `datasources-dev` for the same output directory refuses to start and reports where the first one
+  is running. A stray `datasources-ingest run` or `datasources-similarity backfill`/`retry` is caught by the
+  existing locks (`output/state/ingest.lock` and the PostgreSQL graph-writer lock), which the launcher checks
+  before starting.
+* If a service exits during startup or later, the launcher reports it with its exit code and stops the other
+  one. It never keeps running with a dead collector. An occupied port is reported before anything starts.
+* Ctrl+C stops the worker first (it finishes the record it is writing; queued work stays retryable), then the
+  web server. A second Ctrl+C terminates them immediately. The services also stop if the launcher window is
+  closed or the launcher is killed.
+* The worker writes `output/state/worker_status.json` every 15 seconds. The page's collector status comes only
+  from this file. After 60 seconds without a heartbeat, the status shows as unknown.
+
+### The page
+
+* **Events** (default): one card per grouped event, with a warning above the summary when sources disagree,
+  the latest published AI-generated summary (version and update time), source times and the source count.
+  **Show sources and evidence** opens the competing claims with quotes, the quote behind each summary
+  statement, every original source link, the version history and resolved reviews.
+* **All articles**: every stored news article and SEC filing with the original headline, the publisher
+  ("via Alpaca") or issuer ("SEC filing"), the source's own times, the excerpt supplied with the article
+  (labelled as not AI-generated) and the original link. Filter by news or SEC filings.
+* **Source explorer**: the original Alpaca / EDGAR data-dictionary view. It makes live requests only when you
+  press a button.
+* **Include sample data** shows the fictional demo and test records, each marked *Sample*. They are hidden
+  otherwise.
+* The page refreshes every 20 seconds without reloading. It pauses while the tab is hidden, backs off after
+  failures (up to 5 minutes), and keeps showing the last data with a notice when a refresh fails. Open details,
+  focus and scroll position are kept.
 
 ## Run
 
@@ -868,7 +972,22 @@ the version, `published_at`, `generation_reason` and limitations; the
 version history; open/resolved reviews; and every current source with whether
 it was cited, given to the model, or added after the current version (a repeat
 that arrived later is listed but never shown as evidence of an older version).
-The existing `/api/edgar` and `/api/alpaca` endpoints are unchanged.
+`/api/events` also accepts `symbol=<ticker>`: events with a current source linked to that company.
+
+Two more read-only endpoints serve the page:
+
+* `GET /api/articles?limit=50&offset=0&source=all|news|sec&symbol=NVDA&include_sample=false` returns stored
+  records as their current revision, newest first by source time. Each has the original headline, `provider`
+  (`alpaca` / `sec_edgar`), `publisher` (news) or `issuer` (SEC), the source's `published_at`,
+  `source_updated_at` and `retrieved_at`, the source-supplied `excerpt` (trimmed to 600 characters; SEC
+  records have none), the original `url` (http/https only, otherwise `null`), form and item codes for
+  filings, the number of stored `revisions`, `grouping_status` and the `events` it belongs to, plus a `total`.
+* `GET /api/status` returns `collector` (from the worker's status file: `running`, `stale`, `stopped` or
+  `not_running`, with the times of its last WebSocket subscription and SEC poll), the configured
+  `features` flags, `database` availability and stored `counts` (records, events, grouping statuses).
+
+The existing `/api/edgar` and `/api/alpaca` endpoints are unchanged. API responses are sent with
+`Cache-Control: no-store`.
 
 ### Conflict notices
 

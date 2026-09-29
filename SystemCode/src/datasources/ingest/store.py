@@ -24,6 +24,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,6 +46,9 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+REPLACE_ATTEMPTS = 10
+
+
 def atomic_write_bytes(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
@@ -53,7 +57,14 @@ def atomic_write_bytes(path: Path, data: bytes) -> None:
             handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(tmp, path)
+        for attempt in range(REPLACE_ATTEMPTS):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:  # Windows: a reader (e.g. the status endpoint) has the target open briefly
+                if attempt == REPLACE_ATTEMPTS - 1:
+                    raise
+                time.sleep(0.02)
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise

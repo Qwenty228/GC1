@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -271,8 +272,10 @@ def test_real_model_is_never_downloaded_implicitly(monkeypatch):
 
 # ----------------------------------------------------------------------------- settings
 def test_similarity_is_off_by_default_and_validated(monkeypatch):
-    for name in ("SIMILARITY_ENABLED", "SIMILARITY_WINDOW_DAYS", "SIMILARITY_COMPARISON_EFFORT"):
-        monkeypatch.delenv(name, raising=False)
+    # Code defaults only: `datasources.config` loads .env into the environment at import, so clear every
+    # SIMILARITY_* setting (the local .env may choose another model or turn grouping on).
+    for name in [name for name in os.environ if name.startswith("SIMILARITY_")]:
+        monkeypatch.delenv(name)
     settings = load_similarity_settings()
     assert settings.enabled is False and settings.window_days == 7.0
     assert settings.comparison_model == "claude-opus-5"
