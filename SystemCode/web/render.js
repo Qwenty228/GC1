@@ -1,7 +1,9 @@
-// Rendering for the Stock News page: pure functions from API data to HTML strings.
+// Rendering for the Stock News pages: pure functions from API data to HTML strings.
 // Every piece of source, model or database text goes through esc(); only absolute
-// http(s) URLs become links. Nothing here fetches data or calls a model. The
-// conflict notice follows the stored review records exactly (see summary/conflicts.py).
+// http(s) URLs become links. Nothing here fetches data or calls a model. A card's
+// preview is cut from the stored summary at a sentence boundary (or is its stored
+// key points); no text is rewritten or added. The conflict notice follows the stored
+// review records exactly (see summary/conflicts.py).
 
 (function (root) {
   "use strict";
@@ -38,16 +40,34 @@
     return href ? new URL(href).hostname.replace(/^www\./, "") : "";
   }
 
+  // Exact times (sources, quotes, history) carry the time zone; the card shows a short form with the exact
+  // time as its tooltip.
   const DATE_FMT = { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
                      timeZoneName: "short" };
+  const SHORT_FMT = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
   function when(iso) {
     if (!iso) return "unknown time";
     const d = new Date(iso);
     if (isNaN(d)) return esc(iso);
     return `<time datetime="${esc(d.toISOString())}">${esc(d.toLocaleString(undefined, DATE_FMT))}</time>`;
   }
+  function shortWhen(iso) {
+    const d = new Date(iso);
+    if (!iso || isNaN(d)) return "";
+    const fmt = d.getFullYear() === new Date().getFullYear() ? SHORT_FMT : { ...SHORT_FMT, year: "numeric" };
+    return `<time datetime="${esc(d.toISOString())}" title="${esc(d.toLocaleString(undefined, DATE_FMT))}">${
+      esc(d.toLocaleString(undefined, fmt))}</time>`;
+  }
   function clock(date) {
     return date ? esc(date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })) : "";
+  }
+  function ago(date, now) {
+    const minutes = Math.floor((now - date) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${plural(minutes, "minute")} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${plural(hours, "hour")} ago`;
+    return `on ${date.toLocaleString(undefined, SHORT_FMT)}`;
   }
 
   function plural(n, one, many) {
@@ -71,102 +91,124 @@
       `${esc(title)}</h4>${body}</div>`;
   }
 
-  // ------------------------------------------------------------------ event list card
-  const CONFLICT_BADGE = {
+  // ------------------------------------------------------------------ summary preview
+  // Where sentences end in stored text. A full stop after an initial or a common abbreviation ("U.S.", "Inc.",
+  // "p.m.", "Aug.") is not an end. Only used to choose where a preview stops.
+  const ABBREVIATION = new RegExp("(?:\\b[A-Z]|\\b(?:Inc|Corp|Co|Cos|Ltd|Plc|Jr|Sr|Mr|Mrs|Ms|Dr|Prof|St|Ave|vs|" +
+    "No|Nos|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|approx|est|[ap]\\.m|e\\.g|i\\.e))\\.$");
+  const SENTENCE_END = "([.!?])[\"'”’)\\]]*\\s+(?=[\"'“‘(\\[]?[A-Z0-9$€£¥])|[。！？]";
+
+  function sentenceEnds(text) {
+    const ends = [];
+    const re = new RegExp(SENTENCE_END, "g");
+    let m;
+    while ((m = re.exec(text))) {
+      if (m[1] === "." && ABBREVIATION.test(text.slice(0, m.index + 1))) continue;
+      ends.push(m.index + m[0].trimEnd().length);
+    }
+    return ends;
+  }
+
+  const PREVIEW_CHARS = 280; // whole sentences up to about this length (always at least one)
+  const BULLET_CHARS = 180;  // stored key points this short can stand alone as preview bullets
+
+  function keyPoints(s) {
+    return (s.key_points || []).map((p) => (typeof p === "string" ? p : p && p.text))
+      .map((p) => String(p || "").trim()).filter(Boolean);
+  }
+
+  // {html, complete}: two or three stored key points when they are short, otherwise the overview's opening
+  // sentences. `complete` means the preview already shows the whole summary.
+  function preview(s) {
+    const overview = String(s.overview || "").trim();
+    const points = keyPoints(s);
+    const lead = points.slice(0, 3);
+    if (lead.length && (!overview || (lead.length >= 2 && lead.every((p) => p.length <= BULLET_CHARS)))) {
+      return { html: `<ul class="preview-points">${lead.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`,
+               complete: !overview && points.length === lead.length };
+    }
+    const first = overview.split(/\n\s*\n/)[0];
+    const ends = [...sentenceEnds(first), first.length];
+    const fit = ends.filter((end) => end <= PREVIEW_CHARS);
+    const cut = fit.length ? fit[fit.length - 1] : ends[0];
+    return { html: `<p>${esc(first.slice(0, cut).trim())}</p>`, complete: cut >= overview.length && !points.length };
+  }
+
+  // ------------------------------------------------------------------ news card
+  function cardHead(e, ctx) {
+    const id = esc(e.event_id);
+    const headline = (e.summary && e.summary.headline) || e.title || "Untitled story";
+    const symbols = (e.symbols || []).length ? e.symbols : ctx.company ? [ctx.company] : [];
+    const tickers = symbols.slice(0, 3).map((s) => `<span class="ticker">${esc(s)}</span>`).join("") +
+      (symbols.length > 3 ? `<span class="ticker more">+${esc(symbols.length - 3)}</span>` : "");
+    const time = e.last_source_time
+      ? `<span>${e.documents > 1 ? "Latest report" : "Published"} ${shortWhen(e.last_source_time)}</span>` : "";
+    const sample = e.is_sample ? `<span class="badge sample">Sample</span>` : "";
+    const meta = [tickers && `<span class="tickers">${tickers}</span>`, time, sample].filter(Boolean)
+      .join(`<span class="sep" aria-hidden="true">·</span>`);
+    return `<h3 class="card-title" id="event-${id}-title">${esc(headline)}</h3>
+      ${meta ? `<p class="card-meta">${meta}</p>` : ""}`;
+  }
+
+  const CONFLICT_LABEL = {
     under_review: "Conflicting reports—under review",
     correction_pending: "Grouping correction in progress",
     disputed: "Sources disagree",
   };
 
-  function eventBadges(e, ctx) {
-    const badges = [];
-    if (e.is_sample) badges.push(`<span class="badge sample">Sample</span>`);
-    if (ctx.isNew(e.event_id)) badges.push(`<span class="badge new">New</span>`);
-    else if (ctx.isUpdated(e.event_id)) badges.push(`<span class="badge info">Updated</span>`);
-    const status = e.conflict && e.conflict.status;
-    if (CONFLICT_BADGE[status]) badges.push(`<span class="badge warn">${icon("warn")}${CONFLICT_BADGE[status]}</span>`);
-    // While a review is open the update is blocked, not on its way: the conflict badge says so instead.
-    const blocked = ["under_review", "correction_pending"].includes(status);
-    if (e.update_pending && e.summary_state === "published" && !blocked) {
-      badges.push(`<span class="badge info">${icon("info")}Newer summary queued</span>`);
-    }
-    return badges.length ? `<div class="badges">${badges.join("")}</div>` : "";
-  }
-
-  function eventHead(e, ctx) {
-    const id = esc(e.event_id);
-    return `<h3 class="card-title" id="event-${id}-title">${esc(e.title || "Untitled event")}</h3>
-      ${eventBadges(e, ctx)}
-      <p class="meta">${esc(plural(e.documents, "source"))}<span class="sep">·</span>Source times: first
-        ${when(e.first_source_time)}, latest ${when(e.last_source_time)}</p>`;
-  }
-
-  // Shown above the summary on every card; the full claims and quotes are in the details.
-  function eventConflict(e) {
+  // A compact warning on the collapsed card; its button opens the Sources panel with the competing claims.
+  function conflictLine(e) {
     const c = e.conflict;
-    if (!c) return "";
-    const many = c.count > 1 ? ` <strong>${esc(c.count)} disputes</strong> are active on this event.` : "";
-    const open = " Open the details to compare the competing claims and quotes.";
-    switch (c.status) {
-      case "under_review":
-        return notice("warn", "Conflicting reports—under review", `<p>${e.summary
-          ? "The summary below is the last published version. It stays visible, unchanged, until the review is complete."
-          : "No summary is published while the review is open."}${many}${open}</p>`);
-      case "correction_pending":
-        return notice("warn", "Grouping correction in progress", `<p>A reviewer decided that a report in this event
-          describes a different event, and the correction is not complete yet${e.summary
-          ? ", so the summary below may still reflect that report" : ""}.${many}${open}</p>`);
-      case "disputed":
-        return notice("warn", "Sources disagree", `<p>A review confirmed that the sources disagree. The review does
-          not establish which source is correct.${many}${open}</p>`);
-      default:
-        return "";
-    }
+    const label = c && CONFLICT_LABEL[c.status];
+    if (!label) return "";
+    const action = c.status === "correction_pending" ? "See details" : "Compare the claims";
+    return `<p class="conflict-line">${icon("warn")}<strong>${label}</strong>${c.count > 1
+      ? ` <span>(${esc(c.count)} disputes)</span>` : ""}<button type="button" class="inline-toggle" data-action="sources"
+      data-focus="conflict" aria-expanded="false" aria-controls="event-${esc(e.event_id)}-sources"
+      aria-describedby="event-${esc(e.event_id)}-title">${action}</button></p>`;
   }
 
-  function summaryStateNote(e, ctx) {
-    let text;
-    let cls = "";
-    switch (e.summary_state) {
-      case "awaiting_review":
-        text = "No summary yet: the sources disagree, and a summary is published only after the review is complete.";
-        break;
-      case "pending":
-        return `<p class="state-note">${icon("info")}Summary pending: a summary job is queued or in progress. Nothing
-          has been published yet.${e.retry_after ? ` The next attempt is due after ${when(e.retry_after)}.` : ""}</p>`;
-      case "failed":
-        text = "Summary unavailable: generating it failed after repeated attempts. The sources are listed in the details.";
-        cls = " failed";
-        break;
-      case "not_available":
-        text = "No summary: this event has no text that can be summarized.";
-        break;
-      case "not_requested":
-        text = ctx.summariesEnabled === false
-          ? "No summary: event summaries are turned off (SUMMARY_ENABLED=false)."
-          : "No summary has been requested for this event yet.";
-        break;
-      default:
-        text = "Summary status unknown.";
+  const NO_SUMMARY = {
+    pending: "Preparing summary…",
+    awaiting_review: "The summary is on hold until the conflicting reports are reviewed.",
+    failed: "A summary could not be prepared for this story.",
+    not_available: "This story has no text that can be summarized.",
+  };
+
+  // No AI summary yet: a short status and the most recent original source. Nothing here is labelled as AI text.
+  function noSummary(e, ctx) {
+    const text = NO_SUMMARY[e.summary_state] ||
+      (ctx.summariesEnabled === false ? "AI summaries are turned off." : "No summary yet.");
+    const src = e.latest_source;
+    let link = "";
+    if (src && safeUrl(src.url)) {
+      const what = src.record_type === "sec_filing" ? "Original filing" : "Original article";
+      link = `<p class="original-link">${what}: ${extLink(src.url, src.title || host(src.url))}${src.name
+        ? ` <span class="muted">· ${esc(publisher(src.name))}</span>` : ""}</p>`;
     }
-    return `<p class="state-note${cls}">${icon(cls ? "error" : "info")}${esc(text)}</p>`;
+    return `<p class="summary-pending">${esc(text)}</p>${link}`;
   }
 
-  function eventSummary(e, ctx) {
+  function fullSummary(e) {
     const s = e.summary;
-    if (!s) return summaryStateNote(e, ctx);
-    const points = (s.key_points || []).map((p) => (typeof p === "string" ? p : p && p.text)).filter(Boolean);
-    return `<section class="summary" aria-label="AI-generated summary">
-      <p class="summary-label">AI-generated summary · version ${esc(s.version)} · updated ${when(s.published_at)}</p>
-      ${s.headline ? `<p class="summary-headline">${esc(s.headline)}</p>` : ""}
-      ${paragraphs(s.overview)}
-      ${points.length ? `<ul>${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
-      <p class="muted small">Written by a language model from the linked sources. The details show the quote each
-        statement is based on.</p>
-    </section>`;
+    const points = keyPoints(s);
+    const blocked = e.conflict && ["under_review", "correction_pending"].includes(e.conflict.status);
+    return `<p class="ai-label">AI summary</p>${paragraphs(s.overview)}
+      ${points.length ? `<ul class="summary-points">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      <p class="summary-note">Written by AI from the sources listed under Sources${s.published_at
+        ? `, ${shortWhen(s.published_at)}` : ""}. Check the originals before relying on it.</p>
+      ${e.update_pending && !blocked ? `<p class="summary-note">An updated summary is being prepared.</p>` : ""}`;
   }
 
-  // ------------------------------------------------------------------ event details: conflict notice
+  // {preview, full, more}: what the collapsed card shows, the complete stored summary for "Read more", and
+  // whether "Read more" would show anything the preview does not.
+  function summaryView(e, ctx) {
+    if (!e.summary) return { preview: noSummary(e, ctx), full: "", more: false };
+    const p = preview(e.summary);
+    return { preview: `<p class="ai-label">AI summary</p>${p.html}`, full: fullSummary(e), more: !p.complete };
+  }
+
+  // ------------------------------------------------------------------ sources panel: conflict notice
   function sourceLine(s) {
     const name = s.name ? publisher(s.name) : "Unnamed source";
     const title = s.title || "Original source";
@@ -212,12 +254,6 @@
     return `<div class="dispute">${parts.join("")}</div>`;
   }
 
-  const NOTICE_TITLE = {
-    under_review: "Conflicting reports—under review",
-    correction_pending: "Grouping correction in progress",
-    disputed: "Sources disagree",
-  };
-
   function conflictDetails(d) {
     const c = d.conflict;
     if (!c) return "";
@@ -229,7 +265,7 @@
           (c.summary_not_updated_for_conflict
             ? " This summary has not yet been updated to reflect the disagreement." : "") + "</p>"
         : "";
-      html += notice("warn", `${NOTICE_TITLE[c.status] || "Sources disagree"}${active.length > 1
+      html += notice("warn", `${CONFLICT_LABEL[c.status] || "Sources disagree"}${active.length > 1
         ? ` (${active.length} disputes)` : ""}`, active.map(dispute).join("") + summaryLine);
     }
     if (c.pending_update) {
@@ -256,12 +292,35 @@
       (${history.length})</summary>${history.map(dispute).join("")}</details>`;
   }
 
-  // ------------------------------------------------------------------ event details: evidence and sources
+  // ------------------------------------------------------------------ sources panel: sources, quotes, history
   const KIND = { headline: "Headline", overview: "Overview", key_point: "Key point" };
   const REASON = { initial: "first summary", new_information: "new information", review_resolution: "after a review",
                    manual_refresh: "manual refresh", conflict: "conflict" };
 
+  function sourceList(d) {
+    const disputed = new Set(((d.conflict && d.conflict.disputes) || []).filter((x) => x.active)
+      .flatMap((x) => x.sources.filter((s) => s.side === "incoming").map((s) => s.revision_id)));
+    const items = (d.sources || []).map((s) => {
+      const isSec = s.record_type === "sec_filing";
+      const name = isSec ? [s.name || "SEC filing", s.form].filter(Boolean).join(" · ") : publisher(s.name);
+      const title = s.title || "Original source";
+      const flags = [];
+      if (s.cited_in_current_summary) flags.push(`<span class="badge">Cited in the summary</span>`);
+      if (s.added_after_current_summary) flags.push(`<span class="badge info">Newer than the summary</span>`);
+      if (disputed.has(s.revision_id)) flags.push(`<span class="badge warn">${icon("warn")}Disputed report</span>`);
+      return `<li><p class="source-name"><strong>${esc(name)}</strong> ${isSec
+          ? `<span class="badge type-sec">SEC filing</span>` : `<span class="muted small">via Alpaca</span>`}</p>
+        <p class="source-title">${safeUrl(s.url) ? extLink(s.url, title)
+          : `${esc(title)} <span class="muted">(no valid link)</span>`}</p>
+        <p class="meta">${isSec ? "Filed" : "Published"} ${when(s.published_at)}</p>
+        ${flags.length ? `<div class="badges">${flags.join("")}</div>` : ""}</li>`;
+    }).join("");
+    return `<section class="detail-section"><h4>Original sources (${esc((d.sources || []).length)})</h4>
+      <ul class="source-list">${items}</ul></section>`;
+  }
+
   function evidence(s) {
+    if (!s) return "";
     const items = (s.statements || []).map((st) => {
       const cites = (st.citations || []).map((c) => `${quotes([c.quote])}<p class="quote-source">${
         sourceLine(c.source || {})}</p>`).join("");
@@ -270,33 +329,16 @@
     }).join("");
     const limits = (s.limitations || []).length
       ? `<p class="muted small">Limitations recorded with this summary: ${s.limitations.map(esc).join("; ")}</p>` : "";
-    return `<section class="detail-section"><h4>Evidence behind the summary (version ${esc(s.version)})</h4>
-      <ol class="statements">${items}</ol>${limits}<p class="muted small">${esc(s.note || "")}</p></section>`;
+    return `<section class="detail-section"><h4>Supporting quotes</h4>
+      <p class="muted small">Each statement in the AI summary and the passage from the source it is based on.</p>
+      <ol class="statements">${items}</ol>${limits}</section>`;
   }
 
-  function sourceKicker(s) {
-    if (s.record_type === "sec_filing") {
-      return `<span class="badge type-sec">SEC filing</span> ${esc([s.form, s.name].filter(Boolean).join(" · "))}`;
-    }
-    return `<span class="badge type-news">News</span> ${esc(publisher(s.name))} · via Alpaca`;
-  }
-
-  function sources(d) {
-    const disputed = new Set(((d.conflict && d.conflict.disputes) || []).filter((x) => x.active)
-      .flatMap((x) => x.sources.filter((s) => s.side === "incoming").map((s) => s.revision_id)));
-    const items = (d.sources || []).map((s) => {
-      const flags = [];
-      if (s.cited_in_current_summary) flags.push(`<span class="badge">Cited in the summary</span>`);
-      if (s.added_after_current_summary) flags.push(`<span class="badge info">Added after this summary version</span>`);
-      if (disputed.has(s.revision_id)) flags.push(`<span class="badge warn">${icon("warn")}Disputed report</span>`);
-      const title = s.title || "Original source";
-      return `<li><p class="kicker">${sourceKicker(s)}</p>
-        <div>${safeUrl(s.url) ? extLink(s.url, title) : `${esc(title)} <span class="muted">(no valid link)</span>`}</div>
-        <p class="meta">Published ${when(s.published_at)}</p>
-        ${flags.length ? `<div class="badges">${flags.join("")}</div>` : ""}</li>`;
-    }).join("");
-    return `<section class="detail-section"><h4>Sources (${esc((d.sources || []).length)})</h4>
-      <ul class="source-list">${items}</ul></section>`;
+  function related(d) {
+    if (!(d.pending_relations > 0)) return "";
+    return `<p class="muted small">${esc(plural(d.pending_relations, "more report"))} might be about this story, but
+      grouping could not confirm it, so ${d.pending_relations === 1 ? "it is" : "they are"} not included here or in
+      the summary.</p>`;
   }
 
   function versions(d) {
@@ -304,24 +346,41 @@
     const items = d.versions.map((v) => `<li>Version ${esc(v.version)}: ${esc(REASON[v.generation_reason] ||
       String(v.generation_reason || "").replace(/_/g, " "))}, published ${when(v.published_at)}${v.status === "published"
       ? " <strong>(current)</strong>" : ` <span class="muted">(${esc(v.status)})</span>`}</li>`).join("");
-    return `<details class="more detail-section" data-key="versions"><summary>Summary versions
+    return `<details class="more detail-section" data-key="versions"><summary>Summary history
       (${esc(d.versions.length)})</summary><ul class="versions">${items}</ul></details>`;
   }
 
-  function eventDetails(d) {
-    const pending = d.pending_relations > 0
-      ? notice("info", "Possibly related reports", `<p>${esc(plural(d.pending_relations, "report"))} might describe
-        this event, but grouping could not confirm it, so ${d.pending_relations === 1 ? "it is" : "they are"} not
-        included here or in the summary.</p>`) : "";
-    return conflictDetails(d) + pending + (d.summary ? evidence(d.summary) : "") + sources(d) + versions(d) +
-      resolvedReviews(d);
+  // Everything behind "Sources (N)": the competing claims first when sources disagree, then each original
+  // source, the quote behind each summary statement, and the summary's version history.
+  function sourcesPanel(d) {
+    return conflictDetails(d) + sourceList(d) + evidence(d.summary) + related(d) + versions(d) + resolvedReviews(d);
   }
 
-  // ------------------------------------------------------------------ article card
+  // ------------------------------------------------------------------ feed states
+  function feedEmpty(status, company) {
+    const counts = status && status.counts;
+    if (counts && counts.articles === 0) {
+      return `<div class="state"><h3>No news yet</h3><p>Stories appear here as articles are collected.</p></div>`;
+    }
+    if (counts && counts.events === 0) {
+      return `<div class="state"><h3>No summaries yet</h3><p>Articles have been collected but not grouped into
+        stories yet. They appear here once they are.</p></div>`;
+    }
+    return `<div class="state"><h3>No news${company ? ` for ${esc(company)}` : ""} yet</h3><p>New stories appear
+      here automatically.</p></div>`;
+  }
+
+  function loadError(what, message, retrying = true) {
+    return `<div class="state error" role="alert"><h3>${icon("error")}Could not load ${esc(what)}</h3>
+      ${retrying ? "<p>The page tries again automatically.</p>" : ""}<p class="small">Details: ${esc(message)}</p></div>`;
+  }
+
+  // ------------------------------------------------------------------ data tools page (tools.html)
   function groupingLine(a, ctx) {
     if (a.events && a.events.length) {
-      const links = a.events.map((ev) => `<a href="#event=${encodeURIComponent(ev.event_id)}" data-event-link="${
-        esc(ev.event_id)}">${esc(ev.title || "Untitled event")}</a>`).join(", ");
+      const sample = a.is_sample ? "&sample=1" : "";
+      const links = a.events.map((ev) => `<a href="/#event=${encodeURIComponent(ev.event_id)}${sample}">${
+        esc(ev.title || "Untitled event")}</a>`).join(", ");
       return `<p class="small">Part of event: ${links}</p>`;
     }
     const text = {
@@ -339,7 +398,6 @@
     const isSec = a.record_type === "sec_filing";
     const badges = [];
     if (a.is_sample) badges.push(`<span class="badge sample">Sample</span>`);
-    if (ctx.isNew(a.document_id)) badges.push(`<span class="badge new">New</span>`);
     const kicker = isSec
       ? `<span class="badge type-sec">SEC filing</span><span>${esc(a.form || "Filing")} · ${esc(a.issuer ||
           "Unknown issuer")} · from SEC EDGAR</span>`
@@ -380,7 +438,12 @@
       ${groupingLine(a, ctx)}`;
   }
 
-  // ------------------------------------------------------------------ header and empty states
+  function articlesEmpty(source, sample) {
+    const what = { news: "news articles", sec: "SEC filings" }[source] || "records";
+    return `<div class="state"><h3>No stored ${esc(what)}</h3><p>Nothing matches the current filters.</p>${sample ? ""
+      : "<p>Sample records are hidden unless <strong>Include sample data</strong> is ticked.</p>"}</div>`;
+  }
+
   function collectorStatus(status) {
     const c = status && status.collector;
     if (!c) return { cls: "status-off", html: `${icon("off")}Collector status unavailable` };
@@ -431,41 +494,9 @@
     return `Event grouping ${word(grouping)} · AI summaries ${word(summaries)}${running ? "" : " (as configured)"}`;
   }
 
-  function eventsEmpty(status, sample) {
-    const counts = status && status.counts;
-    const sampleHint = sample ? "" : `<p>Sample events are hidden. Tick <strong>Include sample data</strong> to show
-      the fictional demo event.</p>`;
-    if (counts && counts.articles > 0 && counts.events === 0) {
-      const grouping = counts.grouping || {};
-      const waiting = (grouping.pending || 0) + (grouping.partial || 0);
-      return `<div class="state"><h3>No events yet</h3>
-        <p>${esc(plural(counts.articles, "stored record"))} (${esc(counts.news)} news, ${esc(counts.sec)} SEC) ${
-          counts.articles === 1 ? "has" : "have"} not been grouped into events${waiting
-          ? `; grouping analysis is pending for ${esc(waiting)}` : ""}. The <strong>All articles</strong> tab lists them.</p>
-        <p>New records are grouped as the ingestion worker stores them (when event grouping is on). Earlier records with
-          pending analysis are retried with <code>uv run datasources-similarity retry</code> while the worker is
-          stopped; that can make paid model calls.</p>${sampleHint}</div>`;
-    }
-    if (counts && counts.articles === 0) {
-      return `<div class="state"><h3>Nothing stored yet</h3><p>Articles and events appear here once the collectors
-        store them.</p>${sampleHint}</div>`;
-    }
-    return `<div class="state"><h3>No events match</h3><p>No events for this company.</p>${sampleHint}</div>`;
-  }
-
-  function articlesEmpty(source, sample) {
-    const what = { news: "news articles", sec: "SEC filings" }[source] || "records";
-    return `<div class="state"><h3>No stored ${esc(what)}</h3><p>Nothing matches the current filters.</p>${sample ? ""
-      : "<p>Sample records are hidden unless <strong>Include sample data</strong> is ticked.</p>"}</div>`;
-  }
-
-  function loadError(what, message) {
-    return `<div class="state error" role="alert"><h3>${icon("error")}Could not load ${esc(what)}</h3>
-      <p>${esc(message)}</p><p>The page retries automatically.</p></div>`;
-  }
-
-  const api = { esc, safeUrl, extLink, when, clock, plural, eventHead, eventConflict, eventSummary, eventDetails,
-                articleCard, collectorStatus, processingStatus, eventsEmpty, articlesEmpty, loadError, icon };
+  const api = { esc, safeUrl, extLink, when, clock, ago, plural, icon, sentenceEnds, preview, cardHead,
+                conflictLine, summaryView, sourcesPanel, feedEmpty, loadError, articleCard, articlesEmpty,
+                collectorStatus, processingStatus };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StockNewsRender = api;
 })(this);

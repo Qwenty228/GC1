@@ -1,4 +1,4 @@
-// Source explorer: the original data-dictionary view. On request only (never polled), it fetches
+// Source explorer (data tools page): the original data-dictionary view. On request only (never polled), it fetches
 // recent records straight from /api/alpaca and /api/edgar and shows each record's raw JSON with the
 // generated data dictionary. Nothing here is stored.
 
@@ -74,7 +74,5 @@
 
   $("explorer-alpaca").addEventListener("click", () => load("alpaca"));
   $("explorer-edgar").addEventListener("click", () => load("edgar"));
-  $("tab-explorer").addEventListener("click", loadCompanies);
-  $("tab-explorer").addEventListener("focus", loadCompanies);
-  if (!$("panel-explorer").hidden) loadCompanies();
+  loadCompanies(); // the local ticker map only; Alpaca and EDGAR are asked only by the buttons above
 })();

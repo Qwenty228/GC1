@@ -1,0 +1,4503 @@
+{
+ "baseline": {
+  "extensions": {
+   "vector": {
+    "schema": "public"
+   }
+  },
+  "functions": {
+   "protect_text_unit_input()": {
+    "body": "\nBEGIN\n    IF ROW(NEW.unit_id, NEW.revision_id, NEW.profile_id, NEW.unit_kind,\n           NEW.ordinal, NEW.input_text, NEW.input_hash, NEW.location)\n       IS DISTINCT FROM\n       ROW(OLD.unit_id, OLD.revision_id, OLD.profile_id, OLD.unit_kind,\n           OLD.ordinal, OLD.input_text, OLD.input_hash, OLD.location) THEN\n        RAISE EXCEPTION 'Text unit input is immutable; create a new profile/revision';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "reject_snapshot_update()": {
+    "body": "\nBEGIN\n    RAISE EXCEPTION '% rows are immutable; insert a new version', TG_TABLE_NAME;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_embedding_dimensions()": {
+    "body": "\nDECLARE expected_dimensions integer;\nBEGIN\n    SELECT p.dimensions INTO expected_dimensions\n    FROM public.text_unit t\n    JOIN public.embedding_profile p ON p.profile_id = t.profile_id\n    WHERE t.unit_id = NEW.unit_id;\n    IF expected_dimensions IS NULL OR\n       public.vector_dims(NEW.embedding) <> expected_dimensions THEN\n        RAISE EXCEPTION 'Embedding dimension mismatch or missing text unit/profile';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_sec_details()": {
+    "body": "\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1 FROM public.document_revision r\n        JOIN public.document d ON d.document_id = r.document_id\n        JOIN public.provider p ON p.provider_id = d.provider_id\n        JOIN public.company c ON c.company_id = NEW.issuer_company_id\n        WHERE r.revision_id = NEW.revision_id\n          AND d.record_type = 'sec_filing' AND p.code = 'sec_edgar'\n          AND r.source_category = 'official_filing'\n          AND d.source_namespace = NEW.cik\n          AND d.source_record_id = NEW.accession_number\n          AND c.cik = NEW.cik\n    ) THEN\n        RAISE EXCEPTION 'SEC details must match filing identity, issuer CIK and category';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   }
+  },
+  "tables": {
+   "company": {
+    "columns": {
+     "cik": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 3,
+      "type": "text"
+     },
+     "company_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "company_cik_check": {
+      "definition": "CHECK ((cik ~ '^[0-9]{10}$'::text))",
+      "type": "c"
+     },
+     "company_cik_key": {
+      "definition": "UNIQUE (cik)",
+      "type": "u"
+     },
+     "company_name_check": {
+      "definition": "CHECK ((btrim(name) <> ''::text))",
+      "type": "c"
+     },
+     "company_pkey": {
+      "definition": "PRIMARY KEY (company_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "company_symbol": {
+    "columns": {
+     "company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "market": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "symbol": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "symbol_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "company_symbol_company_id_fkey": {
+      "definition": "FOREIGN KEY (company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "company_symbol_market_check": {
+      "definition": "CHECK ((btrim(market) <> ''::text))",
+      "type": "c"
+     },
+     "company_symbol_market_symbol_key": {
+      "definition": "UNIQUE (market, symbol)",
+      "type": "u"
+     },
+     "company_symbol_pkey": {
+      "definition": "PRIMARY KEY (symbol_id)",
+      "type": "p"
+     },
+     "company_symbol_symbol_check": {
+      "definition": "CHECK (((symbol = upper(symbol)) AND (btrim(symbol) <> ''::text)))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "company_symbol_company_idx": "CREATE INDEX company_symbol_company_idx ON public.company_symbol USING btree (company_id)"
+    },
+    "triggers": {}
+   },
+   "document": {
+    "columns": {
+     "current_revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "uuid"
+     },
+     "document_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "first_seen_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "timestamp with time zone"
+     },
+     "is_sample": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "boolean"
+     },
+     "last_seen_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "timestamp with time zone"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "smallint"
+     },
+     "record_type": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "source_namespace": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "source_record_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "document_check": {
+      "definition": "CHECK ((last_seen_at >= first_seen_at))",
+      "type": "c"
+     },
+     "document_current_revision_fk": {
+      "definition": "FOREIGN KEY (document_id, current_revision_id) REFERENCES document_revision(document_id, revision_id) DEFERRABLE INITIALLY DEFERRED",
+      "type": "f"
+     },
+     "document_pkey": {
+      "definition": "PRIMARY KEY (document_id)",
+      "type": "p"
+     },
+     "document_provider_id_fkey": {
+      "definition": "FOREIGN KEY (provider_id) REFERENCES provider(provider_id)",
+      "type": "f"
+     },
+     "document_provider_id_source_namespace_source_record_id_is_s_key": {
+      "definition": "UNIQUE (provider_id, source_namespace, source_record_id, is_sample)",
+      "type": "u"
+     },
+     "document_record_type_check": {
+      "definition": "CHECK ((record_type = ANY (ARRAY['news_article'::text, 'sec_filing'::text])))",
+      "type": "c"
+     },
+     "document_source_namespace_check": {
+      "definition": "CHECK ((btrim(source_namespace) <> ''::text))",
+      "type": "c"
+     },
+     "document_source_record_id_check": {
+      "definition": "CHECK ((btrim(source_record_id) <> ''::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "document_revision": {
+    "columns": {
+     "analysis_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "text"
+     },
+     "author": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "text"
+     },
+     "body_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "text"
+     },
+     "content_scope": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 19,
+      "type": "text"
+     },
+     "content_status": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 18,
+      "type": "text"
+     },
+     "document_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "original_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "preprocessing_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 16,
+      "type": "text"
+     },
+     "processing_warnings": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 21,
+      "type": "jsonb"
+     },
+     "provenance": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 20,
+      "type": "jsonb"
+     },
+     "published_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 12,
+      "type": "timestamp with time zone"
+     },
+     "publisher_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 3,
+      "type": "uuid"
+     },
+     "retrieved_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "timestamp with time zone"
+     },
+     "revision_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "schema_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 15,
+      "type": "text"
+     },
+     "source_category": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "source_snapshot_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 17,
+      "type": "text"
+     },
+     "source_updated_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 13,
+      "type": "timestamp with time zone"
+     },
+     "summary_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "text"
+     },
+     "title": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "title_generated": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "boolean"
+     }
+    },
+    "constraints": {
+     "document_revision_content_scope_check": {
+      "definition": "CHECK ((content_scope = ANY (ARRAY['full_article'::text, 'primary_document_only'::text, 'title_summary_only'::text, 'metadata_only'::text])))",
+      "type": "c"
+     },
+     "document_revision_content_status_check": {
+      "definition": "CHECK ((content_status = ANY (ARRAY['available'::text, 'partial'::text, 'missing'::text, 'extraction_failed'::text])))",
+      "type": "c"
+     },
+     "document_revision_document_id_fkey": {
+      "definition": "FOREIGN KEY (document_id) REFERENCES document(document_id)",
+      "type": "f"
+     },
+     "document_revision_document_id_revision_id_key": {
+      "definition": "UNIQUE (document_id, revision_id)",
+      "type": "u"
+     },
+     "document_revision_document_id_source_snapshot_hash_preproce_key": {
+      "definition": "UNIQUE (document_id, source_snapshot_hash, preprocessing_version)",
+      "type": "u"
+     },
+     "document_revision_pkey": {
+      "definition": "PRIMARY KEY (revision_id)",
+      "type": "p"
+     },
+     "document_revision_processing_warnings_check": {
+      "definition": "CHECK ((jsonb_typeof(processing_warnings) = 'array'::text))",
+      "type": "c"
+     },
+     "document_revision_provenance_check": {
+      "definition": "CHECK ((jsonb_typeof(provenance) = 'object'::text))",
+      "type": "c"
+     },
+     "document_revision_publisher_id_fkey": {
+      "definition": "FOREIGN KEY (publisher_id) REFERENCES publisher(publisher_id)",
+      "type": "f"
+     },
+     "document_revision_source_category_check": {
+      "definition": "CHECK ((source_category = ANY (ARRAY['official_filing'::text, 'media_report'::text, 'company_announcement'::text, 'other'::text])))",
+      "type": "c"
+     },
+     "document_revision_source_snapshot_hash_check": {
+      "definition": "CHECK ((source_snapshot_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "revision_category_idx": "CREATE INDEX revision_category_idx ON public.document_revision USING btree (source_category)",
+     "revision_published_idx": "CREATE INDEX revision_published_idx ON public.document_revision USING btree (published_at)",
+     "revision_publisher_idx": "CREATE INDEX revision_publisher_idx ON public.document_revision USING btree (publisher_id)"
+    },
+    "triggers": {
+     "revision_immutable": "CREATE TRIGGER revision_immutable BEFORE UPDATE ON public.document_revision FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "embedding": {
+    "columns": {
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "timestamp with time zone"
+     },
+     "embedding": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "vector"
+     },
+     "unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "embedding_pkey": {
+      "definition": "PRIMARY KEY (unit_id)",
+      "type": "p"
+     },
+     "embedding_unit_id_fkey": {
+      "definition": "FOREIGN KEY (unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {},
+    "triggers": {
+     "embedding_dimensions_check": "CREATE TRIGGER embedding_dimensions_check BEFORE INSERT OR UPDATE ON public.embedding FOR EACH ROW EXECUTE FUNCTION validate_embedding_dimensions()"
+    }
+   },
+   "embedding_profile": {
+    "columns": {
+     "chunking_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     },
+     "config_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "configuration": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "jsonb"
+     },
+     "dimensions": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "integer"
+     },
+     "distance_metric": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "model_name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "model_provider": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "model_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "profile_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "embedding_profile_config_hash_check": {
+      "definition": "CHECK ((config_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     },
+     "embedding_profile_config_hash_key": {
+      "definition": "UNIQUE (config_hash)",
+      "type": "u"
+     },
+     "embedding_profile_configuration_check": {
+      "definition": "CHECK ((jsonb_typeof(configuration) = 'object'::text))",
+      "type": "c"
+     },
+     "embedding_profile_dimensions_check": {
+      "definition": "CHECK ((dimensions > 0))",
+      "type": "c"
+     },
+     "embedding_profile_distance_metric_check": {
+      "definition": "CHECK ((distance_metric = ANY (ARRAY['cosine'::text, 'l2'::text, 'inner_product'::text])))",
+      "type": "c"
+     },
+     "embedding_profile_pkey": {
+      "definition": "PRIMARY KEY (profile_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {
+     "profile_immutable": "CREATE TRIGGER profile_immutable BEFORE UPDATE ON public.embedding_profile FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "ingestion_state": {
+    "columns": {
+     "checkpoint": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "jsonb"
+     },
+     "is_sample": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "boolean"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "smallint"
+     },
+     "stream_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "updated_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "timestamp with time zone"
+     }
+    },
+    "constraints": {
+     "ingestion_state_checkpoint_check": {
+      "definition": "CHECK ((jsonb_typeof(checkpoint) = 'object'::text))",
+      "type": "c"
+     },
+     "ingestion_state_pkey": {
+      "definition": "PRIMARY KEY (provider_id, stream_key, is_sample)",
+      "type": "p"
+     },
+     "ingestion_state_provider_id_fkey": {
+      "definition": "FOREIGN KEY (provider_id) REFERENCES provider(provider_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "provider": {
+    "columns": {
+     "code": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": "a",
+      "not_null": true,
+      "position": 1,
+      "type": "smallint"
+     }
+    },
+    "constraints": {
+     "provider_code_check": {
+      "definition": "CHECK ((btrim(code) <> ''::text))",
+      "type": "c"
+     },
+     "provider_code_key": {
+      "definition": "UNIQUE (code)",
+      "type": "u"
+     },
+     "provider_pkey": {
+      "definition": "PRIMARY KEY (provider_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "publisher": {
+    "columns": {
+     "canonical_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "credibility_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "credibility_reviewed_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 6,
+      "type": "timestamp with time zone"
+     },
+     "credibility_tier": {
+      "default": "'unreviewed'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "publisher_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "publisher_canonical_key_key": {
+      "definition": "UNIQUE (canonical_key)",
+      "type": "u"
+     },
+     "publisher_credibility_tier_check": {
+      "definition": "CHECK ((credibility_tier = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text, 'unreviewed'::text])))",
+      "type": "c"
+     },
+     "publisher_pkey": {
+      "definition": "PRIMARY KEY (publisher_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "revision_company": {
+    "columns": {
+     "company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "revision_company_company_id_fkey": {
+      "definition": "FOREIGN KEY (company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "revision_company_pkey": {
+      "definition": "PRIMARY KEY (revision_id, company_id)",
+      "type": "p"
+     },
+     "revision_company_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "revision_company_company_idx": "CREATE INDEX revision_company_company_idx ON public.revision_company USING btree (company_id, revision_id)"
+    },
+    "triggers": {}
+   },
+   "sec_filing_details": {
+    "columns": {
+     "accepted_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "timestamp with time zone"
+     },
+     "accession_number": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "cik": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "exhibits": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "jsonb"
+     },
+     "filing_date": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "date"
+     },
+     "filing_index_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "text"
+     },
+     "form": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "issuer_company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "item_codes": {
+      "default": "ARRAY[]::text[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text[]"
+     },
+     "primary_document_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "text"
+     },
+     "report_date": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "date"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "sec_filing_details_accession_number_check": {
+      "definition": "CHECK ((accession_number ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_cik_check": {
+      "definition": "CHECK ((cik ~ '^[0-9]{10}$'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_exhibits_check": {
+      "definition": "CHECK ((jsonb_typeof(exhibits) = 'array'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_form_check": {
+      "definition": "CHECK ((form = ANY (ARRAY['8-K'::text, '8-K/A'::text])))",
+      "type": "c"
+     },
+     "sec_filing_details_issuer_company_id_fkey": {
+      "definition": "FOREIGN KEY (issuer_company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "sec_filing_details_pkey": {
+      "definition": "PRIMARY KEY (revision_id)",
+      "type": "p"
+     },
+     "sec_filing_details_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "sec_accepted_idx": "CREATE INDEX sec_accepted_idx ON public.sec_filing_details USING btree (accepted_at)",
+     "sec_issuer_idx": "CREATE INDEX sec_issuer_idx ON public.sec_filing_details USING btree (issuer_company_id)"
+    },
+    "triggers": {
+     "sec_details_identity_check": "CREATE TRIGGER sec_details_identity_check BEFORE INSERT ON public.sec_filing_details FOR EACH ROW EXECUTE FUNCTION validate_sec_details()",
+     "sec_details_immutable": "CREATE TRIGGER sec_details_immutable BEFORE UPDATE ON public.sec_filing_details FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "text_unit": {
+    "columns": {
+     "embedding_status": {
+      "default": "'pending'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text"
+     },
+     "input_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "input_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "last_error": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "location": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "jsonb"
+     },
+     "ordinal": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "integer"
+     },
+     "profile_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "retry_count": {
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "integer"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "unit_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "unit_kind": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "text_unit_embedding_status_check": {
+      "definition": "CHECK ((embedding_status = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text, 'failed'::text])))",
+      "type": "c"
+     },
+     "text_unit_input_hash_check": {
+      "definition": "CHECK ((input_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     },
+     "text_unit_input_text_check": {
+      "definition": "CHECK ((btrim(input_text) <> ''::text))",
+      "type": "c"
+     },
+     "text_unit_location_check": {
+      "definition": "CHECK ((jsonb_typeof(location) = 'object'::text))",
+      "type": "c"
+     },
+     "text_unit_ordinal_check": {
+      "definition": "CHECK ((ordinal >= 0))",
+      "type": "c"
+     },
+     "text_unit_pkey": {
+      "definition": "PRIMARY KEY (unit_id)",
+      "type": "p"
+     },
+     "text_unit_profile_id_fkey": {
+      "definition": "FOREIGN KEY (profile_id) REFERENCES embedding_profile(profile_id)",
+      "type": "f"
+     },
+     "text_unit_retry_count_check": {
+      "definition": "CHECK ((retry_count >= 0))",
+      "type": "c"
+     },
+     "text_unit_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     },
+     "text_unit_revision_id_profile_id_unit_kind_ordinal_key": {
+      "definition": "UNIQUE (revision_id, profile_id, unit_kind, ordinal)",
+      "type": "u"
+     },
+     "text_unit_unit_kind_check": {
+      "definition": "CHECK ((unit_kind = ANY (ARRAY['document'::text, 'chunk'::text, 'overview'::text])))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "text_unit_profile_idx": "CREATE INDEX text_unit_profile_idx ON public.text_unit USING btree (profile_id)",
+     "text_unit_work_idx": "CREATE INDEX text_unit_work_idx ON public.text_unit USING btree (embedding_status) WHERE (embedding_status = ANY (ARRAY['pending'::text, 'failed'::text]))"
+    },
+    "triggers": {
+     "text_unit_input_immutable": "CREATE TRIGGER text_unit_input_immutable BEFORE UPDATE ON public.text_unit FOR EACH ROW EXECUTE FUNCTION protect_text_unit_input()"
+    }
+   }
+  },
+  "views": {
+   "current_live_document": {
+    "columns": [
+     "document_id",
+     "record_type",
+     "source_record_id",
+     "revision_id",
+     "title",
+     "summary_text",
+     "body_text",
+     "original_url",
+     "source_category",
+     "source_badge",
+     "api_provider",
+     "publisher_name",
+     "publisher_credibility_tier",
+     "filing_issuer",
+     "source_time",
+     "retrieved_at",
+     "content_status",
+     "content_scope"
+    ],
+    "definition": " SELECT d.document_id,\n    d.record_type,\n    d.source_record_id,\n    r.revision_id,\n    r.title,\n    r.summary_text,\n    r.body_text,\n    r.original_url,\n    r.source_category,\n        CASE r.source_category\n            WHEN 'official_filing'::text THEN 'Official filing'::text\n            WHEN 'media_report'::text THEN 'Media report'::text\n            WHEN 'company_announcement'::text THEN 'Company announcement'::text\n            ELSE 'Other'::text\n        END AS source_badge,\n    p.code AS api_provider,\n    pub.name AS publisher_name,\n    COALESCE(pub.credibility_tier, 'unreviewed'::text) AS publisher_credibility_tier,\n    c.name AS filing_issuer,\n        CASE\n            WHEN (d.record_type = 'sec_filing'::text) THEN s.accepted_at\n            ELSE r.published_at\n        END AS source_time,\n    r.retrieved_at,\n    r.content_status,\n    r.content_scope\n   FROM (((((document d\n     JOIN document_revision r ON (((r.revision_id = d.current_revision_id) AND (r.document_id = d.document_id))))\n     JOIN provider p ON ((p.provider_id = d.provider_id)))\n     LEFT JOIN publisher pub ON ((pub.publisher_id = r.publisher_id)))\n     LEFT JOIN sec_filing_details s ON ((s.revision_id = r.revision_id)))\n     LEFT JOIN company c ON ((c.company_id = s.issuer_company_id)))\n  WHERE (d.is_sample = false);"
+   }
+  }
+ },
+ "current": {
+  "extensions": {
+   "vector": {
+    "schema": "public"
+   }
+  },
+  "functions": {
+   "protect_conflict_review()": {
+    "body": "\nBEGIN\n    IF NEW.comparison_id IS DISTINCT FROM OLD.comparison_id THEN\n        RAISE EXCEPTION 'event_conflict_review.comparison_id is immutable';\n    END IF;\n    IF OLD.status = 'resolved' THEN\n        RAISE EXCEPTION 'event_conflict_review % is already resolved', OLD.review_id;\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "protect_event_summary()": {
+    "body": "\nBEGIN\n    IF ROW(NEW.summary_id, NEW.event_id, NEW.language_code, NEW.version, NEW.headline, NEW.summary_text,\n           NEW.key_points, NEW.statements, NEW.generation_reason, NEW.model_provider, NEW.model_name,\n           NEW.prompt_version, NEW.input_fingerprint, NEW.input_manifest, NEW.limitations, NEW.usage,\n           NEW.created_at)\n       IS DISTINCT FROM\n       ROW(OLD.summary_id, OLD.event_id, OLD.language_code, OLD.version, OLD.headline, OLD.summary_text,\n           OLD.key_points, OLD.statements, OLD.generation_reason, OLD.model_provider, OLD.model_name,\n           OLD.prompt_version, OLD.input_fingerprint, OLD.input_manifest, OLD.limitations, OLD.usage,\n           OLD.created_at) THEN\n        RAISE EXCEPTION 'event_summary content is immutable; insert a new version';\n    END IF;\n    IF OLD.status = 'superseded' AND NEW.status <> 'superseded' THEN\n        RAISE EXCEPTION 'a superseded event_summary cannot be republished';\n    END IF;\n    IF OLD.status = 'published' AND NEW.status = 'draft' THEN\n        RAISE EXCEPTION 'a published event_summary cannot return to draft';\n    END IF;\n    IF OLD.published_at IS NOT NULL AND NEW.published_at IS DISTINCT FROM OLD.published_at THEN\n        RAISE EXCEPTION 'event_summary.published_at is set once';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "protect_text_unit_input()": {
+    "body": "\nBEGIN\n    IF ROW(NEW.unit_id, NEW.revision_id, NEW.profile_id, NEW.unit_kind,\n           NEW.ordinal, NEW.input_text, NEW.input_hash, NEW.location)\n       IS DISTINCT FROM\n       ROW(OLD.unit_id, OLD.revision_id, OLD.profile_id, OLD.unit_kind,\n           OLD.ordinal, OLD.input_text, OLD.input_hash, OLD.location) THEN\n        RAISE EXCEPTION 'Text unit input is immutable; create a new profile/revision';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "reject_snapshot_update()": {
+    "body": "\nBEGIN\n    RAISE EXCEPTION '% rows are immutable; insert a new version', TG_TABLE_NAME;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_embedding_dimensions()": {
+    "body": "\nDECLARE expected_dimensions integer;\nBEGIN\n    SELECT p.dimensions INTO expected_dimensions\n    FROM public.text_unit t\n    JOIN public.embedding_profile p ON p.profile_id = t.profile_id\n    WHERE t.unit_id = NEW.unit_id;\n    IF expected_dimensions IS NULL OR\n       public.vector_dims(NEW.embedding) <> expected_dimensions THEN\n        RAISE EXCEPTION 'Embedding dimension mismatch or missing text unit/profile';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_event_link()": {
+    "body": "\nDECLARE\n    target uuid;\nBEGIN\n    -- Separate branches: PL/pgSQL only plans the branch it runs, and each table\n    -- has only one of these columns.\n    IF TG_TABLE_NAME = 'event_membership' THEN\n        target := NEW.event_id;\n    ELSE\n        target := NEW.candidate_event_id;\n    END IF;\n    IF NOT EXISTS (\n        SELECT 1 FROM public.revision_analysis a\n        JOIN public.document d ON d.document_id = a.document_id\n        JOIN public.news_event e ON e.event_id = target\n        WHERE a.analysis_id = NEW.analysis_id\n          AND a.revision_id = NEW.revision_id\n          AND a.profile_id = e.profile_id\n          AND a.pipeline_version = e.pipeline_version\n          AND d.is_sample = e.is_sample\n    ) THEN\n        RAISE EXCEPTION '% must link a revision to an event in the same analysis space and sample/live partition',\n            TG_TABLE_NAME;\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_news_event()": {
+    "body": "\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1 FROM public.revision_analysis a\n        JOIN public.document d ON d.document_id = a.document_id\n        WHERE a.analysis_id = NEW.origin_analysis_id\n          AND a.revision_id = NEW.origin_revision_id\n          AND a.profile_id = NEW.profile_id\n          AND a.pipeline_version = NEW.pipeline_version\n          AND d.is_sample = NEW.is_sample\n    ) THEN\n        RAISE EXCEPTION 'news_event must match its origin analysis space and sample/live partition';\n    END IF;\n    IF NEW.superseded_by IS NOT NULL AND NOT EXISTS (\n        SELECT 1 FROM public.news_event e\n        WHERE e.event_id = NEW.superseded_by\n          AND e.is_sample = NEW.is_sample\n          AND e.profile_id = NEW.profile_id\n          AND e.pipeline_version = NEW.pipeline_version\n    ) THEN\n        RAISE EXCEPTION 'an event can only be superseded by an event in the same partition';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_sec_details()": {
+    "body": "\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1 FROM public.document_revision r\n        JOIN public.document d ON d.document_id = r.document_id\n        JOIN public.provider p ON p.provider_id = d.provider_id\n        JOIN public.company c ON c.company_id = NEW.issuer_company_id\n        WHERE r.revision_id = NEW.revision_id\n          AND d.record_type = 'sec_filing' AND p.code = 'sec_edgar'\n          AND r.source_category = 'official_filing'\n          AND d.source_namespace = NEW.cik\n          AND d.source_record_id = NEW.accession_number\n          AND c.cik = NEW.cik\n    ) THEN\n        RAISE EXCEPTION 'SEC details must match filing identity, issuer CIK and category';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   },
+   "validate_summary_citation()": {
+    "body": "\nBEGIN\n    IF NOT EXISTS (\n        SELECT 1 FROM public.event_summary s\n        JOIN public.news_event e ON e.event_id = s.event_id\n        JOIN public.text_unit t ON t.unit_id = NEW.unit_id\n        JOIN public.document_revision r ON r.revision_id = t.revision_id\n        JOIN public.document d ON d.document_id = r.document_id\n        WHERE s.summary_id = NEW.summary_id AND d.is_sample = e.is_sample\n    ) THEN\n        RAISE EXCEPTION 'event_summary_citation must cite a text unit in the event''s sample/live partition';\n    END IF;\n    RETURN NEW;\nEND;\n",
+    "config": [],
+    "kind": "f",
+    "language": "plpgsql",
+    "result": "trigger",
+    "security_definer": false,
+    "volatility": "v"
+   }
+  },
+  "tables": {
+   "company": {
+    "columns": {
+     "cik": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 3,
+      "type": "text"
+     },
+     "company_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "company_cik_check": {
+      "definition": "CHECK ((cik ~ '^[0-9]{10}$'::text))",
+      "type": "c"
+     },
+     "company_cik_key": {
+      "definition": "UNIQUE (cik)",
+      "type": "u"
+     },
+     "company_name_check": {
+      "definition": "CHECK ((btrim(name) <> ''::text))",
+      "type": "c"
+     },
+     "company_pkey": {
+      "definition": "PRIMARY KEY (company_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "company_symbol": {
+    "columns": {
+     "company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "market": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "symbol": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "symbol_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "company_symbol_company_id_fkey": {
+      "definition": "FOREIGN KEY (company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "company_symbol_market_check": {
+      "definition": "CHECK ((btrim(market) <> ''::text))",
+      "type": "c"
+     },
+     "company_symbol_market_symbol_key": {
+      "definition": "UNIQUE (market, symbol)",
+      "type": "u"
+     },
+     "company_symbol_pkey": {
+      "definition": "PRIMARY KEY (symbol_id)",
+      "type": "p"
+     },
+     "company_symbol_symbol_check": {
+      "definition": "CHECK (((symbol = upper(symbol)) AND (btrim(symbol) <> ''::text)))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "company_symbol_company_idx": "CREATE INDEX company_symbol_company_idx ON public.company_symbol USING btree (company_id)"
+    },
+    "triggers": {}
+   },
+   "document": {
+    "columns": {
+     "current_revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "uuid"
+     },
+     "document_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "first_seen_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "timestamp with time zone"
+     },
+     "is_sample": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "boolean"
+     },
+     "last_seen_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "timestamp with time zone"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "smallint"
+     },
+     "record_type": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "source_namespace": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "source_record_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "document_check": {
+      "definition": "CHECK ((last_seen_at >= first_seen_at))",
+      "type": "c"
+     },
+     "document_current_revision_fk": {
+      "definition": "FOREIGN KEY (document_id, current_revision_id) REFERENCES document_revision(document_id, revision_id) DEFERRABLE INITIALLY DEFERRED",
+      "type": "f"
+     },
+     "document_pkey": {
+      "definition": "PRIMARY KEY (document_id)",
+      "type": "p"
+     },
+     "document_provider_id_fkey": {
+      "definition": "FOREIGN KEY (provider_id) REFERENCES provider(provider_id)",
+      "type": "f"
+     },
+     "document_provider_id_source_namespace_source_record_id_is_s_key": {
+      "definition": "UNIQUE (provider_id, source_namespace, source_record_id, is_sample)",
+      "type": "u"
+     },
+     "document_record_type_check": {
+      "definition": "CHECK ((record_type = ANY (ARRAY['news_article'::text, 'sec_filing'::text])))",
+      "type": "c"
+     },
+     "document_source_namespace_check": {
+      "definition": "CHECK ((btrim(source_namespace) <> ''::text))",
+      "type": "c"
+     },
+     "document_source_record_id_check": {
+      "definition": "CHECK ((btrim(source_record_id) <> ''::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "document_revision": {
+    "columns": {
+     "analysis_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "text"
+     },
+     "author": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "text"
+     },
+     "body_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "text"
+     },
+     "content_scope": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 19,
+      "type": "text"
+     },
+     "content_status": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 18,
+      "type": "text"
+     },
+     "document_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "original_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "preprocessing_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 16,
+      "type": "text"
+     },
+     "processing_warnings": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 21,
+      "type": "jsonb"
+     },
+     "provenance": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 20,
+      "type": "jsonb"
+     },
+     "published_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 12,
+      "type": "timestamp with time zone"
+     },
+     "publisher_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 3,
+      "type": "uuid"
+     },
+     "retrieved_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "timestamp with time zone"
+     },
+     "revision_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "schema_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 15,
+      "type": "text"
+     },
+     "source_category": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "source_snapshot_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 17,
+      "type": "text"
+     },
+     "source_updated_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 13,
+      "type": "timestamp with time zone"
+     },
+     "summary_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "text"
+     },
+     "title": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "title_generated": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "boolean"
+     }
+    },
+    "constraints": {
+     "document_revision_content_scope_check": {
+      "definition": "CHECK ((content_scope = ANY (ARRAY['full_article'::text, 'primary_document_only'::text, 'title_summary_only'::text, 'metadata_only'::text])))",
+      "type": "c"
+     },
+     "document_revision_content_status_check": {
+      "definition": "CHECK ((content_status = ANY (ARRAY['available'::text, 'partial'::text, 'missing'::text, 'extraction_failed'::text])))",
+      "type": "c"
+     },
+     "document_revision_document_id_fkey": {
+      "definition": "FOREIGN KEY (document_id) REFERENCES document(document_id)",
+      "type": "f"
+     },
+     "document_revision_document_id_revision_id_key": {
+      "definition": "UNIQUE (document_id, revision_id)",
+      "type": "u"
+     },
+     "document_revision_document_id_source_snapshot_hash_preproce_key": {
+      "definition": "UNIQUE (document_id, source_snapshot_hash, preprocessing_version)",
+      "type": "u"
+     },
+     "document_revision_pkey": {
+      "definition": "PRIMARY KEY (revision_id)",
+      "type": "p"
+     },
+     "document_revision_processing_warnings_check": {
+      "definition": "CHECK ((jsonb_typeof(processing_warnings) = 'array'::text))",
+      "type": "c"
+     },
+     "document_revision_provenance_check": {
+      "definition": "CHECK ((jsonb_typeof(provenance) = 'object'::text))",
+      "type": "c"
+     },
+     "document_revision_publisher_id_fkey": {
+      "definition": "FOREIGN KEY (publisher_id) REFERENCES publisher(publisher_id)",
+      "type": "f"
+     },
+     "document_revision_source_category_check": {
+      "definition": "CHECK ((source_category = ANY (ARRAY['official_filing'::text, 'media_report'::text, 'company_announcement'::text, 'other'::text])))",
+      "type": "c"
+     },
+     "document_revision_source_snapshot_hash_check": {
+      "definition": "CHECK ((source_snapshot_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "revision_category_idx": "CREATE INDEX revision_category_idx ON public.document_revision USING btree (source_category)",
+     "revision_published_idx": "CREATE INDEX revision_published_idx ON public.document_revision USING btree (published_at)",
+     "revision_publisher_idx": "CREATE INDEX revision_publisher_idx ON public.document_revision USING btree (publisher_id)"
+    },
+    "triggers": {
+     "revision_immutable": "CREATE TRIGGER revision_immutable BEFORE UPDATE ON public.document_revision FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "document_revision_source": {
+    "columns": {
+     "raw_document": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 4,
+      "type": "text"
+     },
+     "raw_document_sha256": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "raw_document_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 6,
+      "type": "text"
+     },
+     "raw_file_refs": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "jsonb"
+     },
+     "raw_payload": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "jsonb"
+     },
+     "raw_payload_sha256": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "stored_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "timestamp with time zone"
+     }
+    },
+    "constraints": {
+     "document_revision_source_document_hash_check": {
+      "definition": "CHECK (((raw_document_sha256 IS NULL) OR (raw_document_sha256 ~ '^[0-9a-f]{64}$'::text)))",
+      "type": "c"
+     },
+     "document_revision_source_document_pair_check": {
+      "definition": "CHECK (((raw_document IS NULL) = (raw_document_sha256 IS NULL)))",
+      "type": "c"
+     },
+     "document_revision_source_payload_check": {
+      "definition": "CHECK ((jsonb_typeof(raw_payload) = 'object'::text))",
+      "type": "c"
+     },
+     "document_revision_source_payload_hash_check": {
+      "definition": "CHECK ((raw_payload_sha256 ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     },
+     "document_revision_source_pkey": {
+      "definition": "PRIMARY KEY (revision_id)",
+      "type": "p"
+     },
+     "document_revision_source_refs_check": {
+      "definition": "CHECK ((jsonb_typeof(raw_file_refs) = 'array'::text))",
+      "type": "c"
+     },
+     "document_revision_source_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {},
+    "triggers": {
+     "revision_source_immutable": "CREATE TRIGGER revision_source_immutable BEFORE UPDATE ON public.document_revision_source FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "embedding": {
+    "columns": {
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "timestamp with time zone"
+     },
+     "embedding": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "vector"
+     },
+     "unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "embedding_pkey": {
+      "definition": "PRIMARY KEY (unit_id)",
+      "type": "p"
+     },
+     "embedding_unit_id_fkey": {
+      "definition": "FOREIGN KEY (unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {},
+    "triggers": {
+     "embedding_dimensions_check": "CREATE TRIGGER embedding_dimensions_check BEFORE INSERT OR UPDATE ON public.embedding FOR EACH ROW EXECUTE FUNCTION validate_embedding_dimensions()"
+    }
+   },
+   "embedding_profile": {
+    "columns": {
+     "chunking_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     },
+     "config_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "configuration": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "jsonb"
+     },
+     "dimensions": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "integer"
+     },
+     "distance_metric": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "model_name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "model_provider": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "model_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "profile_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "embedding_profile_config_hash_check": {
+      "definition": "CHECK ((config_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     },
+     "embedding_profile_config_hash_key": {
+      "definition": "UNIQUE (config_hash)",
+      "type": "u"
+     },
+     "embedding_profile_configuration_check": {
+      "definition": "CHECK ((jsonb_typeof(configuration) = 'object'::text))",
+      "type": "c"
+     },
+     "embedding_profile_dimensions_check": {
+      "definition": "CHECK ((dimensions > 0))",
+      "type": "c"
+     },
+     "embedding_profile_distance_metric_check": {
+      "definition": "CHECK ((distance_metric = ANY (ARRAY['cosine'::text, 'l2'::text, 'inner_product'::text])))",
+      "type": "c"
+     },
+     "embedding_profile_pkey": {
+      "definition": "PRIMARY KEY (profile_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {
+     "profile_immutable": "CREATE TRIGGER profile_immutable BEFORE UPDATE ON public.embedding_profile FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "event_comparison": {
+    "columns": {
+     "analysis_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "candidate_event_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "uuid"
+     },
+     "candidate_revision_ids": {
+      "default": "'{}'::uuid[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "uuid[]"
+     },
+     "candidate_unit_ids": {
+      "default": "'{}'::uuid[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "uuid[]"
+     },
+     "comparison_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 21,
+      "type": "timestamp with time zone"
+     },
+     "differences": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "jsonb"
+     },
+     "evidence": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 13,
+      "type": "jsonb"
+     },
+     "explanation": {
+      "default": "''::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "text"
+     },
+     "incoming_unit_ids": {
+      "default": "'{}'::uuid[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "uuid[]"
+     },
+     "insufficient_context": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 15,
+      "type": "boolean"
+     },
+     "label": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "matching_facts": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "jsonb"
+     },
+     "method": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     },
+     "model": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 18,
+      "type": "text"
+     },
+     "prompt_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 19,
+      "type": "text"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "segment_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "uncertainty": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 16,
+      "type": "text"
+     },
+     "usage": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 20,
+      "type": "jsonb"
+     },
+     "validation_notes": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 17,
+      "type": "jsonb"
+     }
+    },
+    "constraints": {
+     "event_comparison_analysis_id_fkey": {
+      "definition": "FOREIGN KEY (analysis_id) REFERENCES revision_analysis(analysis_id)",
+      "type": "f"
+     },
+     "event_comparison_candidate_event_id_fkey": {
+      "definition": "FOREIGN KEY (candidate_event_id) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "event_comparison_differences_check": {
+      "definition": "CHECK ((jsonb_typeof(differences) = 'array'::text))",
+      "type": "c"
+     },
+     "event_comparison_evidence_check": {
+      "definition": "CHECK ((jsonb_typeof(evidence) = 'object'::text))",
+      "type": "c"
+     },
+     "event_comparison_facts_check": {
+      "definition": "CHECK ((jsonb_typeof(matching_facts) = 'array'::text))",
+      "type": "c"
+     },
+     "event_comparison_label_check": {
+      "definition": "CHECK ((label = ANY (ARRAY['same_event_repeated'::text, 'same_event_update'::text, 'same_event_conflict'::text, 'different_event'::text, 'uncertain'::text])))",
+      "type": "c"
+     },
+     "event_comparison_method_check": {
+      "definition": "CHECK ((method = ANY (ARRAY['llm'::text, 'exact_content'::text])))",
+      "type": "c"
+     },
+     "event_comparison_notes_check": {
+      "definition": "CHECK ((jsonb_typeof(validation_notes) = 'array'::text))",
+      "type": "c"
+     },
+     "event_comparison_pair_key": {
+      "definition": "UNIQUE (analysis_id, segment_key, candidate_event_id)",
+      "type": "u"
+     },
+     "event_comparison_pkey": {
+      "definition": "PRIMARY KEY (comparison_id)",
+      "type": "p"
+     },
+     "event_comparison_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     },
+     "event_comparison_usage_check": {
+      "definition": "CHECK ((jsonb_typeof(usage) = 'object'::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_comparison_event_idx": "CREATE INDEX event_comparison_event_idx ON public.event_comparison USING btree (candidate_event_id)"
+    },
+    "triggers": {
+     "event_comparison_immutable": "CREATE TRIGGER event_comparison_immutable BEFORE UPDATE ON public.event_comparison FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()",
+     "event_comparison_partition_check": "CREATE TRIGGER event_comparison_partition_check BEFORE INSERT ON public.event_comparison FOR EACH ROW EXECUTE FUNCTION validate_event_link()"
+    }
+   },
+   "event_conflict_review": {
+    "columns": {
+     "comparison_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "timestamp with time zone"
+     },
+     "resolution": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 4,
+      "type": "text"
+     },
+     "resolved_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "timestamp with time zone"
+     },
+     "review_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "reviewer_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "reviewer_notes": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 6,
+      "type": "text"
+     },
+     "status": {
+      "default": "'open'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "event_conflict_review_check": {
+      "definition": "CHECK ((((status = ANY (ARRAY['open'::text, 'in_review'::text])) AND (resolution IS NULL) AND (resolved_at IS NULL)) OR ((status = 'resolved'::text) AND (resolution IS NOT NULL) AND (NULLIF(btrim(reviewer_id), ''::text) IS NOT NULL) AND (NULLIF(btrim(reviewer_notes), ''::text) IS NOT NULL) AND (resolved_at IS NOT NULL))))",
+      "type": "c"
+     },
+     "event_conflict_review_comparison_id_fkey": {
+      "definition": "FOREIGN KEY (comparison_id) REFERENCES event_comparison(comparison_id)",
+      "type": "f"
+     },
+     "event_conflict_review_comparison_id_key": {
+      "definition": "UNIQUE (comparison_id)",
+      "type": "u"
+     },
+     "event_conflict_review_pkey": {
+      "definition": "PRIMARY KEY (review_id)",
+      "type": "p"
+     },
+     "event_conflict_review_resolution_check": {
+      "definition": "CHECK ((resolution = ANY (ARRAY['confirmed_conflict'::text, 'not_a_conflict'::text, 'different_events'::text])))",
+      "type": "c"
+     },
+     "event_conflict_review_status_check": {
+      "definition": "CHECK ((status = ANY (ARRAY['open'::text, 'in_review'::text, 'resolved'::text])))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_conflict_review_open": "CREATE INDEX event_conflict_review_open ON public.event_conflict_review USING btree (created_at) WHERE (status = ANY (ARRAY['open'::text, 'in_review'::text]))"
+    },
+    "triggers": {
+     "event_conflict_review_final": "CREATE TRIGGER event_conflict_review_final BEFORE UPDATE ON public.event_conflict_review FOR EACH ROW EXECUTE FUNCTION protect_conflict_review()"
+    }
+   },
+   "event_membership": {
+    "columns": {
+     "analysis_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "uuid"
+     },
+     "comparison_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "timestamp with time zone"
+     },
+     "document_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "uuid"
+     },
+     "event_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "membership_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "relation": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "segment_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "state": {
+      "default": "'active'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "event_membership_analysis_id_fkey": {
+      "definition": "FOREIGN KEY (analysis_id) REFERENCES revision_analysis(analysis_id)",
+      "type": "f"
+     },
+     "event_membership_comparison_check": {
+      "definition": "CHECK (((relation = 'origin'::text) = (comparison_id IS NULL)))",
+      "type": "c"
+     },
+     "event_membership_comparison_id_fkey": {
+      "definition": "FOREIGN KEY (comparison_id) REFERENCES event_comparison(comparison_id)",
+      "type": "f"
+     },
+     "event_membership_event_id_fkey": {
+      "definition": "FOREIGN KEY (event_id) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "event_membership_pair_key": {
+      "definition": "UNIQUE (event_id, revision_id)",
+      "type": "u"
+     },
+     "event_membership_pending_check": {
+      "definition": "CHECK (((relation = 'uncertain'::text) = (state = 'pending'::text)))",
+      "type": "c"
+     },
+     "event_membership_pkey": {
+      "definition": "PRIMARY KEY (membership_id)",
+      "type": "p"
+     },
+     "event_membership_relation_check": {
+      "definition": "CHECK ((relation = ANY (ARRAY['origin'::text, 'same_event_repeated'::text, 'same_event_update'::text, 'same_event_conflict'::text, 'uncertain'::text])))",
+      "type": "c"
+     },
+     "event_membership_revision_fk": {
+      "definition": "FOREIGN KEY (document_id, revision_id) REFERENCES document_revision(document_id, revision_id)",
+      "type": "f"
+     },
+     "event_membership_state_check": {
+      "definition": "CHECK ((state = ANY (ARRAY['active'::text, 'pending'::text, 'detached'::text])))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_membership_document_idx": "CREATE INDEX event_membership_document_idx ON public.event_membership USING btree (document_id)",
+     "event_membership_revision_idx": "CREATE INDEX event_membership_revision_idx ON public.event_membership USING btree (revision_id)"
+    },
+    "triggers": {
+     "event_membership_partition_check": "CREATE TRIGGER event_membership_partition_check BEFORE INSERT OR UPDATE ON public.event_membership FOR EACH ROW EXECUTE FUNCTION validate_event_link()"
+    }
+   },
+   "event_membership_unit": {
+    "columns": {
+     "membership_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "event_membership_unit_membership_id_fkey": {
+      "definition": "FOREIGN KEY (membership_id) REFERENCES event_membership(membership_id)",
+      "type": "f"
+     },
+     "event_membership_unit_pkey": {
+      "definition": "PRIMARY KEY (membership_id, unit_id)",
+      "type": "p"
+     },
+     "event_membership_unit_unit_id_fkey": {
+      "definition": "FOREIGN KEY (unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "event_membership_unit_unit_idx": "CREATE INDEX event_membership_unit_unit_idx ON public.event_membership_unit USING btree (unit_id)"
+    },
+    "triggers": {}
+   },
+   "event_review_decision": {
+    "columns": {
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "timestamp with time zone"
+     },
+     "decision": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "decision_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "explanation": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "membership_corrections": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "jsonb"
+     },
+     "queued_jobs": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "jsonb"
+     },
+     "resulting_status": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "review_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "reviewer_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "event_review_decision_check": {
+      "definition": "CHECK ((decision = ANY (ARRAY['not_a_conflict'::text, 'confirmed_conflict'::text, 'different_events'::text, 'insufficient_evidence'::text])))",
+      "type": "c"
+     },
+     "event_review_decision_corrections_check": {
+      "definition": "CHECK ((jsonb_typeof(membership_corrections) = 'array'::text))",
+      "type": "c"
+     },
+     "event_review_decision_explanation_check": {
+      "definition": "CHECK ((btrim(explanation) <> ''::text))",
+      "type": "c"
+     },
+     "event_review_decision_jobs_check": {
+      "definition": "CHECK ((jsonb_typeof(queued_jobs) = 'array'::text))",
+      "type": "c"
+     },
+     "event_review_decision_pkey": {
+      "definition": "PRIMARY KEY (decision_id)",
+      "type": "p"
+     },
+     "event_review_decision_review_id_fkey": {
+      "definition": "FOREIGN KEY (review_id) REFERENCES event_conflict_review(review_id)",
+      "type": "f"
+     },
+     "event_review_decision_reviewer_check": {
+      "definition": "CHECK ((btrim(reviewer_id) <> ''::text))",
+      "type": "c"
+     },
+     "event_review_decision_status_check": {
+      "definition": "CHECK ((resulting_status = ANY (ARRAY['open'::text, 'in_review'::text, 'resolved'::text])))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_review_decision_review_idx": "CREATE INDEX event_review_decision_review_idx ON public.event_review_decision USING btree (review_id, created_at)"
+    },
+    "triggers": {
+     "event_review_decision_immutable": "CREATE TRIGGER event_review_decision_immutable BEFORE UPDATE ON public.event_review_decision FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "event_summary": {
+    "columns": {
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 15,
+      "type": "timestamp with time zone"
+     },
+     "event_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "generation_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text"
+     },
+     "headline": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "input_fingerprint": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 13,
+      "type": "text"
+     },
+     "input_manifest": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 18,
+      "type": "jsonb"
+     },
+     "key_points": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "jsonb"
+     },
+     "language_code": {
+      "default": "'en'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "limitations": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 19,
+      "type": "jsonb"
+     },
+     "model_name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "text"
+     },
+     "model_provider": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "text"
+     },
+     "prompt_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "text"
+     },
+     "published_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 16,
+      "type": "timestamp with time zone"
+     },
+     "statements": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 17,
+      "type": "jsonb"
+     },
+     "status": {
+      "default": "'draft'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     },
+     "summary_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "summary_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "usage": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "jsonb"
+     },
+     "version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "integer"
+     }
+    },
+    "constraints": {
+     "event_summary_check": {
+      "definition": "CHECK ((((status = 'draft'::text) AND (published_at IS NULL)) OR ((status = ANY (ARRAY['published'::text, 'superseded'::text])) AND (published_at IS NOT NULL))))",
+      "type": "c"
+     },
+     "event_summary_event_id_fkey": {
+      "definition": "FOREIGN KEY (event_id) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "event_summary_event_id_language_code_version_key": {
+      "definition": "UNIQUE (event_id, language_code, version)",
+      "type": "u"
+     },
+     "event_summary_generation_reason_check": {
+      "definition": "CHECK ((generation_reason = ANY (ARRAY['initial'::text, 'new_information'::text, 'review_resolution'::text, 'manual_refresh'::text])))",
+      "type": "c"
+     },
+     "event_summary_headline_check": {
+      "definition": "CHECK ((btrim(headline) <> ''::text))",
+      "type": "c"
+     },
+     "event_summary_key_points_check": {
+      "definition": "CHECK ((jsonb_typeof(key_points) = 'array'::text))",
+      "type": "c"
+     },
+     "event_summary_limitations_check": {
+      "definition": "CHECK ((jsonb_typeof(limitations) = 'array'::text))",
+      "type": "c"
+     },
+     "event_summary_manifest_check": {
+      "definition": "CHECK ((jsonb_typeof(input_manifest) = 'object'::text))",
+      "type": "c"
+     },
+     "event_summary_pkey": {
+      "definition": "PRIMARY KEY (summary_id)",
+      "type": "p"
+     },
+     "event_summary_statements_check": {
+      "definition": "CHECK ((jsonb_typeof(statements) = 'array'::text))",
+      "type": "c"
+     },
+     "event_summary_status_check": {
+      "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'superseded'::text])))",
+      "type": "c"
+     },
+     "event_summary_summary_text_check": {
+      "definition": "CHECK ((btrim(summary_text) <> ''::text))",
+      "type": "c"
+     },
+     "event_summary_usage_check": {
+      "definition": "CHECK ((jsonb_typeof(usage) = 'object'::text))",
+      "type": "c"
+     },
+     "event_summary_version_check": {
+      "definition": "CHECK ((version > 0))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_summary_input_lookup": "CREATE INDEX event_summary_input_lookup ON public.event_summary USING btree (event_id, language_code, input_fingerprint)",
+     "event_summary_one_published": "CREATE UNIQUE INDEX event_summary_one_published ON public.event_summary USING btree (event_id, language_code) WHERE (status = 'published'::text)"
+    },
+    "triggers": {
+     "event_summary_content_immutable": "CREATE TRIGGER event_summary_content_immutable BEFORE UPDATE ON public.event_summary FOR EACH ROW EXECUTE FUNCTION protect_event_summary()"
+    }
+   },
+   "event_summary_attempt": {
+    "columns": {
+     "attempt_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "attempt_number": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "integer"
+     },
+     "base_summary_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 21,
+      "type": "timestamp with time zone"
+     },
+     "error_kind": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 17,
+      "type": "text"
+     },
+     "error_message": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 18,
+      "type": "text"
+     },
+     "event_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "evidence_fingerprint": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text"
+     },
+     "generation_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "input_fingerprint": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "text"
+     },
+     "input_manifest": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 20,
+      "type": "jsonb"
+     },
+     "job_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "language_code": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "model_name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 13,
+      "type": "text"
+     },
+     "model_provider": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 12,
+      "type": "text"
+     },
+     "outcome": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "output": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 15,
+      "type": "jsonb"
+     },
+     "prompt_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 14,
+      "type": "text"
+     },
+     "summary_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "uuid"
+     },
+     "usage": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 19,
+      "type": "jsonb"
+     },
+     "validation_errors": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 16,
+      "type": "jsonb"
+     }
+    },
+    "constraints": {
+     "event_summary_attempt_base_summary_id_fkey": {
+      "definition": "FOREIGN KEY (base_summary_id) REFERENCES event_summary(summary_id)",
+      "type": "f"
+     },
+     "event_summary_attempt_errors_check": {
+      "definition": "CHECK ((jsonb_typeof(validation_errors) = 'array'::text))",
+      "type": "c"
+     },
+     "event_summary_attempt_event_id_fkey": {
+      "definition": "FOREIGN KEY (event_id) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "event_summary_attempt_job_id_fkey": {
+      "definition": "FOREIGN KEY (job_id) REFERENCES event_summary_job(job_id)",
+      "type": "f"
+     },
+     "event_summary_attempt_manifest_check": {
+      "definition": "CHECK ((jsonb_typeof(input_manifest) = 'object'::text))",
+      "type": "c"
+     },
+     "event_summary_attempt_number_check": {
+      "definition": "CHECK ((attempt_number > 0))",
+      "type": "c"
+     },
+     "event_summary_attempt_outcome_check": {
+      "definition": "CHECK ((outcome = ANY (ARRAY['published'::text, 'invalid'::text, 'error'::text, 'stale'::text, 'blocked'::text])))",
+      "type": "c"
+     },
+     "event_summary_attempt_pkey": {
+      "definition": "PRIMARY KEY (attempt_id)",
+      "type": "p"
+     },
+     "event_summary_attempt_published_check": {
+      "definition": "CHECK (((outcome = 'published'::text) = (summary_id IS NOT NULL)))",
+      "type": "c"
+     },
+     "event_summary_attempt_summary_id_fkey": {
+      "definition": "FOREIGN KEY (summary_id) REFERENCES event_summary(summary_id)",
+      "type": "f"
+     },
+     "event_summary_attempt_usage_check": {
+      "definition": "CHECK ((jsonb_typeof(usage) = 'object'::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "event_summary_attempt_event_idx": "CREATE INDEX event_summary_attempt_event_idx ON public.event_summary_attempt USING btree (event_id, created_at)"
+    },
+    "triggers": {
+     "event_summary_attempt_immutable": "CREATE TRIGGER event_summary_attempt_immutable BEFORE UPDATE ON public.event_summary_attempt FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "event_summary_citation": {
+    "columns": {
+     "citation_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "timestamp with time zone"
+     },
+     "evidence_quote": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "quote_index": {
+      "default": "1",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "integer"
+     },
+     "statement_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "summary_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "event_summary_citation_evidence_quote_check": {
+      "definition": "CHECK ((btrim(evidence_quote) <> ''::text))",
+      "type": "c"
+     },
+     "event_summary_citation_pkey": {
+      "definition": "PRIMARY KEY (citation_id)",
+      "type": "p"
+     },
+     "event_summary_citation_quote_index_check": {
+      "definition": "CHECK ((quote_index >= 1))",
+      "type": "c"
+     },
+     "event_summary_citation_quote_position_key": {
+      "definition": "UNIQUE (summary_id, statement_key, unit_id, quote_index)",
+      "type": "u"
+     },
+     "event_summary_citation_statement_key_check": {
+      "definition": "CHECK ((btrim(statement_key) <> ''::text))",
+      "type": "c"
+     },
+     "event_summary_citation_summary_id_fkey": {
+      "definition": "FOREIGN KEY (summary_id) REFERENCES event_summary(summary_id)",
+      "type": "f"
+     },
+     "event_summary_citation_unit_id_fkey": {
+      "definition": "FOREIGN KEY (unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "event_summary_citation_unit": "CREATE INDEX event_summary_citation_unit ON public.event_summary_citation USING btree (unit_id)"
+    },
+    "triggers": {
+     "event_summary_citation_immutable": "CREATE TRIGGER event_summary_citation_immutable BEFORE UPDATE ON public.event_summary_citation FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()",
+     "event_summary_citation_partition_check": "CREATE TRIGGER event_summary_citation_partition_check BEFORE INSERT ON public.event_summary_citation FOR EACH ROW EXECUTE FUNCTION validate_summary_citation()"
+    }
+   },
+   "event_summary_job": {
+    "columns": {
+     "attempts": {
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "integer"
+     },
+     "completed_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 15,
+      "type": "timestamp with time zone"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 13,
+      "type": "timestamp with time zone"
+     },
+     "event_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "job_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "language_code": {
+      "default": "'en'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "last_error": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "text"
+     },
+     "last_input_fingerprint": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "lease_expires_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "timestamp with time zone"
+     },
+     "lease_owner": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "text"
+     },
+     "next_retry_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "timestamp with time zone"
+     },
+     "reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "status": {
+      "default": "'pending'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "summary_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 12,
+      "type": "uuid"
+     },
+     "updated_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "timestamp with time zone"
+     }
+    },
+    "constraints": {
+     "event_summary_job_attempts_check": {
+      "definition": "CHECK ((attempts >= 0))",
+      "type": "c"
+     },
+     "event_summary_job_event_id_fkey": {
+      "definition": "FOREIGN KEY (event_id) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "event_summary_job_key": {
+      "definition": "UNIQUE (event_id, language_code)",
+      "type": "u"
+     },
+     "event_summary_job_lease_check": {
+      "definition": "CHECK (((status = 'running'::text) = ((lease_owner IS NOT NULL) AND (lease_expires_at IS NOT NULL))))",
+      "type": "c"
+     },
+     "event_summary_job_pkey": {
+      "definition": "PRIMARY KEY (job_id)",
+      "type": "p"
+     },
+     "event_summary_job_reason_check": {
+      "definition": "CHECK ((reason = ANY (ARRAY['initial'::text, 'new_information'::text, 'review_resolution'::text, 'manual_refresh'::text])))",
+      "type": "c"
+     },
+     "event_summary_job_status_check": {
+      "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'completed'::text, 'failed'::text, 'awaiting_review'::text])))",
+      "type": "c"
+     },
+     "event_summary_job_summary_id_fkey": {
+      "definition": "FOREIGN KEY (summary_id) REFERENCES event_summary(summary_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "event_summary_job_work_idx": "CREATE INDEX event_summary_job_work_idx ON public.event_summary_job USING btree (status, next_retry_at) WHERE (status = ANY (ARRAY['pending'::text, 'running'::text, 'failed'::text]))"
+    },
+    "triggers": {}
+   },
+   "ingestion_state": {
+    "columns": {
+     "checkpoint": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "jsonb"
+     },
+     "is_sample": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "boolean"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "smallint"
+     },
+     "stream_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "updated_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "timestamp with time zone"
+     }
+    },
+    "constraints": {
+     "ingestion_state_checkpoint_check": {
+      "definition": "CHECK ((jsonb_typeof(checkpoint) = 'object'::text))",
+      "type": "c"
+     },
+     "ingestion_state_pkey": {
+      "definition": "PRIMARY KEY (provider_id, stream_key, is_sample)",
+      "type": "p"
+     },
+     "ingestion_state_provider_id_fkey": {
+      "definition": "FOREIGN KEY (provider_id) REFERENCES provider(provider_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "news_event": {
+    "columns": {
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 15,
+      "type": "timestamp with time zone"
+     },
+     "event_facts": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "jsonb"
+     },
+     "event_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "first_source_time": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "timestamp with time zone"
+     },
+     "flags": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "jsonb"
+     },
+     "is_sample": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "boolean"
+     },
+     "last_source_time": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "timestamp with time zone"
+     },
+     "origin_analysis_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "uuid"
+     },
+     "origin_revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "uuid"
+     },
+     "origin_segment_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 13,
+      "type": "text"
+     },
+     "pipeline_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "profile_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "status": {
+      "default": "'provisional'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "superseded_by": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 14,
+      "type": "uuid"
+     },
+     "title": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "updated_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 16,
+      "type": "timestamp with time zone"
+     }
+    },
+    "constraints": {
+     "news_event_facts_check": {
+      "definition": "CHECK ((jsonb_typeof(event_facts) = 'object'::text))",
+      "type": "c"
+     },
+     "news_event_flags_check": {
+      "definition": "CHECK ((jsonb_typeof(flags) = 'array'::text))",
+      "type": "c"
+     },
+     "news_event_not_self_check": {
+      "definition": "CHECK (((superseded_by IS NULL) OR (superseded_by <> event_id)))",
+      "type": "c"
+     },
+     "news_event_origin_analysis_id_fkey": {
+      "definition": "FOREIGN KEY (origin_analysis_id) REFERENCES revision_analysis(analysis_id)",
+      "type": "f"
+     },
+     "news_event_origin_key": {
+      "definition": "UNIQUE (origin_analysis_id, origin_segment_key)",
+      "type": "u"
+     },
+     "news_event_origin_revision_id_fkey": {
+      "definition": "FOREIGN KEY (origin_revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     },
+     "news_event_pkey": {
+      "definition": "PRIMARY KEY (event_id)",
+      "type": "p"
+     },
+     "news_event_profile_id_fkey": {
+      "definition": "FOREIGN KEY (profile_id) REFERENCES embedding_profile(profile_id)",
+      "type": "f"
+     },
+     "news_event_status_check": {
+      "definition": "CHECK ((status = ANY (ARRAY['provisional'::text, 'corroborated'::text, 'superseded'::text])))",
+      "type": "c"
+     },
+     "news_event_superseded_by_fkey": {
+      "definition": "FOREIGN KEY (superseded_by) REFERENCES news_event(event_id)",
+      "type": "f"
+     },
+     "news_event_superseded_check": {
+      "definition": "CHECK (((status = 'superseded'::text) = (superseded_by IS NOT NULL)))",
+      "type": "c"
+     },
+     "news_event_title_check": {
+      "definition": "CHECK ((btrim(title) <> ''::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "news_event_space_idx": "CREATE INDEX news_event_space_idx ON public.news_event USING btree (is_sample, profile_id, pipeline_version, status)"
+    },
+    "triggers": {
+     "news_event_partition_check": "CREATE TRIGGER news_event_partition_check BEFORE INSERT OR UPDATE ON public.news_event FOR EACH ROW EXECUTE FUNCTION validate_news_event()"
+    }
+   },
+   "provider": {
+    "columns": {
+     "code": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "provider_id": {
+      "default": null,
+      "generated": null,
+      "identity": "a",
+      "not_null": true,
+      "position": 1,
+      "type": "smallint"
+     }
+    },
+    "constraints": {
+     "provider_code_check": {
+      "definition": "CHECK ((btrim(code) <> ''::text))",
+      "type": "c"
+     },
+     "provider_code_key": {
+      "definition": "UNIQUE (code)",
+      "type": "u"
+     },
+     "provider_pkey": {
+      "definition": "PRIMARY KEY (provider_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "publisher": {
+    "columns": {
+     "canonical_key": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "text"
+     },
+     "credibility_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "text"
+     },
+     "credibility_reviewed_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 6,
+      "type": "timestamp with time zone"
+     },
+     "credibility_tier": {
+      "default": "'unreviewed'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "name": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "publisher_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "publisher_canonical_key_key": {
+      "definition": "UNIQUE (canonical_key)",
+      "type": "u"
+     },
+     "publisher_credibility_tier_check": {
+      "definition": "CHECK ((credibility_tier = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text, 'unreviewed'::text])))",
+      "type": "c"
+     },
+     "publisher_pkey": {
+      "definition": "PRIMARY KEY (publisher_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "retrieval_candidate": {
+    "columns": {
+     "analysis_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "candidate_event_ids": {
+      "default": "'{}'::uuid[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "uuid[]"
+     },
+     "candidate_revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "uuid"
+     },
+     "candidate_unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "timestamp with time zone"
+     },
+     "fused_rank": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "integer"
+     },
+     "fused_score": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "double precision"
+     },
+     "incoming_unit_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "lexical_rank": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "integer"
+     },
+     "lexical_score": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "double precision"
+     },
+     "not_compared_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 13,
+      "type": "text"
+     },
+     "semantic_rank": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 5,
+      "type": "integer"
+     },
+     "semantic_similarity": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 6,
+      "type": "double precision"
+     },
+     "shortlisted": {
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "boolean"
+     }
+    },
+    "constraints": {
+     "retrieval_candidate_analysis_id_fkey": {
+      "definition": "FOREIGN KEY (analysis_id) REFERENCES revision_analysis(analysis_id)",
+      "type": "f"
+     },
+     "retrieval_candidate_candidate_revision_id_fkey": {
+      "definition": "FOREIGN KEY (candidate_revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     },
+     "retrieval_candidate_candidate_unit_id_fkey": {
+      "definition": "FOREIGN KEY (candidate_unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     },
+     "retrieval_candidate_channel_check": {
+      "definition": "CHECK (((semantic_rank IS NOT NULL) OR (lexical_rank IS NOT NULL)))",
+      "type": "c"
+     },
+     "retrieval_candidate_incoming_unit_id_fkey": {
+      "definition": "FOREIGN KEY (incoming_unit_id) REFERENCES text_unit(unit_id)",
+      "type": "f"
+     },
+     "retrieval_candidate_not_self_check": {
+      "definition": "CHECK ((incoming_unit_id <> candidate_unit_id))",
+      "type": "c"
+     },
+     "retrieval_candidate_pkey": {
+      "definition": "PRIMARY KEY (analysis_id, incoming_unit_id, candidate_unit_id)",
+      "type": "p"
+     }
+    },
+    "indexes": {},
+    "triggers": {}
+   },
+   "revision_analysis": {
+    "columns": {
+     "analysis_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "anchor_source": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "anchor_time": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 10,
+      "type": "timestamp with time zone"
+     },
+     "attempts": {
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 17,
+      "type": "integer"
+     },
+     "comparison_model": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 15,
+      "type": "text"
+     },
+     "completed_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 22,
+      "type": "timestamp with time zone"
+     },
+     "created_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 20,
+      "type": "timestamp with time zone"
+     },
+     "document_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "evidence_level": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 9,
+      "type": "text"
+     },
+     "index_coverage": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "jsonb"
+     },
+     "last_error": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 18,
+      "type": "text"
+     },
+     "limitations": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 13,
+      "type": "jsonb"
+     },
+     "next_retry_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 19,
+      "type": "timestamp with time zone"
+     },
+     "pipeline_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "profile_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "uuid"
+     },
+     "prompt_version": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 16,
+      "type": "text"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "skip_reason": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "text"
+     },
+     "stage_status": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "jsonb"
+     },
+     "status": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "updated_at": {
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 21,
+      "type": "timestamp with time zone"
+     },
+     "usage": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 14,
+      "type": "jsonb"
+     }
+    },
+    "constraints": {
+     "revision_analysis_attempts_check": {
+      "definition": "CHECK ((attempts >= 0))",
+      "type": "c"
+     },
+     "revision_analysis_coverage_check": {
+      "definition": "CHECK ((jsonb_typeof(index_coverage) = 'object'::text))",
+      "type": "c"
+     },
+     "revision_analysis_evidence_check": {
+      "definition": "CHECK (((evidence_level IS NULL) OR (evidence_level = ANY (ARRAY['full'::text, 'summary_only'::text, 'headline_only'::text]))))",
+      "type": "c"
+     },
+     "revision_analysis_identity_key": {
+      "definition": "UNIQUE (revision_id, profile_id, pipeline_version)",
+      "type": "u"
+     },
+     "revision_analysis_limitations_check": {
+      "definition": "CHECK ((jsonb_typeof(limitations) = 'array'::text))",
+      "type": "c"
+     },
+     "revision_analysis_pkey": {
+      "definition": "PRIMARY KEY (analysis_id)",
+      "type": "p"
+     },
+     "revision_analysis_profile_id_fkey": {
+      "definition": "FOREIGN KEY (profile_id) REFERENCES embedding_profile(profile_id)",
+      "type": "f"
+     },
+     "revision_analysis_revision_fk": {
+      "definition": "FOREIGN KEY (document_id, revision_id) REFERENCES document_revision(document_id, revision_id)",
+      "type": "f"
+     },
+     "revision_analysis_skip_check": {
+      "definition": "CHECK (((status = 'skipped'::text) = (skip_reason IS NOT NULL)))",
+      "type": "c"
+     },
+     "revision_analysis_stage_check": {
+      "definition": "CHECK ((jsonb_typeof(stage_status) = 'object'::text))",
+      "type": "c"
+     },
+     "revision_analysis_status_check": {
+      "definition": "CHECK ((status = ANY (ARRAY['completed'::text, 'partial'::text, 'pending'::text, 'failed'::text, 'skipped'::text])))",
+      "type": "c"
+     },
+     "revision_analysis_usage_check": {
+      "definition": "CHECK ((jsonb_typeof(usage) = 'object'::text))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "revision_analysis_document_idx": "CREATE INDEX revision_analysis_document_idx ON public.revision_analysis USING btree (document_id)",
+     "revision_analysis_work_idx": "CREATE INDEX revision_analysis_work_idx ON public.revision_analysis USING btree (profile_id, pipeline_version, status, next_retry_at) WHERE (status = ANY (ARRAY['pending'::text, 'partial'::text]))"
+    },
+    "triggers": {}
+   },
+   "revision_company": {
+    "columns": {
+     "company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "revision_company_company_id_fkey": {
+      "definition": "FOREIGN KEY (company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "revision_company_pkey": {
+      "definition": "PRIMARY KEY (revision_id, company_id)",
+      "type": "p"
+     },
+     "revision_company_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "revision_company_company_idx": "CREATE INDEX revision_company_company_idx ON public.revision_company USING btree (company_id, revision_id)"
+    },
+    "triggers": {}
+   },
+   "sec_filing_details": {
+    "columns": {
+     "accepted_at": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 8,
+      "type": "timestamp with time zone"
+     },
+     "accession_number": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     },
+     "cik": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "text"
+     },
+     "exhibits": {
+      "default": "'[]'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 12,
+      "type": "jsonb"
+     },
+     "filing_date": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "date"
+     },
+     "filing_index_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "text"
+     },
+     "form": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "text"
+     },
+     "issuer_company_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "item_codes": {
+      "default": "ARRAY[]::text[]",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text[]"
+     },
+     "primary_document_url": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 11,
+      "type": "text"
+     },
+     "report_date": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 7,
+      "type": "date"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     }
+    },
+    "constraints": {
+     "sec_filing_details_accession_number_check": {
+      "definition": "CHECK ((accession_number ~ '^[0-9]{10}-[0-9]{2}-[0-9]{6}$'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_cik_check": {
+      "definition": "CHECK ((cik ~ '^[0-9]{10}$'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_exhibits_check": {
+      "definition": "CHECK ((jsonb_typeof(exhibits) = 'array'::text))",
+      "type": "c"
+     },
+     "sec_filing_details_form_check": {
+      "definition": "CHECK ((form = ANY (ARRAY['8-K'::text, '8-K/A'::text])))",
+      "type": "c"
+     },
+     "sec_filing_details_issuer_company_id_fkey": {
+      "definition": "FOREIGN KEY (issuer_company_id) REFERENCES company(company_id)",
+      "type": "f"
+     },
+     "sec_filing_details_pkey": {
+      "definition": "PRIMARY KEY (revision_id)",
+      "type": "p"
+     },
+     "sec_filing_details_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     }
+    },
+    "indexes": {
+     "sec_accepted_idx": "CREATE INDEX sec_accepted_idx ON public.sec_filing_details USING btree (accepted_at)",
+     "sec_issuer_idx": "CREATE INDEX sec_issuer_idx ON public.sec_filing_details USING btree (issuer_company_id)"
+    },
+    "triggers": {
+     "sec_details_identity_check": "CREATE TRIGGER sec_details_identity_check BEFORE INSERT ON public.sec_filing_details FOR EACH ROW EXECUTE FUNCTION validate_sec_details()",
+     "sec_details_immutable": "CREATE TRIGGER sec_details_immutable BEFORE UPDATE ON public.sec_filing_details FOR EACH ROW EXECUTE FUNCTION reject_snapshot_update()"
+    }
+   },
+   "text_unit": {
+    "columns": {
+     "embedding_status": {
+      "default": "'pending'::text",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 9,
+      "type": "text"
+     },
+     "input_hash": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 7,
+      "type": "text"
+     },
+     "input_text": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 6,
+      "type": "text"
+     },
+     "last_error": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": false,
+      "position": 11,
+      "type": "text"
+     },
+     "location": {
+      "default": "'{}'::jsonb",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 8,
+      "type": "jsonb"
+     },
+     "ordinal": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 5,
+      "type": "integer"
+     },
+     "profile_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 3,
+      "type": "uuid"
+     },
+     "retry_count": {
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 10,
+      "type": "integer"
+     },
+     "revision_id": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 2,
+      "type": "uuid"
+     },
+     "search_tsv": {
+      "default": null,
+      "generated": "to_tsvector('english'::regconfig, input_text)",
+      "identity": null,
+      "not_null": false,
+      "position": 12,
+      "type": "tsvector"
+     },
+     "unit_id": {
+      "default": "gen_random_uuid()",
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 1,
+      "type": "uuid"
+     },
+     "unit_kind": {
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "not_null": true,
+      "position": 4,
+      "type": "text"
+     }
+    },
+    "constraints": {
+     "text_unit_embedding_status_check": {
+      "definition": "CHECK ((embedding_status = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text, 'failed'::text])))",
+      "type": "c"
+     },
+     "text_unit_input_hash_check": {
+      "definition": "CHECK ((input_hash ~ '^[0-9a-f]{64}$'::text))",
+      "type": "c"
+     },
+     "text_unit_input_text_check": {
+      "definition": "CHECK ((btrim(input_text) <> ''::text))",
+      "type": "c"
+     },
+     "text_unit_location_check": {
+      "definition": "CHECK ((jsonb_typeof(location) = 'object'::text))",
+      "type": "c"
+     },
+     "text_unit_ordinal_check": {
+      "definition": "CHECK ((ordinal >= 0))",
+      "type": "c"
+     },
+     "text_unit_pkey": {
+      "definition": "PRIMARY KEY (unit_id)",
+      "type": "p"
+     },
+     "text_unit_profile_id_fkey": {
+      "definition": "FOREIGN KEY (profile_id) REFERENCES embedding_profile(profile_id)",
+      "type": "f"
+     },
+     "text_unit_retry_count_check": {
+      "definition": "CHECK ((retry_count >= 0))",
+      "type": "c"
+     },
+     "text_unit_revision_id_fkey": {
+      "definition": "FOREIGN KEY (revision_id) REFERENCES document_revision(revision_id)",
+      "type": "f"
+     },
+     "text_unit_revision_id_profile_id_unit_kind_ordinal_key": {
+      "definition": "UNIQUE (revision_id, profile_id, unit_kind, ordinal)",
+      "type": "u"
+     },
+     "text_unit_unit_kind_check": {
+      "definition": "CHECK ((unit_kind = ANY (ARRAY['document'::text, 'chunk'::text, 'overview'::text])))",
+      "type": "c"
+     }
+    },
+    "indexes": {
+     "text_unit_profile_hash_idx": "CREATE INDEX text_unit_profile_hash_idx ON public.text_unit USING btree (profile_id, input_hash)",
+     "text_unit_profile_idx": "CREATE INDEX text_unit_profile_idx ON public.text_unit USING btree (profile_id)",
+     "text_unit_revision_profile_idx": "CREATE INDEX text_unit_revision_profile_idx ON public.text_unit USING btree (revision_id, profile_id)",
+     "text_unit_search_idx": "CREATE INDEX text_unit_search_idx ON public.text_unit USING gin (search_tsv)",
+     "text_unit_work_idx": "CREATE INDEX text_unit_work_idx ON public.text_unit USING btree (embedding_status) WHERE (embedding_status = ANY (ARRAY['pending'::text, 'failed'::text]))"
+    },
+    "triggers": {
+     "text_unit_input_immutable": "CREATE TRIGGER text_unit_input_immutable BEFORE UPDATE ON public.text_unit FOR EACH ROW EXECUTE FUNCTION protect_text_unit_input()"
+    }
+   }
+  },
+  "views": {
+   "current_event_membership": {
+    "columns": [
+     "membership_id",
+     "event_id",
+     "revision_id",
+     "document_id",
+     "relation",
+     "segment_key",
+     "analysis_id",
+     "comparison_id",
+     "is_sample",
+     "event_status",
+     "record_type",
+     "publisher_id",
+     "source_time"
+    ],
+    "definition": " SELECT m.membership_id,\n    m.event_id,\n    m.revision_id,\n    m.document_id,\n    m.relation,\n    m.segment_key,\n    m.analysis_id,\n    m.comparison_id,\n    e.is_sample,\n    e.status AS event_status,\n    d.record_type,\n    r.publisher_id,\n    COALESCE(r.published_at, s.accepted_at, r.source_updated_at, r.retrieved_at) AS source_time\n   FROM ((((event_membership m\n     JOIN news_event e ON ((e.event_id = m.event_id)))\n     JOIN document d ON (((d.document_id = m.document_id) AND (d.current_revision_id = m.revision_id))))\n     JOIN document_revision r ON ((r.revision_id = m.revision_id)))\n     LEFT JOIN sec_filing_details s ON ((s.revision_id = m.revision_id)))\n  WHERE ((m.state = 'active'::text) AND (e.status <> 'superseded'::text));"
+   },
+   "current_event_summary": {
+    "columns": [
+     "summary_id",
+     "event_id",
+     "language_code",
+     "version",
+     "headline",
+     "summary_text",
+     "key_points",
+     "status",
+     "generation_reason",
+     "model_provider",
+     "model_name",
+     "prompt_version",
+     "input_fingerprint",
+     "usage",
+     "created_at",
+     "published_at",
+     "is_sample",
+     "open_review_count",
+     "under_review"
+    ],
+    "definition": " SELECT s.summary_id,\n    s.event_id,\n    s.language_code,\n    s.version,\n    s.headline,\n    s.summary_text,\n    s.key_points,\n    s.status,\n    s.generation_reason,\n    s.model_provider,\n    s.model_name,\n    s.prompt_version,\n    s.input_fingerprint,\n    s.usage,\n    s.created_at,\n    s.published_at,\n    e.is_sample,\n    COALESCE(r.open_review_count, (0)::bigint) AS open_review_count,\n    (COALESCE(r.open_review_count, (0)::bigint) > 0) AS under_review\n   FROM ((event_summary s\n     JOIN news_event e ON ((e.event_id = s.event_id)))\n     LEFT JOIN ( SELECT c.candidate_event_id AS event_id,\n            count(*) AS open_review_count\n           FROM (event_conflict_review r_1\n             JOIN event_comparison c ON ((c.comparison_id = r_1.comparison_id)))\n          WHERE (r_1.status = ANY (ARRAY['open'::text, 'in_review'::text]))\n          GROUP BY c.candidate_event_id) r ON ((r.event_id = s.event_id)))\n  WHERE (s.status = 'published'::text);"
+   },
+   "current_live_document": {
+    "columns": [
+     "document_id",
+     "record_type",
+     "source_record_id",
+     "revision_id",
+     "title",
+     "summary_text",
+     "body_text",
+     "original_url",
+     "source_category",
+     "source_badge",
+     "api_provider",
+     "publisher_name",
+     "publisher_credibility_tier",
+     "filing_issuer",
+     "source_time",
+     "retrieved_at",
+     "content_status",
+     "content_scope"
+    ],
+    "definition": " SELECT d.document_id,\n    d.record_type,\n    d.source_record_id,\n    r.revision_id,\n    r.title,\n    r.summary_text,\n    r.body_text,\n    r.original_url,\n    r.source_category,\n        CASE r.source_category\n            WHEN 'official_filing'::text THEN 'Official filing'::text\n            WHEN 'media_report'::text THEN 'Media report'::text\n            WHEN 'company_announcement'::text THEN 'Company announcement'::text\n            ELSE 'Other'::text\n        END AS source_badge,\n    p.code AS api_provider,\n    pub.name AS publisher_name,\n    COALESCE(pub.credibility_tier, 'unreviewed'::text) AS publisher_credibility_tier,\n    c.name AS filing_issuer,\n        CASE\n            WHEN (d.record_type = 'sec_filing'::text) THEN s.accepted_at\n            ELSE r.published_at\n        END AS source_time,\n    r.retrieved_at,\n    r.content_status,\n    r.content_scope\n   FROM (((((document d\n     JOIN document_revision r ON (((r.revision_id = d.current_revision_id) AND (r.document_id = d.document_id))))\n     JOIN provider p ON ((p.provider_id = d.provider_id)))\n     LEFT JOIN publisher pub ON ((pub.publisher_id = r.publisher_id)))\n     LEFT JOIN sec_filing_details s ON ((s.revision_id = r.revision_id)))\n     LEFT JOIN company c ON ((c.company_id = s.issuer_company_id)))\n  WHERE (d.is_sample = false);"
+   },
+   "current_live_event": {
+    "columns": [
+     "event_id",
+     "title",
+     "status",
+     "event_facts",
+     "flags",
+     "first_source_time",
+     "last_source_time",
+     "documents",
+     "articles",
+     "filings",
+     "publishers",
+     "has_updates",
+     "has_conflicts",
+     "pending_relations",
+     "profile_id",
+     "pipeline_version"
+    ],
+    "definition": " SELECT e.event_id,\n    e.title,\n    e.status,\n    e.event_facts,\n    e.flags,\n    min(m.source_time) AS first_source_time,\n    max(m.source_time) AS last_source_time,\n    count(DISTINCT m.document_id) AS documents,\n    count(DISTINCT m.document_id) FILTER (WHERE (m.record_type = 'news_article'::text)) AS articles,\n    count(DISTINCT m.document_id) FILTER (WHERE (m.record_type = 'sec_filing'::text)) AS filings,\n    count(DISTINCT m.publisher_id) AS publishers,\n    bool_or((m.relation = 'same_event_update'::text)) AS has_updates,\n    bool_or((m.relation = 'same_event_conflict'::text)) AS has_conflicts,\n    ( SELECT count(*) AS count\n           FROM event_membership p\n          WHERE ((p.event_id = e.event_id) AND (p.state = 'pending'::text))) AS pending_relations,\n    e.profile_id,\n    e.pipeline_version\n   FROM (news_event e\n     JOIN current_event_membership m ON ((m.event_id = e.event_id)))\n  WHERE ((e.is_sample = false) AND (e.status <> 'superseded'::text))\n  GROUP BY e.event_id;"
+   },
+   "current_revision_analysis": {
+    "columns": [
+     "document_id",
+     "record_type",
+     "is_sample",
+     "revision_id",
+     "analysis_id",
+     "profile_id",
+     "pipeline_version",
+     "analysis_status",
+     "skip_reason",
+     "evidence_level",
+     "index_coverage",
+     "attempts",
+     "last_error",
+     "updated_at"
+    ],
+    "definition": " SELECT d.document_id,\n    d.record_type,\n    d.is_sample,\n    d.current_revision_id AS revision_id,\n    a.analysis_id,\n    a.profile_id,\n    a.pipeline_version,\n    COALESCE(a.status, 'not_analyzed'::text) AS analysis_status,\n    a.skip_reason,\n    a.evidence_level,\n    a.index_coverage,\n    a.attempts,\n    a.last_error,\n    a.updated_at\n   FROM (document d\n     LEFT JOIN revision_analysis a ON ((a.revision_id = d.current_revision_id)));"
+   }
+  }
+ },
+ "generated_on": {
+  "note": "Snapshots of a database built from the migration files alone: 'baseline' after 000_base_schema.sql, 'current' after every file. 'legacy' lists the objects and definitions the reverted 003_event_match_routing.sql branch left in stock_news (taken read-only from stock_news; not created by any file here). Regenerate baseline/current with DATASOURCES_UPDATE_SCHEMA_MANIFEST=1 pytest tests/test_migrations.py",
+  "server_version": "18.6"
+ },
+ "legacy": {
+  "extras": [
+   "column:event_comparison.cache_key",
+   "function:validate_routing_decision()",
+   "index:event_comparison.event_comparison_cache_idx",
+   "table:event_routing_decision"
+  ],
+  "variants": {
+   "constraint:event_comparison.event_comparison_label_check": {
+    "definition": "CHECK ((label = ANY (ARRAY['same_event_repeated'::text, 'same_event_update'::text, 'same_event_conflict'::text, 'same_event_unassessed'::text, 'different_event'::text, 'uncertain'::text])))",
+    "type": "c"
+   },
+   "constraint:event_comparison.event_comparison_method_check": {
+    "definition": "CHECK ((method = ANY (ARRAY['llm'::text, 'exact_content'::text, 'local_classifier'::text])))",
+    "type": "c"
+   },
+   "constraint:event_membership.event_membership_relation_check": {
+    "definition": "CHECK ((relation = ANY (ARRAY['origin'::text, 'same_event_repeated'::text, 'same_event_update'::text, 'same_event_conflict'::text, 'same_event_unassessed'::text, 'uncertain'::text])))",
+    "type": "c"
+   },
+   "view:current_live_event": {
+    "columns": [
+     "event_id",
+     "title",
+     "status",
+     "event_facts",
+     "flags",
+     "first_source_time",
+     "last_source_time",
+     "documents",
+     "articles",
+     "filings",
+     "publishers",
+     "has_updates",
+     "has_conflicts",
+     "pending_relations",
+     "profile_id",
+     "pipeline_version",
+     "unassessed_claims"
+    ],
+    "definition": " SELECT e.event_id,\n    e.title,\n    e.status,\n    e.event_facts,\n    e.flags,\n    min(m.source_time) AS first_source_time,\n    max(m.source_time) AS last_source_time,\n    count(DISTINCT m.document_id) AS documents,\n    count(DISTINCT m.document_id) FILTER (WHERE (m.record_type = 'news_article'::text)) AS articles,\n    count(DISTINCT m.document_id) FILTER (WHERE (m.record_type = 'sec_filing'::text)) AS filings,\n    count(DISTINCT m.publisher_id) AS publishers,\n    bool_or((m.relation = 'same_event_update'::text)) AS has_updates,\n    bool_or((m.relation = 'same_event_conflict'::text)) AS has_conflicts,\n    ( SELECT count(*) AS count\n           FROM event_membership p\n          WHERE ((p.event_id = e.event_id) AND (p.state = 'pending'::text))) AS pending_relations,\n    e.profile_id,\n    e.pipeline_version,\n    count(*) FILTER (WHERE (m.relation = 'same_event_unassessed'::text)) AS unassessed_claims\n   FROM (news_event e\n     JOIN current_event_membership m ON ((m.event_id = e.event_id)))\n  WHERE ((e.is_sample = false) AND (e.status <> 'superseded'::text))\n  GROUP BY e.event_id;"
+   }
+  }
+ }
+}

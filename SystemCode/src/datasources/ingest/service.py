@@ -113,6 +113,7 @@ class IngestionService:
         database=None,
         analyzer=None,
         summarizer=None,
+        model_budget=None,
     ):
         self.settings = settings
         self.store = OutputStore(settings.root)
@@ -126,6 +127,11 @@ class IngestionService:
         # Optional `summary.pipeline.SummaryRuntime`. When None, grouped events are not
         # summarized inline (`datasources-summary backfill` can still do it later).
         self.summarizer = summarizer
+        # Optional run-wide cap on model HTTP attempts (`llm_budget.AttemptLedger`), used by
+        # `datasources-ingest bounded-run`; the worker runs without one.
+        self.model_budget = model_budget
+        # The latest graph result, (RecordOutcome | None, RecordError | None), for per-record reports.
+        self.last_graph: tuple[RecordOutcome | None, RecordError | None] | None = None
         self.sec_client = sec_client
         self.document_fetcher = document_fetcher or self._fetch_document_live
         self.alpaca_auth = alpaca_auth
@@ -218,7 +224,7 @@ class IngestionService:
     # ------------------------------------------------------------------ graph
     def pipeline_context(self) -> PipelineContext:
         return PipelineContext(database=self.database, analyzer=self.analyzer, persist=True,
-                               summarizer=self.summarizer)
+                               summarizer=self.summarizer, model_budget=self.model_budget)
 
     def run_graph(self, envelope: SourceEnvelope | dict) -> tuple[RecordOutcome | None, RecordError | None]:
         """Prepare, compare and store one record through the compiled graph.
@@ -230,10 +236,13 @@ class IngestionService:
         `outcome.error`, and the caller leaves the record unmarked in the ledger so a
         later poll or delivery retries it.
         """
+        self.last_graph = None
         result = run_pipeline([envelope], self.pipeline_context())
         if result.errors:
+            self.last_graph = (None, result.errors[0])
             return None, result.errors[0]
         outcome = result.outcomes[0]
+        self.last_graph = (outcome, None)
         if outcome.persist_outcome:
             self.stats[f"db_{outcome.persist_outcome}"] += 1
         if outcome.unresolved_symbols:

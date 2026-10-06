@@ -7,92 +7,45 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <a class="sr-only" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">Skip to the news</a>
   <header class="site-header">
     <div class="wrap header-row">
-      <div class="brand">
-        <h1>Stock News</h1>
-        <span class="company" id="company"><label for="company-select">Company</label>
-          <select id="company-select"><option value="NVDA" selected>NVDA</option></select></span>
-      </div>
-      <div class="header-status">
-        <p id="refresh-status" class="status-off"><span class="icon" aria-hidden="true">…</span> Loading…</p>
-        <p id="collector-status" class="status-off"><span class="icon" aria-hidden="true">…</span> Collector status loading…</p>
-        <p id="processing-status" class="muted small"></p>
-      </div>
+      <h1 class="site-title">Stock News</h1>
+      <label class="company" for="company-select">Company
+        <select id="company-select"><option value="NVDA" selected>NVDA</option></select></label>
     </div>
   </header>
   <div id="sample-banner" class="banner sample" hidden>
-    <div class="wrap"><strong>Sample mode.</strong> Fictional demo and test records are included and marked
-      <span class="badge sample">Sample</span>. They are never mixed into the default view.</div>
+    <div class="wrap"><strong>Sample mode.</strong> Fictional demo and test stories are included and marked
+      <span class="badge sample">Sample</span>.</div>
   </div>
-  <div id="refresh-alert" class="banner alert" hidden><div class="wrap" id="refresh-alert-text"></div></div>
+  <div id="refresh-alert" class="banner alert" hidden>
+    <div class="wrap"><span id="refresh-alert-text"></span>
+      <button type="button" class="link-button" id="retry-now">Try again now</button></div>
+  </div>
   <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
 
   <main id="main" class="wrap" tabindex="-1">
-    <div class="toolbar">
-      <div class="tabs" role="tablist" aria-label="Views">
-        <button type="button" role="tab" id="tab-events" aria-controls="panel-events" aria-selected="true">Events</button>
-        <button type="button" role="tab" id="tab-articles" aria-controls="panel-articles" aria-selected="false" tabindex="-1">All articles</button>
-        <button type="button" role="tab" id="tab-explorer" aria-controls="panel-explorer" aria-selected="false" tabindex="-1">Source explorer</button>
+    <div class="feed-head">
+      <div>
+        <h2>News summaries</h2>
+        <p class="feed-intro">AI summaries with links to original sources.</p>
       </div>
-      <div class="controls">
-        <label id="source-filter-label" hidden>Show
-          <select id="source-filter">
-            <option value="all">All sources</option>
-            <option value="news">News articles</option>
-            <option value="sec">SEC filings</option>
-          </select>
-        </label>
-        <label><input type="checkbox" id="sample-toggle" /> Include sample data</label>
-        <button type="button" class="button secondary" id="refresh-now">Refresh now</button>
-      </div>
+      <p id="refresh-status" class="refresh-status">Loading…</p>
     </div>
-
-    <section id="panel-events" class="panel" role="tabpanel" aria-labelledby="tab-events">
-      <h2 class="sr-only">Events</h2>
-      <p class="panel-intro">Each event groups reports about the same development. Event summaries are
-        AI-generated from the linked sources; open an event to see the quotes each statement is based on.</p>
-      <div id="events-state"></div>
-      <div id="events-list" class="card-list" aria-busy="false"></div>
-      <div class="list-footer" id="events-footer"></div>
-    </section>
-
-    <section id="panel-articles" class="panel" role="tabpanel" aria-labelledby="tab-articles" hidden>
-      <h2 class="sr-only">All articles</h2>
-      <p class="panel-intro">Every stored news article and SEC filing, newest first, as published by its source.
-        News arrives from the publisher through Alpaca (the data provider); filings come from SEC EDGAR.</p>
-      <div id="articles-state"></div>
-      <div id="articles-list" class="card-list" aria-busy="false"></div>
-      <div class="list-footer" id="articles-footer"></div>
-    </section>
-
-    <section id="panel-explorer" class="panel" role="tabpanel" aria-labelledby="tab-explorer" hidden>
-      <h2 class="sr-only">Source explorer</h2>
-      <p class="panel-intro">Fetch recent records straight from the Alpaca and SEC EDGAR APIs with their data
-        dictionaries. These are live requests made only when you press a button; they are not the stored database
-        and nothing here is saved.</p>
-      <div class="explorer-controls">
-        <label for="explorer-ticker">Company</label>
-        <select id="explorer-ticker"></select>
-        <label for="explorer-limit">Records</label>
-        <select id="explorer-limit"><option>5</option><option selected>10</option><option>20</option></select>
-        <button type="button" class="button secondary" id="explorer-alpaca">Load Alpaca news</button>
-        <button type="button" class="button secondary" id="explorer-edgar">Load EDGAR 8-K filings</button>
-      </div>
-      <div id="explorer-output" aria-live="polite"></div>
-    </section>
+    <p id="feed-note" class="feed-note" hidden></p>
+    <div id="events-state"></div>
+    <div id="events-list" class="card-list" aria-busy="false"></div>
+    <div class="list-footer" id="events-footer"></div>
   </main>
 
   <footer class="wrap site-footer">
-    <p>Source labels say who published a record; they are not a judgement of its accuracy. SEC filings are company
-      disclosures, not statements verified by the SEC. AI-generated summaries cite their sources: check the originals
-      before relying on them.</p>
+    <p>AI summaries can contain mistakes: check the original sources before relying on them. SEC filings are company
+      disclosures, not statements verified by the SEC.</p>
   </footer>
 
   <noscript><p class="wrap">This page needs JavaScript to load the news.</p></noscript>
   <script src="render.js"></script>
   <script src="app.js"></script>
-  <script src="explorer.js"></script>
 </body>
 </html>

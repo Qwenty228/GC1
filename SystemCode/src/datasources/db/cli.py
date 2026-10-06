@@ -1,9 +1,12 @@
 """`datasources-db`: connection check, migrations and the end-to-end smoke test.
 
-    uv run datasources-db check            # which database, and is pgvector enabled
-    uv run datasources-db migrate          # apply the additive migrations (idempotent)
-    uv run datasources-db inspect          # row counts per table
-    uv run datasources-db smoke            # bounded live fetch -> store -> read back -> replay
+    uv run datasources-db check                     # which database, and is pgvector enabled
+    uv run datasources-db migrate --dry-run         # what migrate would do (read-only)
+    uv run datasources-db migrate                   # build a new database / apply pending migrations
+    uv run datasources-db migrate --adopt-baseline  # existing database: record the verified base schema
+    uv run datasources-db verify                    # compare the schema with the migrations (read-only)
+    uv run datasources-db inspect                   # row counts per table
+    uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
 news from Alpaca and one recent NVIDIA 8-K from SEC EDGAR, stores them through
@@ -30,8 +33,9 @@ from ..ingest.adapters import sec_context_from_submissions, unwrap_payload
 from ..ingest.sec_client import SecClient, SecFetchError
 from ..ingest.service import IngestionService
 from ..ingest.settings import ConfigurationError, load_settings, require_sec_user_agent
+from . import migrate as migrations
+from . import schema as schema_check
 from .connection import Database, DatabaseError
-from .migrate import apply_migrations
 from .repository import ALPACA_NAMESPACE, persist_record
 from .settings import load_db_settings
 
@@ -69,13 +73,135 @@ def cmd_check(db: Database) -> int:
     return 0
 
 
-def cmd_migrate(db: Database) -> int:
-    results = apply_migrations(db)
+def _print_comparison(comparison: schema_check.Comparison, *, indent: str = "  ") -> None:
+    counts = comparison.counts()
+    print(f"{indent}missing: {counts.get('missing', 0)}, mismatched: {counts.get('mismatch', 0)}, "
+          f"legacy: {counts.get('legacy', 0)}, not created by this repository: {counts.get('unexpected', 0)}"
+          + (f", created by later migrations: {counts['later']}" if counts.get("later") else ""))
+    for kind, title in (("missing", "MISSING"), ("mismatch", "MISMATCHED"),
+                        ("unexpected", "not created by this repository (left alone)"),
+                        ("legacy", "legacy objects of the reverted 003 branch (unused, left in place)")):
+        found = comparison.of(kind)
+        if found:
+            print(f"{indent}{title}:")
+            for finding in found:
+                print(f"{indent}  - {finding.describe()}")
+
+
+def _print_plan(plan: migrations.MigrationPlan, *, dry_run: bool) -> None:
+    vector = (f"pgvector {plan.pgvector_installed} installed" if plan.pgvector_installed else
+              f"pgvector not installed{' (available on the server)' if plan.pgvector_available else ''}")
+    print(f"Migration plan for {plan.database} (PostgreSQL {plan.server_version}, {vector})")
+    if dry_run:
+        print("READ ONLY: nothing was changed.")
+    state = {
+        "recorded": "recorded",
+        "fresh": "not recorded; no base tables yet, so it will be EXECUTED (new database)",
+        "adoptable": "not recorded; the existing base schema MATCHES it, so it can be ADOPTED (recorded, never "
+                     "executed)",
+        "mismatch": "not recorded; the existing schema does NOT match it (see below)",
+    }[plan.baseline_state]
+    print(f"\nBaseline {migrations.BASELINE}: {state}")
+    if plan.baseline is not None:
+        _print_comparison(plan.baseline, indent="  ")
+    if plan.other_tables:
+        print(f"  other tables in this database (not managed here, left alone): {', '.join(plan.other_tables)}")
+    print("\nMigration files:")
+    names = {f.name for f in plan.files}
+    for name in sorted(names | set(plan.recorded)):
+        entry = plan.recorded.get(name)
+        if entry is None:
+            status = "pending"
+        elif name not in names:
+            status = f"recorded, NO FILE: {migrations.KNOWN_UNFILED.get(name, 'unknown migration; left alone')}"
+        else:
+            when = entry.applied_at.date().isoformat() if entry.applied_at else "?"
+            how = f", {entry.method}" if entry.method else ""
+            tracked = "checksum ok" if entry.checksum else "checksum not tracked (recorded before checksums)"
+            if any(m[0] == name for m in plan.checksum_mismatches):
+                tracked = "CHECKSUM MISMATCH"
+            status = f"recorded {when}{how}; {tracked}"
+        print(f"  {name:<46} {status}")
+    if plan.actions:
+        print("\nWould run:" if dry_run else "\nTo run:")
+        for name, action in plan.actions:
+            print(f"  {name:<46} {'adopt (record only, not executed)' if action == 'adopt' else 'execute'}")
+        if any(e.checksum is None for e in plan.recorded.values()) or not plan.recorded:
+            print("  (schema_migration gets two nullable columns, checksum and method, when the first file is "
+                  "recorded)")
+    else:
+        print("\nNothing to run: every migration file is recorded.")
+    if plan.problems:
+        print("\nProblems (migrate changes nothing until they are resolved):")
+        for problem in plan.problems:
+            print(f"  X {problem}")
+
+
+def cmd_migrate(db: Database, args) -> int:
+    import psycopg
+
+    plan = migrations.plan_migrations(db, adopt_baseline=args.adopt_baseline)
+    if args.json:
+        print(json.dumps({"dry_run": args.dry_run, **plan.as_dict()}, indent=2, default=str))
+    else:
+        _print_plan(plan, dry_run=args.dry_run)
+    if args.dry_run:
+        if not args.json:
+            verdict = ("migrate would refuse (see the problems above)" if plan.problems else
+                       "nothing to do" if not plan.actions else "migrate would run the files listed above")
+            print(f"\nDry run: {verdict}.")
+        return 1 if plan.problems else 0
+    if plan.problems:
+        print("\nNot migrated: nothing was changed.", file=sys.stderr)
+        return 1
+    if not plan.actions:
+        print("\nUp to date: nothing was changed.")
+        return 0
+    try:
+        results = migrations.apply_migrations(db, adopt_baseline=args.adopt_baseline)
+    except migrations.MigrationRefused as refused:
+        print(f"\nNot migrated: {refused}", file=sys.stderr)
+        return 1
+    except psycopg.Error as error:
+        print(f"\nMigration failed: {error}. The failing file's transaction was rolled back; files listed as done "
+              "above stay recorded. Re-run `uv run datasources-db migrate --dry-run` to see the state.", file=sys.stderr)
+        return 1
+    print()
     for result in results:
-        print(f"{result.filename}: {'applied' if result.applied else 'already applied'}")
-    if not results:
-        print("no migrations found")
-    return 0
+        if result.applied:
+            print(f"{result.filename}: {'adopted (verified, not executed)' if result.method == 'adopted' else 'executed'}")
+    comparison = migrations.verify_schema(db)
+    print(f"\nSchema check after migrating: {'OK' if comparison.ok else 'PROBLEMS FOUND'}")
+    _print_comparison(comparison)
+    return 0 if comparison.ok else 1
+
+
+def cmd_verify(db: Database, args) -> int:
+    comparison = migrations.verify_schema(db)
+    with db.connection() as conn, conn.transaction():
+        conn.execute("SET TRANSACTION READ ONLY")
+        row = conn.execute("SELECT current_database() AS db").fetchone()
+        version = schema_check.server_version(conn)
+    recorded = migrations.applied_migrations(db)
+    files = migrations.load_files()
+    pending = [f.name for f in files if f.name not in recorded]
+    generated = schema_check.expected()["generated_on"]["server_version"]
+    if args.json:
+        print(json.dumps({"database": row["db"], "server_version": version, "manifest_server_version": generated,
+                          "pending_files": pending, **comparison.as_dict()}, indent=2, default=str))
+        return 0 if comparison.ok else 1
+    print(f"Schema check for {row['db']} (PostgreSQL {version}; expected structure generated on PostgreSQL "
+          f"{generated}). READ ONLY: nothing was changed.")
+    if version.split(".")[0] != generated.split(".")[0]:
+        print("  note: another PostgreSQL major version may print some definitions differently; review mismatches")
+    print(f"Result: {'OK' if comparison.ok else 'PROBLEMS FOUND'}")
+    _print_comparison(comparison)
+    if pending:
+        print(f"Pending migration files: {', '.join(pending)} (`uv run datasources-db migrate --dry-run`)")
+    unfiled = sorted(set(recorded) - {f.name for f in files})
+    for name in unfiled:
+        print(f"Recorded without a file: {name}: {migrations.KNOWN_UNFILED.get(name, 'unknown migration')}")
+    return 0 if comparison.ok else 1
 
 
 def cmd_backfill(db: Database, args) -> int:
@@ -542,7 +668,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("check", help="Report the database and whether pgvector is enabled")
-    sub.add_parser("migrate", help="Apply additive migrations (idempotent)")
+    p_migrate = sub.add_parser("migrate", help="Build a new database or apply pending migrations (additive)")
+    p_migrate.add_argument("--dry-run", action="store_true",
+                           help="Show what migrate would do, in a read-only transaction; change nothing")
+    p_migrate.add_argument("--adopt-baseline", action="store_true",
+                           help="Existing database: record 000_base_schema.sql as adopted, only if every base "
+                                "object matches it (it is never executed on an existing schema)")
+    p_migrate.add_argument("--json", action="store_true", help="Print the plan as JSON")
+    p_verify = sub.add_parser("verify", help="Compare the schema with what the migrations define (read-only)")
+    p_verify.add_argument("--json", action="store_true")
     sub.add_parser("inspect", help="Row counts per table")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
@@ -567,7 +701,9 @@ def main(argv: list[str] | None = None) -> int:
         if command == "check":
             return cmd_check(database)
         if command == "migrate":
-            return cmd_migrate(database)
+            return cmd_migrate(database, args)
+        if command == "verify":
+            return cmd_verify(database, args)
         if command == "inspect":
             return cmd_inspect(database)
         if command == "backfill":

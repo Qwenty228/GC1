@@ -80,13 +80,34 @@ def _in_citation_order(rows: list[dict], cited: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda c: (rank.get(c["unit_id"], len(rank)), c["unit_id"], c["quote_index"]))
 
 
+# List cards only: the company symbols of the current sources, and the most recent source (a link to show while
+# no summary is published). The inner ``s`` is the filing row SOURCE_TIME expects, not the outer summary.
+_LIST_COLUMNS = f"""
+    ARRAY(SELECT DISTINCT cs.symbol FROM current_event_membership m
+            JOIN revision_company rc ON rc.revision_id = m.revision_id
+            JOIN company_symbol cs ON cs.company_id = rc.company_id
+           WHERE m.event_id = e.event_id ORDER BY cs.symbol) AS symbols,
+    (SELECT jsonb_build_object('title', r.title, 'url', COALESCE(r.original_url, s.primary_document_url),
+                               'name', COALESCE(pub.name, co.name), 'record_type', d.record_type,
+                               'published_at', {SOURCE_TIME})
+       FROM current_event_membership m
+       JOIN document d ON d.document_id = m.document_id
+       JOIN document_revision r ON r.revision_id = m.revision_id
+       LEFT JOIN publisher pub ON pub.publisher_id = r.publisher_id
+       LEFT JOIN sec_filing_details s ON s.revision_id = m.revision_id
+       LEFT JOIN company co ON co.company_id = s.issuer_company_id
+      WHERE m.event_id = e.event_id
+      ORDER BY {SOURCE_TIME} DESC NULLS LAST, m.revision_id LIMIT 1) AS latest_source
+"""
+
+
 def list_events(conn: Connection, *, include_sample: bool, language: str, limit: int, offset: int,
                 state: str | None = None, symbol: str | None = None) -> list[dict[str, Any]]:
     """``symbol`` keeps events with at least one current source linked to that company symbol."""
     rows = conn.execute(
         f"""
         SELECT * FROM (
-            SELECT {_EVENT_COLUMNS} {_EVENT_FROM}
+            SELECT {_EVENT_COLUMNS}, {_LIST_COLUMNS} {_EVENT_FROM}
              WHERE e.status <> 'superseded' AND (%(sample)s OR NOT e.is_sample)
                AND EXISTS (SELECT 1 FROM current_event_membership m WHERE m.event_id = e.event_id)
                AND (%(symbol)s::text IS NULL OR EXISTS (
@@ -109,13 +130,20 @@ def list_events(conn: Connection, *, include_sample: bool, language: str, limit:
                 "is_sample": row["is_sample"], "first_source_time": row["first_source_time"],
                 "last_source_time": row["last_source_time"], "documents": int(row["documents"]),
                 "pending_relations": int(row["pending_relations"]), **summary_state(row),
-                "conflict": conflict_status[str(row["event_id"])], "summary": None}
+                "conflict": conflict_status[str(row["event_id"])], "symbols": list(row["symbols"] or []),
+                "latest_source": _latest_source(row["latest_source"]), "summary": None}
         if row["summary_id"]:
             item["summary"] = {"version": row["version"], "headline": row["headline"],
                                "overview": row["summary_text"], "key_points": row["key_points"],
                                "published_at": row["published_at"]}
         events.append(item)
     return events
+
+
+def _latest_source(source: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not source:
+        return None
+    return {**source, "url": conflicts.safe_url(source.get("url"))}
 
 
 def event_detail(conn: Connection, event_id: str, *, include_sample: bool, language: str) -> dict[str, Any] | None:

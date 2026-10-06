@@ -132,6 +132,9 @@ class PipelineContext:
     # Event summarization after persist_result (`summary.pipeline.SummaryRuntime`); None = off.
     summarizer: Any = None
     summary_budget: Any = None  # per-run request cap, created on first use
+    # Run-wide cap on actual model HTTP attempts across comparison and summary calls
+    # (`llm_budget.AttemptLedger`, checked before each model call); None = no run-wide cap.
+    model_budget: Any = None
 
     def clock(self) -> datetime:
         return self.now() if self.now else datetime.now(timezone.utc)
@@ -466,6 +469,9 @@ def compare_with_llm(work: RecordWork, ctx: PipelineContext) -> None:
             stop_reason = f"per-record call budget reached ({settings.llm_max_calls_per_record})"
         if stop_reason is None and tokens_used >= settings.llm_token_budget_per_record:
             stop_reason = f"per-record token budget reached ({settings.llm_token_budget_per_record})"
+        if stop_reason is None and ctx.model_budget is not None and ctx.model_budget.exhausted():
+            # A limit, not a failure: the pairs stay unevaluated (analysis 'partial') and no request is made.
+            stop_reason = f"run model-attempt budget used up ({ctx.model_budget.limit} HTTP attempts)"
         if stop_reason is not None:
             work.unevaluated.extend(pairs)
             if stopped_by_error:
@@ -479,7 +485,7 @@ def compare_with_llm(work: RecordWork, ctx: PipelineContext) -> None:
             work.error_pairs.extend(pairs)
             work.comparison_errors.append({"kind": error.kind, "message": str(error), "retryable": error.retryable})
             work.note_error("comparison", error, retryable=error.retryable)
-            if not error.retryable or error.kind in ("authentication", "model_not_found"):
+            if not error.retryable or error.kind in ("authentication", "model_not_found", "budget_exhausted"):
                 stop_reason, stopped_by_error = f"comparison backend error: {error.kind}", True
             continue
         except Exception as error:

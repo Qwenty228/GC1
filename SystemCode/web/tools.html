@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stock News data tools</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="tools">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <h1 class="site-title">Stock News data tools</h1>
+      <a href="/">Back to the news</a>
+    </div>
+  </header>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <p class="feed-intro">For checking what the collectors stored. The news summaries page does not show this.</p>
+
+    <section class="tools-section" aria-labelledby="status-heading">
+      <h2 id="status-heading">Collectors</h2>
+      <p id="collector-status" class="status-off"><span class="icon" aria-hidden="true">…</span> Loading…</p>
+      <p id="processing-status" class="muted small"></p>
+    </section>
+
+    <section class="tools-section" aria-labelledby="articles-heading">
+      <h2 id="articles-heading">Stored articles</h2>
+      <p class="muted small">Every stored news article and SEC filing, newest first, as published by its source.
+        News arrives from the publisher through Alpaca (the data provider); filings come from SEC EDGAR.</p>
+      <div class="controls">
+        <label>Company <select id="company-select"><option value="">All companies</option></select></label>
+        <label>Show
+          <select id="source-filter">
+            <option value="all">All sources</option>
+            <option value="news">News articles</option>
+            <option value="sec">SEC filings</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="sample-toggle" /> Include sample data</label>
+        <button type="button" class="button secondary" id="refresh-now">Refresh</button>
+      </div>
+      <div id="articles-state"></div>
+      <div id="articles-list" class="card-list" aria-busy="false"></div>
+      <div class="list-footer" id="articles-footer"></div>
+    </section>
+
+    <section class="tools-section" aria-labelledby="explorer-heading">
+      <h2 id="explorer-heading">Source explorer</h2>
+      <p class="muted small">Fetch recent records straight from the Alpaca and SEC EDGAR APIs with their data
+        dictionaries. These are live requests made only when you press a button; they are not the stored database
+        and nothing here is saved.</p>
+      <div class="explorer-controls">
+        <label for="explorer-ticker">Company</label>
+        <select id="explorer-ticker"></select>
+        <label for="explorer-limit">Records</label>
+        <select id="explorer-limit"><option>5</option><option selected>10</option><option>20</option></select>
+        <button type="button" class="button secondary" id="explorer-alpaca">Load Alpaca news</button>
+        <button type="button" class="button secondary" id="explorer-edgar">Load EDGAR 8-K filings</button>
+      </div>
+      <div id="explorer-output" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <noscript><p class="wrap">This page needs JavaScript.</p></noscript>
+  <script src="render.js"></script>
+  <script src="tools.js"></script>
+  <script src="explorer.js"></script>
+</body>
+</html>

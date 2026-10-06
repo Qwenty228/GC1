@@ -7,6 +7,8 @@
     uv run datasources-ingest process-file PATH --provider alpaca|sec_edgar [--sec-html-dir DIR] [--demo]
     uv run datasources-ingest status [--demo]
     uv run datasources-ingest graph          # print the compiled LangGraph (Mermaid)
+    uv run datasources-ingest bounded-run --source stored|collect --max-records N --max-model-attempts M \\
+        --confirm-paid-calls                 # a few real records through grouping + summaries, hard-capped
 
 Run exactly one worker per output directory (a file lock enforces it) and one
 graph writer per database partition (a PostgreSQL advisory lock enforces it).
@@ -76,8 +78,9 @@ def configure_logging(root: Path, verbose: bool = False) -> None:
 
 
 # ---------------------------------------------------------------------- live run
-def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alpaca: bool,
-                       stage: Callable[[str], None] = lambda _description: None) -> IngestionService:
+def live_collectors(settings: IngestSettings, *, enable_sec: bool,
+                    enable_alpaca: bool) -> tuple[SecClient | None, AlpacaAuth | None]:
+    """The live SEC client and Alpaca credentials (validated; no request is made here)."""
     if settings.demo:
         raise ConfigurationError("`run` is live-only; use `datasources-ingest demo` for sample data")
     sec_client = None
@@ -90,6 +93,12 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     auth: AlpacaAuth | None = None
     if enable_alpaca:
         auth = auth_from_env()  # AlpacaConfigError when credentials are missing
+    return sec_client, auth
+
+
+def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alpaca: bool,
+                       stage: Callable[[str], None] = lambda _description: None) -> IngestionService:
+    sec_client, auth = live_collectors(settings, enable_sec=enable_sec, enable_alpaca=enable_alpaca)
     stage("connecting to the database")
     database = open_database()
     stage("loading the embedding model and grouping settings (local files; no model API call)")
@@ -356,6 +365,20 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("graph", help="Print the compiled ingestion graph (Mermaid) and its edges")
 
+    p_bounded = sub.add_parser(
+        "bounded-run", help="Process a few real records through grouping and summaries with hard limits "
+                            "(see `datasources.ingest.bounded`); paid calls need --confirm-paid-calls")
+    p_bounded.add_argument("--source", required=True, choices=["stored", "collect"],
+                           help="stored: unfinished stored records; collect: one bounded collection pass")
+    p_bounded.add_argument("--max-records", type=int, required=True, help="records started through the graph")
+    p_bounded.add_argument("--max-model-attempts", type=int, required=True,
+                           help="HTTP requests sent to the model API, comparison + summary, SDK retries included")
+    p_bounded.add_argument("--confirm-paid-calls", action="store_true", help="Allow requests to paid model backends")
+    p_bounded.add_argument("--no-summaries", action="store_true", help="Group only; generate no summaries")
+    p_bounded.add_argument("--no-sec", action="store_true", help="collect: Alpaca news only")
+    p_bounded.add_argument("--no-alpaca", action="store_true", help="collect: SEC filings only")
+    p_bounded.add_argument("--sample", action="store_true", help="stored: the sample partition (a rehearsal)")
+
     args = parser.parse_args(argv)
     command = args.command or "run"
     if command == "graph":
@@ -380,6 +403,11 @@ def main(argv: list[str] | None = None) -> int:
                               "note": "ingestion completion only; see `datasources-similarity status` for analysis"},
                              indent=2))
             return 0
+
+        if command == "bounded-run":
+            from .bounded import main as bounded_run
+
+            return bounded_run(args, settings=settings)  # takes its own locks
 
         from ..similarity.lock import GraphWriterLock
 
