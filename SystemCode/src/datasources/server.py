@@ -133,8 +133,9 @@ def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0
                state: str | None = Query(None, description="Filter by summary_state"),
                symbol: str | None = Query(None, description="Only events with a source linked to this ticker"),
                include_sample: bool = False, database=Depends(get_database)) -> JSONResponse:
-    """Grouped events, newest first, each with its current summary (or pending / review state) and a
-    compact `conflict` status and count from the stored conflict reviews.
+    """Grouped events, newest first, each with its current summary (or pending / review state), a
+    compact `conflict` status and count from the stored conflict reviews, the company `symbols` of its
+    sources and its `latest_source` (title, publisher, time, http(s) link) for cards without a summary.
 
     Sample (demo/test) events are excluded unless `include_sample=true`.
     """
@@ -267,14 +268,14 @@ def _lookup_error(_request, exc: LookupError) -> JSONResponse:
 _ASSET_REF = re.compile(r'(?P<attr>src|href)="(?P<name>[\w.-]+\.(?:js|css))"')
 
 
-def _index_html() -> str:
-    """index.html with every local script and stylesheet URL versioned by its content (app.js?v=<hash>).
+def _page_html(name: str) -> str:
+    """A page with every local script and stylesheet URL versioned by its content (app.js?v=<hash>).
 
     Earlier versions of this server sent no Cache-Control header, so browsers may still hold an
     old app.js they consider fresh and reuse without asking. Mixed with a newer page it throws
     during startup and leaves the page unresponsive. A new URL per content version rules that out.
     """
-    html = (config.WEB_DIR / "index.html").read_text(encoding="utf-8")
+    html = (config.WEB_DIR / name).read_text(encoding="utf-8")
 
     def versioned(match: re.Match) -> str:
         try:
@@ -289,7 +290,13 @@ def _index_html() -> str:
 @app.get("/", include_in_schema=False)
 @app.get("/index.html", include_in_schema=False)
 def index_page() -> HTMLResponse:
-    return HTMLResponse(_index_html(), headers={"Cache-Control": "no-cache"})
+    return HTMLResponse(_page_html("index.html"), headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/tools.html", include_in_schema=False)
+def tools_page() -> HTMLResponse:
+    """Stored articles, collector status and the source explorer, kept off the news summaries page."""
+    return HTMLResponse(_page_html("tools.html"), headers={"Cache-Control": "no-cache"})
 
 
 # Serve the static frontend at the root. Mounted last so /api/* wins.

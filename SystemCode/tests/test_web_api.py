@@ -152,6 +152,21 @@ def test_status_counts_and_the_events_company_filter(client, stored):
     assert client.get("/api/events", params={"include_sample": "true", "symbol": "ZZZZ"}).json()["events"] == []
 
 
+def test_event_cards_carry_their_tickers_and_latest_source(client, stored):
+    """The reader card shows the ticker without a company filter and, before a summary exists, a link to the
+    most recent source; unsafe links are dropped by the API itself."""
+    articles = client.get("/api/articles", params={"include_sample": "true", "limit": 200}).json()["articles"]
+    news = next(a for a in articles if a["document_id"] == stored["news"].document_id)
+    events = {e["event_id"]: e for e in client.get("/api/events", params={"include_sample": "true",
+                                                                          "limit": 100}).json()["events"]}
+    event = events[news["events"][0]["event_id"]]
+    assert event["symbols"] == ["NVDA"]
+    latest = event["latest_source"]
+    assert latest["title"] == "NVIDIA expands the Example Lab (updated)" and latest["name"] == TEST_PUBLISHER
+    assert latest["record_type"] == "news_article" and latest["published_at"]
+    assert latest["url"] is None  # javascript: never becomes a link
+
+
 def test_the_launcher_only_counts_a_graph_writer_in_its_own_database(db):
     """Advisory locks are per database, but pg_locks lists them all: a writer in a test database must not
     block launching against another database."""

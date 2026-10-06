@@ -256,15 +256,17 @@ def test_the_page_references_its_assets_by_content_version(client_without_databa
     from datasources import config
 
     client, _ = client_without_database
-    for path in ("/", "/index.html"):
+    pages = {"/": {"styles.css", "render.js", "app.js"}, "/index.html": {"styles.css", "render.js", "app.js"},
+             "/tools.html": {"styles.css", "render.js", "tools.js", "explorer.js"}}
+    for path, assets in pages.items():
         response = client.get(path)
         assert response.status_code == 200 and response.headers["cache-control"] == "no-cache"
         refs = dict(re.findall(r'(?:src|href)="([\w.-]+\.(?:js|css))\?v=([0-9a-f]{12})"', response.text))
-        assert set(refs) == {"styles.css", "render.js", "app.js", "explorer.js"}
+        assert set(refs) == assets
         for name, version in refs.items():
             assert hashlib.sha256((config.WEB_DIR / name).read_bytes()).hexdigest()[:12] == version
-        assert 'src="app.js"' not in response.text
-    asset = client.get(f"/app.js?v={refs['app.js']}")
+        assert 'src="render.js"' not in response.text
+    asset = client.get(f"/render.js?v={refs['render.js']}")
     assert asset.status_code == 200 and asset.headers["cache-control"] == "no-cache"
 
 

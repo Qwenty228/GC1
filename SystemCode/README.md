@@ -147,20 +147,32 @@ event. Both commands can make paid calls.
 
 ### The page
 
-* **Events** (default): one card per grouped event, with a warning above the summary when sources disagree,
-  the latest published AI-generated summary (version and update time), source times and the source count.
-  **Show sources and evidence** opens the competing claims with quotes, the quote behind each summary
-  statement, every original source link, the version history and resolved reviews.
-* **All articles**: every stored news article and SEC filing with the original headline, the publisher
-  ("via Alpaca") or issuer ("SEC filing"), the source's own times, the excerpt supplied with the article
-  (labelled as not AI-generated) and the original link. Filter by news or SEC filings.
-* **Source explorer**: the original Alpaca / EDGAR data-dictionary view. It makes live requests only when you
-  press a button.
-* **Include sample data** shows the fictional demo and test records, each marked *Sample*. They are hidden
-  otherwise.
-* The page refreshes every 20 seconds without reloading. It pauses while the tab is hidden, backs off after
-  failures (up to 5 minutes), and keeps showing the last data with a notice when a refresh fails. Open details,
-  focus and scroll position are kept.
+**News summaries** (`/`) is a single feed for readers, newest story first, with a company selector.
+Each card shows the published summary headline (the event title while no summary exists), the ticker, one
+labelled time ("Published" for one source, "Latest report" for several) and a short preview marked
+*AI summary*: two or three stored key points when they are short, otherwise the overview's opening sentences,
+cut at a sentence boundary. Nothing is rewritten or generated for the page.
+
+* **Read more** / **Show less** shows the complete stored summary in the card.
+* **Sources (N)** shows each original source (publisher, link, exact time), the quote behind each summary
+  statement, the summary's version history and resolved reviews.
+* A conflict shows one line on the card ("Conflicting reports—under review", "Sources disagree" once a
+  review confirms it, or "Grouping correction in progress"); **Compare the claims** opens the competing
+  claims with their quotes and sources.
+* A story without a summary says so briefly ("Preparing summary…", on hold during a review, failed) and links
+  the most recent original source.
+* The page refreshes every 20 seconds without reloading and shows "Updated … ago". It pauses while the tab is
+  hidden, backs off after failures (up to 5 minutes), and keeps showing the last data with a notice when a
+  refresh fails. A note says when collectors are not running (the feed cannot get newer). Open summaries and
+  sources, focus and scroll position are kept.
+* Sample records never appear in the feed. Add `#sample=1` to the address for demos and tests; sample
+  stories are then marked *Sample*.
+
+**Data tools** (`/tools.html`, not linked from the feed) keeps the developer views: collector status, every
+stored news article and SEC filing (original headline, publisher or issuer, the source's own times, the
+excerpt supplied with the article, labelled as not AI-generated, and its grouping status), with company,
+source and sample filters, and the original Alpaca / EDGAR data-dictionary **source explorer**, which makes
+live requests only when you press a button.
 
 ## Run
 
@@ -972,7 +984,9 @@ the version, `published_at`, `generation_reason` and limitations; the
 version history; open/resolved reviews; and every current source with whether
 it was cited, given to the model, or added after the current version (a repeat
 that arrived later is listed but never shown as evidence of an older version).
-`/api/events` also accepts `symbol=<ticker>`: events with a current source linked to that company.
+`/api/events` also accepts `symbol=<ticker>`: events with a current source linked to that company. Each
+listed event carries `symbols` (the tickers of its current sources) and `latest_source` (`title`, `name`,
+`record_type`, `published_at` and an http(s) `url` or `null`), which the feed shows before a summary exists.
 
 Two more read-only endpoints serve the page:
 
@@ -1028,10 +1042,10 @@ reviewer names and reviewer notes are never returned.
 
 An event takes the most urgent status of all its reviews
 (`under_review` > `correction_pending` > `disputed` > `resolved` > `none`), so
-closing one review never hides another. The web page (`web/events.js`, section
-"Event summaries") shows the badge on event cards and, on the detail view, the
-notice above the unchanged summary with each source's claim, quotes and link,
-when the conflict was detected and when the summary was published. Open an event
+closing one review never hides another. The web page (`web/render.js`) shows the
+status line on the collapsed card and, under **Sources**, the notice below the
+unchanged summary with each source's claim, quotes and link, when the conflict
+was detected and when the summary was published. Open an event's sources
 directly with `http://127.0.0.1:8000/#event=<event_id>&sample=1` (`sample=1`
 only for sample events).
 

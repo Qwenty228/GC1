@@ -1,14 +1,17 @@
-// Stock News page: reads stored data from the local API and keeps it current by polling.
+// Stock News reader: one feed of AI news summaries read from the local API, kept current by polling.
 //
-// Polling is GET-only. The API never calls a model and never starts a collector, so
-// refreshing (in any number of tabs) cannot trigger ingestion, grouping or summaries.
-// One refresh cycle runs at a time (a request made meanwhile is queued; a filter or tab
-// change cancels the running cycle instead of waiting for it), each request has its own
-// timeout, and each part of the page is drawn as soon as its own response arrives, so a
-// slow or failing endpoint never holds back the others. Polling pauses while the tab is
-// hidden, failures back off (20 s doubling to 5 min), and a failed refresh keeps the
-// content already shown. Cards are keyed by their stable
-// ids and patched in place, so open details, focus and reading position survive.
+// Polling is GET-only. The API never calls a model and never starts a collector, so reading,
+// expanding or refreshing (in any number of tabs) cannot trigger ingestion, grouping or summaries.
+// One refresh cycle runs at a time (a request made meanwhile is queued; a company change cancels
+// the running cycle instead of waiting for it), each request has its own timeout, and each part of
+// the page is drawn as soon as its own response arrives, so a slow or failing endpoint never holds
+// back the others. Polling pauses while the tab is hidden, failures back off (20 s doubling to
+// 5 min), and a failed refresh keeps the content already shown. Cards are keyed by their stable
+// ids and patched in place, so open summaries and sources, focus and reading position survive.
+//
+// The view is in the address hash: #company=NVDA (empty for all companies), #event=<id> opens that
+// story's sources, and #sample=1 (demos and tests only; the page has no control for it) adds the
+// fictional sample stories, each marked Sample.
 
 (function () {
   "use strict";
@@ -18,27 +21,24 @@
   const POLL_MS = 20000;
   const MAX_BACKOFF_MS = 300000;
   const REQUEST_TIMEOUT_MS = 15000;
+  const CLOCK_MS = 30000; // redraws "Updated … ago"; no request
   const PAGE = 50;
-  const MAX_EVENTS = 100;   // /api/events limit
-  const MAX_ARTICLES = 200; // /api/articles limit
-  const TABS = ["events", "articles", "explorer"];
+  const MAX_EVENTS = 100; // /api/events limit
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const SYMBOL = /^[A-Z0-9.\-]{1,12}$/;
 
   const state = {
-    tab: "events",
     sample: false,
-    source: "all",
     company: "NVDA",
     companyFromUrl: false,
     gen: 0, // bumped when filters change: responses for the old filters are dropped
     status: null,
     events: { items: null, limit: PAGE, error: null },
-    articles: { items: null, total: 0, limit: PAGE, error: null },
     details: new Map(), // event_id -> {data} | {gone: true} | {data?, error}
-    expanded: new Set(),
-    baseline: { events: null, articles: null }, // id -> first-seen signature, for "New" / "Updated"
-    revealEvent: null, // an event to scroll to once the list has it (article link or #event=<id>)
+    sourcesOpen: new Set(), // cards whose Sources panel is open
+    readMore: new Set(), // cards showing the whole summary
+    seen: null, // event ids already shown, to announce new stories
+    revealEvent: null, // an event to scroll to once the list has it (#event=<id>)
   };
   const poll = { inFlight: false, again: false, timer: null, failures: 0, lastOk: null, lastFailAt: null,
                  error: null, nextAt: null, controller: null };
@@ -86,28 +86,16 @@
     return p.toString();
   }
 
-  const eventSignature = (e) => [e.documents, e.summary ? e.summary.version : 0, e.summary_state,
-    e.conflict ? `${e.conflict.status}:${e.conflict.count}:${e.conflict.reviews}` : ""].join("|");
-  const articleSignature = (a) => a.revision_id;
-
-  // Returns the items first seen now (none on the first load after a filter change).
-  function track(kind, items, idOf, signatureOf) {
-    let base = state.baseline[kind];
-    if (!base) {
-      state.baseline[kind] = new Map(items.map((i) => [idOf(i), { sig: signatureOf(i), isNew: false }]));
-      return [];
+  // The number of stories first seen now (none on the first load after a filter change).
+  function countNew(items) {
+    const ids = items.map((e) => e.event_id);
+    if (!state.seen) {
+      state.seen = new Set(ids);
+      return 0;
     }
-    const fresh = [];
-    for (const item of items) {
-      const entry = base.get(idOf(item));
-      if (!entry) {
-        base.set(idOf(item), { sig: signatureOf(item), isNew: true });
-        fresh.push(item);
-      } else {
-        entry.current = signatureOf(item);
-      }
-    }
-    return fresh;
+    const fresh = ids.filter((id) => !state.seen.has(id));
+    fresh.forEach((id) => state.seen.add(id));
+    return fresh.length;
   }
 
   function unique(items, idOf) {
@@ -125,10 +113,10 @@
       const data = await getJson(`/api/events?${query({ limit: state.events.limit })}`, signal);
       if (gen !== state.gen) return;
       const items = unique(data.events, (e) => e.event_id);
-      const fresh = track("events", items, (e) => e.event_id, eventSignature);
+      const fresh = countNew(items);
       state.events.items = items;
       state.events.error = null;
-      if (fresh.length) announce(`${R.plural(fresh.length, "new event")}.`);
+      if (fresh) announce(`${R.plural(fresh, "new story", "new stories")}.`);
     } catch (error) {
       if (gen === state.gen && !signal.aborted) state.events.error = describe(error);
       throw error;
@@ -137,7 +125,7 @@
 
   async function loadDetails(signal, gen) {
     const listed = new Set((state.events.items || []).map((e) => e.event_id));
-    const ids = [...state.expanded].filter((id) => listed.has(id) || id === state.revealEvent);
+    const ids = [...state.sourcesOpen].filter((id) => listed.has(id) || id === state.revealEvent);
     let failure = null;
     for (let i = 0; i < ids.length; i += 4) { // a few at a time, never a burst
       await Promise.all(ids.slice(i, i + 4).map(async (id) => {
@@ -158,22 +146,6 @@
     if (failure) throw failure;
   }
 
-  async function loadArticles(signal, gen) {
-    try {
-      const data = await getJson(`/api/articles?${query({ limit: state.articles.limit, source: state.source })}`, signal);
-      if (gen !== state.gen) return;
-      const items = unique(data.articles, (a) => a.document_id);
-      const fresh = track("articles", items, (a) => a.document_id, articleSignature);
-      state.articles.items = items;
-      state.articles.total = data.total;
-      state.articles.error = null;
-      if (fresh.length) announce(`${R.plural(fresh.length, "new article")}.`);
-    } catch (error) {
-      if (gen === state.gen && !signal.aborted) state.articles.error = describe(error);
-      throw error;
-    }
-  }
-
   // ------------------------------------------------------------------ polling
   async function refresh() {
     if (poll.inFlight) {
@@ -184,16 +156,15 @@
     poll.timer = null;
     poll.inFlight = true;
     const gen = state.gen;
-    const tab = state.tab;
     const controller = new AbortController();
     poll.controller = controller;
     const current = () => gen === state.gen && !controller.signal.aborted;
     // Draw each part as soon as its own response is in: a slow endpoint never holds back the others.
     const drawn = (job) => job.finally(() => { if (current()) safeRender(); });
-    setBusy(tab, true);
-    const jobs = [drawn(loadStatus(controller.signal, gen))];
-    if (tab === "events") {
-      jobs.push(drawn((async () => {
+    setBusy(true);
+    const jobs = [
+      drawn(loadStatus(controller.signal, gen)),
+      drawn((async () => {
         let failure = null;
         try {
           await loadEvents(controller.signal, gen);
@@ -202,27 +173,25 @@
         }
         await loadDetails(controller.signal, gen);
         if (failure) throw failure;
-      })()));
-    } else if (tab === "articles") {
-      jobs.push(drawn(loadArticles(controller.signal, gen)));
-    }
+      })()),
+    ];
     let results = [];
     try {
       results = await Promise.allSettled(jobs);
     } finally {
       poll.inFlight = false;
       poll.controller = null;
-      setBusy(tab, false);
+      setBusy(false);
     }
     if (current()) {
       const failed = results.find((r) => r.status === "rejected");
       if (failed) {
-        if (!poll.failures) announce("Refresh failed. The page keeps showing the data it already has.");
+        if (!poll.failures) announce("Refresh failed. The page keeps showing the news it already has.");
         poll.failures += 1;
         poll.error = describe(failed.reason);
         poll.lastFailAt = new Date();
       } else {
-        if (poll.failures) announce("Connection restored. The page is up to date.");
+        if (poll.failures) announce("Connection restored. The news is up to date.");
         poll.failures = 0;
         poll.error = null;
         poll.lastOk = new Date();
@@ -237,7 +206,7 @@
     schedule();
   }
 
-  // A filter or tab change: stop waiting for the running cycle (its answers no longer matter) and run a new one.
+  // A filter change: stop waiting for the running cycle (its answers no longer matter) and run a new one.
   function supersede() {
     if (poll.controller) poll.controller.abort();
     poll.again = poll.inFlight;
@@ -252,7 +221,7 @@
       poll.nextAt = new Date(Date.now() + delay);
       poll.timer = setTimeout(refresh, delay);
     }
-    renderRefreshStatus();
+    renderStatus();
   }
 
   document.addEventListener("visibilitychange", () => {
@@ -273,6 +242,7 @@
       const details = el.closest("details[data-key]");
       return details ? JSON.stringify(["summary", details.dataset.key]) : null;
     }
+    if (el.matches("[data-focus]")) return JSON.stringify(["focus", el.dataset.focus]);
     if (el.matches("a[href]")) return JSON.stringify(["a", el.getAttribute("href"), el.textContent]);
     return null;
   }
@@ -282,12 +252,15 @@
     if (kind === "summary") {
       return [...slot.querySelectorAll("details[data-key] > summary")].find((s) => s.parentElement.dataset.key === a);
     }
+    if (kind === "focus") return [...slot.querySelectorAll("[data-focus]")].find((x) => x.dataset.focus === a);
     return [...slot.querySelectorAll("a[href]")].find((x) => x.getAttribute("href") === a && x.textContent === b);
   }
 
+  const slotOf = (card, name) => card.querySelector(`:scope > [data-slot="${name}"]`);
+
   // Replace a slot's content only when it changed, keeping open <details> and focus.
   function setSlot(card, name, html) {
-    const slot = card.querySelector(`:scope > [data-slot="${name}"]`);
+    const slot = slotOf(card, name);
     if (!slot || slotHtml.get(slot) === html) return;
     const open = new Set([...slot.querySelectorAll("details[data-key][open]")].map((d) => d.dataset.key));
     const active = document.activeElement;
@@ -343,9 +316,8 @@
     restoreAnchor(anchor);
   }
 
-  function setBusy(tab, busy) {
-    const list = $(`${tab}-list`);
-    if (list) list.setAttribute("aria-busy", String(busy));
+  function setBusy(busy) {
+    $("events-list").setAttribute("aria-busy", String(busy));
   }
 
   function announce(text) {
@@ -355,71 +327,53 @@
   }
 
   // ------------------------------------------------------------------ rendering
-  function processing() {
+  function ctx() {
     const s = state.status;
-    if (!s) return {};
-    const c = s.collector || {};
-    if (c.state === "running" && c.processing) return { grouping: c.processing.similarity, summaries: c.processing.summaries };
-    return { grouping: s.features && s.features.similarity_enabled, summaries: s.features && s.features.summary_enabled };
+    const c = (s && s.collector) || {};
+    const summaries = c.state === "running" && c.processing ? c.processing.summaries
+      : s && s.features && s.features.summary_enabled;
+    return { summariesEnabled: summaries, company: state.company };
   }
 
-  function ctx(kind) {
-    const base = state.baseline[kind];
-    const flags = processing();
-    return {
-      isNew: (id) => Boolean(base && base.get(id) && base.get(id).isNew),
-      isUpdated: (id) => {
-        const entry = base && base.get(id);
-        return Boolean(entry && !entry.isNew && entry.current !== undefined && entry.current !== entry.sig);
-      },
-      summariesEnabled: flags.summaries,
-      groupingEnabled: flags.grouping,
-    };
+  // When the collectors are not running, refreshing cannot bring new stories: say so in plain words.
+  function collectionNote() {
+    const c = state.status && state.status.collector;
+    if (!c) return "";
+    if (c.state === "stopped" || c.state === "not_running") {
+      return "New stories are not being collected right now, so this feed may be out of date.";
+    }
+    if (c.state === "stale") return "News collection may have stopped, so this feed may be out of date.";
+    return "";
   }
 
-  function renderRefreshStatus() {
+  function renderStatus() {
     const el = $("refresh-status");
-    const alert = $("refresh-alert");
-    let cls;
+    const now = new Date();
+    let cls = "";
     let html;
     if (poll.error && poll.lastOk) {
-      cls = "status-warn";
-      html = `${R.icon("warn")}Refresh failed ${R.clock(poll.lastFailAt)}; showing data from ${R.clock(poll.lastOk)}`;
+      cls = " status-warn";
+      html = `${R.icon("warn")}Could not refresh · last updated ${R.esc(R.ago(poll.lastOk, now))}`;
     } else if (poll.error) {
-      cls = "status-error";
-      html = `${R.icon("error")}Could not load data`;
+      cls = " status-error";
+      html = `${R.icon("error")}Could not load the news`;
     } else if (poll.lastOk) {
-      cls = "status-ok";
-      html = `${R.icon("ok")}Updated ${R.clock(poll.lastOk)} · refreshes every ${POLL_MS / 1000} s`;
+      html = `Updated ${R.esc(R.ago(poll.lastOk, now))}`;
     } else {
-      cls = "status-off";
-      html = `${R.icon("off")}Loading…`;
+      html = "Loading…";
     }
-    el.className = cls;
+    el.className = `refresh-status${cls}`;
     setHtml(el, html);
-    alert.hidden = !poll.error;
+    el.title = poll.lastOk ? `Last updated at ${poll.lastOk.toLocaleTimeString()}` : "";
+    const note = poll.error ? "" : collectionNote();
+    $("feed-note").hidden = !note;
+    setHtml($("feed-note"), note ? `${R.icon("info")}${R.esc(note)}` : "");
+    $("refresh-alert").hidden = !poll.error;
     if (poll.error) {
-      setHtml($("refresh-alert-text"), `${R.icon("warn")}<strong>Could not refresh:</strong> ${R.esc(poll.error)}.
-        ${poll.lastOk ? `The page keeps showing the data from ${R.clock(poll.lastOk)}.` : ""}
+      setHtml($("refresh-alert-text"), `${R.icon("warn")}<strong>Could not refresh the news:</strong>
+        ${R.esc(poll.error)}. ${poll.lastOk ? `The page keeps showing the news loaded at ${R.clock(poll.lastOk)}.` : ""}
         ${poll.nextAt ? `Next attempt at ${R.clock(poll.nextAt)}.` : ""}`);
     }
-  }
-
-  function renderHeader() {
-    renderRefreshStatus();
-    const collector = R.collectorStatus(state.status);
-    const el = $("collector-status");
-    if (poll.error && state.status) {
-      // The server cannot be reached, so the collectors' current state is unknown: show the last report as such.
-      el.className = "status-off";
-      setHtml(el, `Last known (${R.clock(poll.lastOk)}): ${collector.html}`);
-    } else {
-      el.className = collector.cls;
-      setHtml(el, collector.html);
-    }
-    setHtml($("processing-status"), R.esc(R.processingStatus(state.status)));
-    $("sample-banner").hidden = !state.sample;
-    renderCompanies();
   }
 
   function renderCompanies() {
@@ -439,99 +393,92 @@
   }
 
   function createEventCard(id) {
+    const safe = R.esc(id);
     const el = document.createElement("article");
-    el.className = "card event-card";
+    el.className = "card news-card";
     el.dataset.id = id;
     el.id = `event-${id}`;
     el.setAttribute("aria-labelledby", `event-${id}-title`);
-    el.innerHTML = `<div data-slot="head"></div><div data-slot="conflict"></div><div data-slot="summary"></div>
-      <div class="card-actions"><button type="button" class="link-button details-toggle" aria-expanded="false"
-        aria-controls="event-${id}-details"></button></div>
-      <div class="details" id="event-${id}-details" data-slot="details" hidden></div>`;
+    el.innerHTML = `<div data-slot="head"></div><div data-slot="conflict"></div>
+      <div class="summary-preview" data-slot="preview"></div>
+      <div class="summary-full" id="event-${safe}-summary" data-slot="full" hidden></div>
+      <div class="card-actions">
+        <button type="button" class="toggle" data-action="summary" aria-expanded="false"
+          aria-controls="event-${safe}-summary" aria-describedby="event-${safe}-title">
+          <span class="label">Read more</span><span class="chev" aria-hidden="true"></span></button>
+        <button type="button" class="toggle" data-action="sources" aria-expanded="false"
+          aria-controls="event-${safe}-sources" aria-describedby="event-${safe}-title">
+          <span class="label">Sources</span><span class="chev" aria-hidden="true"></span></button>
+      </div>
+      <div class="sources-panel" id="event-${safe}-sources" data-slot="sources" hidden></div>`;
     return el;
+  }
+
+  function setToggle(button, expanded, label) {
+    button.setAttribute("aria-expanded", String(expanded));
+    const text = button.querySelector(".label");
+    if (text.textContent !== label) text.textContent = label;
   }
 
   function detailHtml(id) {
     const entry = state.details.get(id);
-    if (!entry) return `<p class="muted" role="status">Loading sources and evidence…</p>`;
+    if (!entry) return `<p class="muted small" role="status">Loading sources…</p>`;
     if (entry.gone) {
-      return `<p class="state-note">This event is no longer available. It may have been merged into another event.</p>`;
+      return `<p class="state-note">This story is no longer available. It may have been merged into another story.</p>`;
     }
-    if (!entry.data) return R.loadError("the event details", entry.error || "unknown error");
-    return R.eventDetails(entry.data);
+    if (!entry.data) return R.loadError("the sources", entry.error || "unknown error");
+    return R.sourcesPanel(entry.data);
   }
 
   function updateEventCard(el, e) {
-    const c = ctx("events");
-    setSlot(el, "head", R.eventHead(e, c));
-    setSlot(el, "conflict", R.eventConflict(e));
-    setSlot(el, "summary", R.eventSummary(e, c));
-    const open = state.expanded.has(e.event_id);
-    const button = el.querySelector(".details-toggle");
-    button.setAttribute("aria-expanded", String(open));
-    const label = open ? "Hide sources and evidence" : `Show sources and evidence (${e.documents})`;
-    if (button.textContent !== label) button.textContent = label;
-    el.querySelector(':scope > [data-slot="details"]').hidden = !open;
-    if (open) setSlot(el, "details", detailHtml(e.event_id));
+    const id = e.event_id;
+    const c = ctx();
+    const view = R.summaryView(e, c);
+    setSlot(el, "head", R.cardHead(e, c));
+    setSlot(el, "conflict", R.conflictLine(e));
+    setSlot(el, "preview", view.preview);
+    setSlot(el, "full", view.full);
+    const reading = view.more && state.readMore.has(id);
+    slotOf(el, "preview").hidden = reading;
+    slotOf(el, "full").hidden = !reading;
+    const more = el.querySelector('.card-actions [data-action="summary"]');
+    more.hidden = !view.more;
+    setToggle(more, reading, reading ? "Show less" : "Read more");
+    const open = state.sourcesOpen.has(id);
+    for (const button of el.querySelectorAll('[data-action="sources"]')) {
+      button.setAttribute("aria-expanded", String(open));
+    }
+    setToggle(el.querySelector('.card-actions [data-action="sources"]'), open, `Sources (${e.documents})`);
+    slotOf(el, "sources").hidden = !open;
+    if (open) setSlot(el, "sources", detailHtml(id));
   }
 
-  function createArticleCard(id) {
-    const el = document.createElement("article");
-    el.className = "card article-card";
-    el.dataset.id = id;
-    el.id = `article-${id}`;
-    el.innerHTML = `<div data-slot="body"></div>`;
-    return el;
-  }
-
-  function updateArticleCard(el, a) {
-    setSlot(el, "body", R.articleCard(a, ctx("articles")));
-  }
-
-  function renderEvents() {
+  function renderFeed() {
     const events = state.events;
     const list = $("events-list");
     if (events.items === null) {
-      setHtml($("events-state"), events.error ? R.loadError("events", events.error)
-        : `<div class="state" role="status">Loading events…</div>`);
+      setHtml($("events-state"), events.error ? R.loadError("the news", events.error)
+        : `<div class="state" role="status">Loading news…</div>`);
       list.replaceChildren();
       setHtml($("events-footer"), "");
       return;
     }
-    setHtml($("events-state"), events.items.length ? "" : R.eventsEmpty(state.status, state.sample));
+    setHtml($("events-state"), events.items.length ? "" : R.feedEmpty(state.status, state.company));
     patchList(list, events.items, (e) => e.event_id, createEventCard, updateEventCard);
-    // For automated checks: "list" once events are shown, "detail" once an open event's details are shown.
-    document.body.dataset.eventsReady = [...state.expanded].some((id) => (state.details.get(id) || {}).data)
+    // For automated checks: "list" once stories are shown, "detail" once an open Sources panel has its data.
+    document.body.dataset.eventsReady = [...state.sourcesOpen].some((id) => (state.details.get(id) || {}).data)
       ? "detail" : "list";
     const full = events.items.length >= events.limit;
-    setHtml($("events-footer"), events.items.length ? `<span class="muted">${R.esc(R.plural(events.items.length,
-      "event"))} shown, most recent first.</span>${full && events.limit < MAX_EVENTS
-      ? `<button type="button" class="button secondary" id="events-more">Show more events</button>` : ""}` : "");
+    setHtml($("events-footer"), full && events.limit < MAX_EVENTS
+      ? `<button type="button" class="button secondary" id="events-more">Show more news</button>` : "");
     revealPending();
   }
 
-  function renderArticles() {
-    const articles = state.articles;
-    const list = $("articles-list");
-    if (articles.items === null) {
-      setHtml($("articles-state"), articles.error ? R.loadError("articles", articles.error)
-        : `<div class="state" role="status">Loading articles…</div>`);
-      list.replaceChildren();
-      setHtml($("articles-footer"), "");
-      return;
-    }
-    setHtml($("articles-state"), articles.items.length ? "" : R.articlesEmpty(state.source, state.sample));
-    patchList(list, articles.items, (a) => a.document_id, createArticleCard, updateArticleCard);
-    const more = articles.total > articles.items.length && articles.limit < MAX_ARTICLES;
-    setHtml($("articles-footer"), articles.items.length ? `<span class="muted">Showing ${R.esc(articles.items.length)}
-      of ${R.esc(articles.total)}, newest first.</span>${more
-      ? `<button type="button" class="button secondary" id="articles-more">Show more articles</button>` : ""}` : "");
-  }
-
   function render() {
-    renderHeader();
-    if (state.tab === "events") renderEvents();
-    else if (state.tab === "articles") renderArticles();
+    renderStatus();
+    renderCompanies();
+    $("sample-banner").hidden = !state.sample;
+    renderFeed();
   }
 
   // A rendering bug must not stop polling or leave the page half-updated without a trace.
@@ -549,7 +496,7 @@
     const card = document.getElementById(`event-${id}`);
     if (card) {
       state.revealEvent = null;
-      card.scrollIntoView({ block: "start" }); // the user asked for this event
+      card.scrollIntoView({ block: "start" }); // the user asked for this story
       const title = card.querySelector(".card-title");
       if (title) {
         title.tabIndex = -1;
@@ -560,7 +507,7 @@
       poll.again = true;
     } else {
       state.revealEvent = null;
-      announce("That event is not in the list of recent events.");
+      announce("That story is not in the list of recent news.");
     }
   }
 
@@ -568,19 +515,15 @@
   function resetData() {
     state.gen += 1;
     state.events = { items: null, limit: PAGE, error: null };
-    state.articles = { items: null, total: 0, limit: PAGE, error: null };
-    state.baseline = { events: null, articles: null };
+    state.seen = null;
     state.details.clear();
     supersede(); // a cycle for the old filters may be running: cancel it and follow with one for the new ones
   }
 
-  // The hash is the whole view state (#tab=articles&sample=1&source=sec&company=NVDA); missing keys are defaults.
-  // #event=<id> (also used by the earlier page) opens that event.
+  // #company=NVDA&sample=1&event=<id>; missing keys are defaults. Older keys (tab, source) are ignored.
   function readHash() {
     const p = new URLSearchParams(location.hash.replace(/^#/, ""));
-    state.tab = TABS.includes(p.get("tab")) ? p.get("tab") : "events";
     state.sample = p.get("sample") === "1";
-    state.source = ["news", "sec"].includes(p.get("source")) ? p.get("source") : "all";
     if (p.has("company")) {
       const company = (p.get("company") || "").toUpperCase();
       if (company === "" || SYMBOL.test(company)) {
@@ -594,130 +537,78 @@
 
   function writeHash() {
     const p = new URLSearchParams();
-    if (state.tab !== "events") p.set("tab", state.tab);
     if (state.sample) p.set("sample", "1");
-    if (state.source !== "all") p.set("source", state.source);
     if (state.companyFromUrl || state.company !== "NVDA") p.set("company", state.company);
     const hash = p.toString();
     history.replaceState(null, "", hash ? `#${hash}` : location.pathname + location.search);
   }
 
-  function syncControls() {
-    $("sample-toggle").checked = state.sample;
-    $("source-filter").value = state.source;
-  }
-
-  function selectTab(name, { focus = false, load = true } = {}) {
-    state.tab = name;
-    for (const tab of TABS) {
-      const selected = tab === name;
-      const button = $(`tab-${tab}`);
-      button.setAttribute("aria-selected", String(selected));
-      button.tabIndex = selected ? 0 : -1;
-      $(`panel-${tab}`).hidden = !selected;
-    }
-    $("source-filter-label").hidden = name !== "articles";
-    if (focus) $(`tab-${name}`).focus();
-    writeHash();
-    safeRender();
-    if (load) {
-      supersede(); // do not wait for a cycle that is loading another tab
-      refresh();
-    }
-  }
-
   function openEvent(id) {
     if (!UUID.test(id)) return;
-    state.expanded.add(id);
+    state.sourcesOpen.add(id);
     state.revealEvent = id;
-    if (state.tab !== "events") selectTab("events");
-    else {
-      render();
-      refresh();
-    }
+    safeRender();
+    refresh();
   }
 
-  const tablist = document.querySelector('[role="tablist"]');
-  tablist.addEventListener("click", (event) => {
-    const tab = event.target.closest('[role="tab"]');
-    if (tab) selectTab(tab.id.replace("tab-", ""));
-  });
-  tablist.addEventListener("keydown", (event) => {
-    const index = TABS.indexOf(state.tab);
-    const next = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: TABS.length - 1 }[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    selectTab(TABS[(next + TABS.length) % TABS.length], { focus: true });
-  });
+  function toggle(set, id) {
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+  }
 
   $("events-list").addEventListener("click", (event) => {
-    const button = event.target.closest(".details-toggle");
+    const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const card = button.closest(".event-card");
+    const card = button.closest(".news-card");
     const id = card.dataset.id;
-    if (state.expanded.has(id)) state.expanded.delete(id);
-    else state.expanded.add(id);
     const item = (state.events.items || []).find((e) => e.event_id === id);
-    if (item) updateEventCard(card, item);
-    if (state.expanded.has(id)) refresh(); // loads (or refreshes) the details; queued if a cycle is running
-  });
-
-  $("articles-list").addEventListener("click", (event) => {
-    const link = event.target.closest("a[data-event-link]");
-    if (!link) return;
-    event.preventDefault();
-    openEvent(link.dataset.eventLink);
+    if (button.dataset.action === "summary") {
+      toggle(state.readMore, id);
+      if (item) updateEventCard(card, item);
+      // Collapsing a long summary can move the button above the screen: keep it in view.
+      if (!state.readMore.has(id)) button.scrollIntoView({ block: "nearest" });
+    } else {
+      toggle(state.sourcesOpen, id);
+      if (item) updateEventCard(card, item);
+      if (state.sourcesOpen.has(id)) refresh(); // loads (or refreshes) the sources; queued if a cycle is running
+    }
   });
 
   document.addEventListener("click", (event) => {
     if (event.target.id === "events-more") {
       state.events.limit = Math.min(state.events.limit + PAGE, MAX_EVENTS);
-      state.baseline.events = null; // older events loaded now are not "new"
+      state.seen = null; // older stories loaded now are not "new"
       refresh();
-    } else if (event.target.id === "articles-more") {
-      state.articles.limit = Math.min(state.articles.limit + PAGE, MAX_ARTICLES);
-      state.baseline.articles = null;
+    } else if (event.target.id === "retry-now") {
       refresh();
     }
   });
 
-  $("sample-toggle").addEventListener("change", (event) => {
-    state.sample = event.target.checked;
-    resetData();
-    writeHash();
-    render();
-    refresh();
-  });
-  $("source-filter").addEventListener("change", (event) => {
-    state.source = event.target.value;
-    resetData();
-    writeHash();
-    render();
-    refresh();
-  });
   $("company-select").addEventListener("change", (event) => {
     state.company = event.target.value;
     state.companyFromUrl = true;
     resetData();
     writeHash();
-    render();
+    safeRender();
     refresh();
   });
-  $("refresh-now").addEventListener("click", () => refresh());
 
   window.addEventListener("hashchange", () => {
     if (location.hash === "#main") return; // the skip link, not a view change
     const event = readHash();
-    syncControls();
     resetData();
-    selectTab(state.tab);
+    writeHash();
+    safeRender();
     if (event) openEvent(event);
+    else refresh();
   });
+
+  setInterval(() => { if (!document.hidden) renderStatus(); }, CLOCK_MS);
 
   // ------------------------------------------------------------------ start
   const initialEvent = readHash();
-  syncControls();
-  selectTab(state.tab, { load: false });
+  writeHash();
+  safeRender();
   if (initialEvent) openEvent(initialEvent);
   else refresh();
 })();
