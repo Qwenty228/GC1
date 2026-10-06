@@ -9,6 +9,8 @@
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
 #   make db-check          report the PostgreSQL connection and pgvector
+#   make db-plan           what `migrate` would do (read-only)
+#   make db-verify         compare the schema with the migrations (read-only)
 #   make db-smoke          bounded live end-to-end test into PostgreSQL
 #   make graph             print the compiled ingestion graph
 #   make similarity-status semantic analysis / event grouping status
@@ -22,7 +24,7 @@ LIMIT ?= 10
 
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db-check db-migrate db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db-check db-plan db-migrate db-verify db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -77,8 +79,14 @@ graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 db-check: sync ## Report the database and whether pgvector is enabled
 	$(UV) run datasources-db check
 
-db-migrate: sync ## Apply the additive SQL migrations (idempotent)
+db-plan: ## What `migrate` would do, read in a READ ONLY transaction
+	$(UV) run datasources-db migrate --dry-run
+
+db-migrate: sync ## New database: the whole schema; existing one: pending files (see README before adopting)
 	$(UV) run datasources-db migrate
+
+db-verify: ## Compare the schema with the migration files (read-only)
+	$(UV) run datasources-db verify
 
 db-inspect: sync ## Row counts per table
 	$(UV) run datasources-db inspect

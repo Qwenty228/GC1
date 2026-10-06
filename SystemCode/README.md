@@ -24,10 +24,65 @@ The original pieces still work as before:
 
 ## Setup
 
+### Prerequisites
+
+| Component | Version | Notes |
+| --- | --- | --- |
+| Python | 3.13.7 (pinned) | installed and managed by `uv` |
+| PostgreSQL | 13 or newer; tested with 18.6 | `gen_random_uuid()` is built in from 13 |
+| pgvector | tested with 0.8.6 | The `vector` extension must be installed on the PostgreSQL **server** (`SELECT * FROM pg_available_extensions WHERE name = 'vector'` returns a row). On a new database, `datasources-db migrate` runs `CREATE EXTENSION vector`; that needs a role allowed to create it (a superuser, or the database owner where pgvector is marked trusted). Otherwise a DBA runs `CREATE EXTENSION vector;` in the database first. |
+| Database role | creates tables, functions and triggers in `public` | `postgres` in the local setup |
+
+### Fresh installation
+
 ```powershell
-uv sync --locked            # Python 3.13.7 + locked dependencies
-Copy-Item .env.example .env # then fill in credentials
+uv sync --locked --extra local-embeddings     # Python + locked dependencies (+ the local embedding backend)
+Copy-Item .env.example .env                   # then fill in credentials and the PG* settings
+& "C:\Program Files\PostgreSQL\18\bin\createdb.exe" -U postgres stock_news   # or CREATE DATABASE in pgAdmin
+uv run datasources-db migrate --dry-run       # read-only: lists 000_base_schema.sql ... 005 as "execute"
+uv run datasources-db migrate                 # builds the whole schema from the repository files
+uv run datasources-db verify                  # read-only structural check: expect "Result: OK"
+uv run datasources-similarity download-model  # once, for SIMILARITY_EMBEDDING_BACKEND=sentence-transformers
+uv run datasources-dev --check                # every startup check; starts nothing
 ```
+
+`000_base_schema.sql` creates the base tables (the project ERD: providers, companies, publishers, documents,
+revisions, SEC details, text units, embeddings, ...), their trigger functions and the `current_live_document`
+view, plus the reference rows ingestion needs but never creates: the providers `sec_edgar` and `alpaca`, and
+NVIDIA (CIK 0001045810, `NVDA` on NASDAQ). Another symbol in `INGEST_SYMBOLS` needs its own `company` and
+`company_symbol` rows; unknown tickers are reported, never invented. Migrations 001-005 follow. See
+[Migrations](#migrations-baseline-checksums-and-legacy-objects).
+
+### Existing database (created before the baseline file existed)
+
+`stock_news` was created from the ERD before `000_base_schema.sql` was in the repository, so the file is not
+recorded there. Migrate never runs the baseline on an existing schema; it compares the schema with it and
+records it only when asked to and only if everything matches.
+
+```powershell
+# Stop the worker first (Ctrl+C in the datasources-dev window), then take a backup:
+& "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" -U postgres -Fc -f stock_news-before-baseline.dump stock_news
+uv run datasources-db migrate --dry-run           # 1. read-only preview (a READ ONLY transaction);
+                                                  #    add --adopt-baseline to preview exactly step 2
+uv run datasources-db migrate --adopt-baseline    # 2. record the verified baseline, apply pending files
+uv run datasources-db verify                      # 3. read-only check: expect OK, with 8 legacy objects listed
+```
+
+What the preview reports for `stock_news` (checked read-only on 2026-09-30):
+
+* `000_base_schema.sql`: not recorded; every base object matches it, so it can be **adopted**: recorded with
+  method `adopted`, never executed. Plain `migrate` refuses and changes nothing until `--adopt-baseline` is
+  given, and the flag never overrides a difference: a missing or differently defined base object is listed and
+  migrate stops.
+* `003_event_match_routing.sql`: recorded, no file (a reverted branch). Left as it is.
+* `005_event_summary_citation_quote_index.sql`: pending, **execute**. Its structure was applied by hand, so it
+  only updates two comments and records itself. On a database without that change it adds
+  `event_summary_citation.quote_index` and swaps the unique key; existing citations keep their content with
+  `quote_index = 1`.
+* `schema_migration` gets two nullable columns, `checksum` and `method`. The rows already there are not changed.
+
+Nothing is dropped. The objects the reverted 003 branch left behind stay, reported as legacy (see
+[Migrations](#migrations-baseline-checksums-and-legacy-objects)).
 
 Minimum `.env` for live ingestion:
 
@@ -88,16 +143,30 @@ missing, it names the command that fixes it and does not start.
 
 ### One-time prerequisites
 
-1. PostgreSQL with pgvector and the `stock_news` database (see [PostgreSQL storage](#postgresql-storage)).
+1. PostgreSQL with pgvector and a database with the schema: [Fresh installation](#fresh-installation) or, for
+   `stock_news` as it exists today, [Existing database](#existing-database-created-before-the-baseline-file-existed).
+   The launcher only checks the schema; it never migrates.
 2. Dependencies, including the local embedding backend used by event grouping:
    ```powershell
    uv sync --locked --extra local-embeddings
    ```
 3. `Copy-Item .env.example .env`, then fill in the Alpaca credentials, `SEC_USER_AGENT`, the `PG*` settings and,
    if grouping or summaries use Anthropic, `ANTHROPIC_API_KEY`.
-4. The schema: `uv run datasources-db migrate` (additive and idempotent; the launcher only checks it).
-5. When `SIMILARITY_ENABLED=true` with the sentence-transformers backend: `uv run datasources-similarity download-model`.
-6. `uv run datasources-dev --check` runs every startup check and prints the summary without starting anything.
+4. When `SIMILARITY_ENABLED=true` with the sentence-transformers backend: `uv run datasources-similarity download-model`.
+5. `uv run datasources-dev --check` runs every startup check and prints the summary without starting anything.
+
+### Read-only preview
+
+Nothing here starts a collector, calls a model or writes to the database:
+
+```powershell
+uv run datasources-dev --check              # configuration, database, schema, port, locks and a paid-call summary
+uv run datasources-dev --no-collectors      # the page and the API over stored data; no worker is started
+uv run datasources-db migrate --dry-run     # the schema plan, read in a READ ONLY transaction
+uv run datasources-db verify                # the schema compared with the migrations, READ ONLY
+uv run datasources-summary pending          # summary work backfill/retry would do (no model calls)
+uv run datasources-similarity status        # grouping status, events and index coverage
+```
 
 ### Model calls and cost
 
@@ -114,13 +183,20 @@ the ingestion worker, for records it ingests:
   filings from its lookback window that are not stored yet. Recovered records go through the same steps, so
   the first start after a long break can make many more calls than a normal hour.
 
+With the defaults, one record can therefore cost up to 3 × (1 + 2) + 5 × (1 + 2) = 24 HTTP requests in the
+worst case; a record with no plausible candidate usually costs one summary request, and one that matches an
+event one comparison and one summary request. **The worker has no run-wide cap**: the Alpaca recovery alone
+can bring up to 40 pages of 50 articles after a long break (72 h at most). Before enabling paid steps for the
+worker, run the [bounded live test](#bounded-live-test-paid-hard-capped), which has a hard cap.
+
 To run without paid calls, set `SIMILARITY_ENABLED=false` and `SUMMARY_ENABLED=false`, or use
 `uv run datasources-dev --no-collectors` to browse stored data only.
 
 **Deferred work is not scheduled.** The launcher adds no retry loop. Records whose grouping is still pending
-wait for `uv run datasources-similarity retry` (run it with the worker stopped). Queued or failed summaries wait
-for `uv run datasources-summary retry --confirm-paid-calls`, or for a later record that touches the same
-event. Both commands can make paid calls.
+wait for `uv run datasources-similarity retry` (run it with the worker stopped) or a bounded run with
+`--source stored`. Queued or failed summaries wait for `uv run datasources-summary retry --confirm-paid-calls`
+(add `--max-model-attempts N` for a hard cap), or for a later record that touches the same event. These
+commands can make paid calls.
 
 ### Options
 
@@ -144,6 +220,24 @@ event. Both commands can make paid calls.
   closed or the launcher is killed.
 * The worker writes `output/state/worker_status.json` every 15 seconds. The page's collector status comes only
   from this file. After 60 seconds without a heartbeat, the status shows as unknown.
+* To stop: Ctrl+C in the launcher window, once, and wait for `web stopped` / `ingest stopped` (the worker may
+  finish a model call first: up to `SIMILARITY_LLM_TIMEOUT_SECONDS` per attempt). Records already queued but
+  not written stay unmarked and are collected again on the next start.
+
+### Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| The page shows another database's data, or none | A `PGDATABASE` (or other `PG*`) value set in this terminal, for example for the tests, wins over `.env`. `uv run datasources-db check` prints the database it reached. Open a new terminal, or `Remove-Item Env:PGDATABASE`. |
+| `migrate` refuses: base schema "not recorded" | An existing database: review `migrate --dry-run`, then `migrate --adopt-baseline` ([Existing database](#existing-database-created-before-the-baseline-file-existed)). |
+| `migrate` refuses: base schema "does not match" | The listed objects are missing or defined differently. Nothing was changed; fix them by hand or start from an empty database. `--adopt-baseline` never overrides this. |
+| `migrate` refuses: "an applied migration was edited" | A recorded file's checksum changed. Restore it (`git checkout -- <file>`) and put the change in a new migration. |
+| Launcher warns "migration file(s) not recorded" | The tables are there but a file is not recorded (for example `stock_news` before adoption). The launch continues; `migrate --dry-run` shows what to do. |
+| "another process is writing grouping results" | A worker, a `datasources-similarity backfill`/`retry` or a bounded run holds the graph-writer lock. Stop it first. |
+| "port 8000 ... already in use" | Another server runs there. Stop it or use `--port 8001`. |
+| The worker "was not ready within 180 s" | Its last stage is printed. Usually the embedding model is not downloaded (`uv run datasources-similarity download-model`) or the database is slow to answer. |
+| A bounded run stopped with `attempt_budget` | Expected: its cap is used up. Unfinished grouping is `partial`/`pending`, summaries are queued; run it again with a new cap, or `datasources-summary retry --confirm-paid-calls --max-model-attempts N`. |
+| A summary reported as "held by another lease" | A run stopped while generating it. The lease expires after `SUMMARY_LEASE_MINUTES` (10); the next run or `summary retry` picks it up. |
 
 ### The page
 
@@ -173,6 +267,56 @@ stored news article and SEC filing (original headline, publisher or issuer, the 
 excerpt supplied with the article, labelled as not AI-generated, and its grouping status), with company,
 source and sample filters, and the original Alpaca / EDGAR data-dictionary **source explorer**, which makes
 live requests only when you press a button.
+
+## Bounded live test (paid, hard-capped)
+
+`datasources-ingest bounded-run` sends a small, explicit number of **real** records through grouping and
+summaries, with a hard cap on the HTTP requests sent to the model API. It runs the same code as the worker (the
+ingestion service, the compiled graph, the reanalysis path of `datasources-similarity retry`, inline
+summaries); only the limits are new. Stop `datasources-dev` first: the run takes the same locks.
+
+```powershell
+# Without --confirm-paid-calls it prints the models and the cap, then stops before any request:
+uv run datasources-ingest bounded-run --source stored --max-records 2 --max-model-attempts 6
+# Two stored records whose grouping never ran (oldest first), at most 6 HTTP requests in total:
+uv run datasources-ingest bounded-run --source stored --max-records 2 --max-model-attempts 6 --confirm-paid-calls
+# Three new records from one collection pass (SEC poll + Alpaca REST window since the last sync):
+uv run datasources-ingest bounded-run --source collect --max-records 3 --max-model-attempts 10 --confirm-paid-calls
+# Summaries a run left queued, under the same kind of cap:
+uv run datasources-summary retry --confirm-paid-calls --max-model-attempts 4 --limit 2
+```
+
+| Limit | What it counts | Where it is enforced |
+| --- | --- | --- |
+| `--max-records N` (1-100) | records started through the graph; duplicates the ingestion ledger skips do not count | before each record |
+| `--max-model-attempts M` (1-1000) | HTTP requests actually sent to the Anthropic API: comparison and summary requests together, **every SDK retry included** | at the HTTP transport, before sending: a request or retry beyond the cap is never sent |
+| `SIMILARITY_LLM_MAX_CALLS_PER_RECORD`, `SUMMARY_MAX_REQUESTS_PER_RUN` | logical calls per record (a call becomes up to 1 + `*_LLM_MAX_RETRIES` requests) | as in the worker |
+| Money | **not capped** | token usage is read from each response and reported; a timed-out or dropped attempt reports none but may still be billed |
+
+`--source stored` works on stored live records whose grouping is unfinished (pending or partial and due, or
+never analysed), oldest first; nothing is collected and no cursor is involved. `--source collect` makes one
+collection pass (`--no-sec` / `--no-alpaca` leave one out). `--no-summaries` groups only. `--sample` rehearses
+`--source stored` on sample records. `SIMILARITY_ENABLED` / `SUMMARY_ENABLED` only switch the worker: the
+bounded run uses the configured backends and models either way.
+
+What a run leaves behind:
+
+* A record starts only while attempts remain. When they run out, the record in progress finishes in an
+  accurate state (grouping `partial`, summary job `pending`) and nothing else starts.
+* Records not started are not marked in the ingestion ledger. The Alpaca cursor moves only when every article
+  of the window was stored or skipped as a duplicate, so nothing is skipped over; SEC filings are tracked per
+  accession. A record that is stored but whose grouping or summary is unfinished is ingested (it is in the
+  database) and its unfinished analysis is recorded as such.
+* Replays reuse stored work: a stored record reuses its analysis without a model call, judged pairs are not
+  sent again, and an unchanged summary fingerprint makes no call. Running the same command again continues
+  where the last one stopped.
+* Ctrl+C finishes the record in progress and starts no other; a second Ctrl+C abandons it (nothing
+  uncommitted is recorded; a summary it had started stays leased for `SUMMARY_LEASE_MINUTES`).
+* `output/bounded-runs/<run id>/report.json`, also printed at the end: `stop_reason` (`completed`,
+  `record_limit`, `attempt_budget`, `interrupted`, `error`); `records` (started, completed, pending, failed,
+  skipped as duplicates, not started) with each record's grouping and summary results; `logical_model_calls_sent`;
+  `http_attempts` (used, not sent because of the cap, SDK retries, outcomes, reported tokens, attempts without
+  usage, served models); the Alpaca `cursor`. `model_attempts.json` lists every attempt, written before it is sent.
 
 ## Run
 
@@ -350,15 +494,18 @@ inspected, not only the latest 10 the UI shows.
 ## PostgreSQL storage
 
 Ingested records are also stored in the local **`stock_news`** database. The
-schema already existed (it is the project ERD); ingestion was mapped onto it
-rather than the other way round.
+base schema is the project ERD, now in `migrations/000_base_schema.sql`;
+ingestion was mapped onto it rather than the other way round.
 
 ```powershell
-uv run datasources-db check      # which database, and is pgvector enabled
-uv run datasources-db migrate    # apply additive migrations (idempotent)
-uv run datasources-db inspect    # row counts per table
-uv run datasources-db backfill   # store existing output/processed records (idempotent)
-uv run datasources-db smoke      # bounded live end-to-end test (see Tests)
+uv run datasources-db check                     # which database, and is pgvector enabled
+uv run datasources-db migrate --dry-run         # what migrate would do (READ ONLY transaction)
+uv run datasources-db migrate                   # new database: the whole schema; otherwise pending files
+uv run datasources-db migrate --adopt-baseline  # existing database: record the verified base schema
+uv run datasources-db verify                    # compare the schema with the migrations (READ ONLY)
+uv run datasources-db inspect                   # row counts per table
+uv run datasources-db backfill                  # store existing output/processed records (idempotent)
+uv run datasources-db smoke                     # bounded live end-to-end test (see Tests)
 ```
 
 `datasources-db backfill` and `smoke` store records without semantic analysis;
@@ -376,6 +523,54 @@ PGDATABASE=stock_news
 PGUSER=postgres
 PGPASSWORD=<set locally>
 ```
+
+### Migrations: baseline, checksums and legacy objects
+
+| File | Creates |
+| --- | --- |
+| `000_base_schema.sql` | the base tables, trigger functions, triggers and `current_live_document` view of the ERD, and the reference rows (providers, NVIDIA/NVDA) |
+| `001_document_revision_source.sql` | `document_revision_source` (original payloads and HTML) and `schema_migration` |
+| `002_semantic_event_grouping.sql` | analysis, event, comparison, membership and retrieval tables ([Schema (migration 002)](#schema-migration-002-additive)) |
+| `004_event_summary.sql` | summaries, citations, jobs, attempts, conflict reviews ([Schema (migration 004)](#schema-migration-004-additive)) |
+| `005_event_summary_citation_quote_index.sql` | several quotes per statement and text unit |
+
+There is no `003` file: that number was used by a reverted branch, which `stock_news` still records (see below).
+
+`datasources-db migrate` works out what to do before it changes anything:
+
+| Database | What migrate does |
+| --- | --- |
+| none of the repository's tables | a new database: runs every file from `000` |
+| `000` recorded | runs the files not recorded yet |
+| the base tables exist, `000` not recorded, every base object matches `000` | refuses until `--adopt-baseline`; then records `000` as `adopted` (never executed) and runs the rest |
+| some base objects missing or different | refuses and lists them; nothing is recorded or applied |
+
+Each file runs in its own transaction and is recorded in `schema_migration` with the SHA-256 of its text (line
+endings normalized) and how it was recorded (`executed` / `adopted`); rows recorded before this have neither.
+A recorded file whose text changed makes migrate stop: an applied migration is never edited, changes go into a
+new file, and `tests/test_migrations.py` pins the committed files' checksums. Running `migrate` on an
+up-to-date database changes nothing (it only reads). Nothing in the normal upgrade path drops a table, a
+column or data.
+
+`datasources-db verify` compares the database with `src/datasources/db/schema_expected.json`: snapshots of a
+database built from the files alone (after `000`, and after every file), generated on PostgreSQL 18.6.
+Definitions are compared as PostgreSQL prints them, so another major version may print some differently.
+`tests/test_migrations.py` rebuilds both snapshots in a temporary database and fails when the file is out of
+date; `DATASOURCES_UPDATE_SCHEMA_MANIFEST=1` regenerates it.
+
+**Legacy objects.** `stock_news` (and databases copied from it) recorded `003_event_match_routing.sql` from a
+branch whose code was reverted. What that branch left is unused by the current code, holds no rows there, and
+is reported by `verify` and the migrate preview as legacy, never changed:
+
+| Object | Note |
+| --- | --- |
+| table `event_routing_decision` (+ its indexes, triggers and `validate_routing_decision()`) | routing audit of the reverted local-classifier branch; 0 rows |
+| column `event_comparison.cache_key` (+ index `event_comparison_cache_idx`) | always NULL |
+| checks `event_comparison_label_check`, `event_comparison_method_check`, `event_membership_relation_check` | wider than required: also allow `same_event_unassessed` / `local_classifier`, which current code never writes |
+| view `current_live_event` | an extra trailing column `unassessed_claims`, always 0 |
+
+A new database built from the files has none of them. Removing them from `stock_news` would be a separate,
+deliberate step; no migration does it.
 
 ### Table mapping
 
@@ -1275,12 +1470,19 @@ requested symbols, adapter, dedup identity/fingerprint), `raw_file_refs`,
 ```powershell
 uv run pytest                                      # offline fixtures + mocked network; database tests are
                                                    # skipped unless PGDATABASE names an isolated test database
-$env:PGDATABASE = "stock_news_conflict_test"; uv run pytest   # database tests too (needs migrations 002-005)
+$env:PGDATABASE = "stock_news_conflict_test"; uv run pytest   # database tests too (needs the full schema)
 $env:RUN_LIVE_TESTS = "1"; uv run pytest -m live   # opt-in: real SEC + Alpaca (needs .env)
 
 # Bounded live end-to-end test: real NVDA news + one real 8-K -> PostgreSQL -> read back -> replay
 uv run datasources-db smoke --symbol NVDA --max-articles 5 --lookback-hours 72
 ```
+
+**Keep test settings out of the terminals that run the application.** `$env:PGDATABASE = ...` (like any
+variable set in a PowerShell window) lasts until that window closes, and `.env` never overrides a variable that
+is already set: `datasources-dev`, the CLIs and the web server started from that window then use the test
+database too. Run the tests in their own terminal, or clear the override afterwards with
+`Remove-Item Env:PGDATABASE` (likewise any other override, such as `$env:SIMILARITY_ENABLED`).
+`uv run datasources-db check` prints which database a terminal reaches.
 
 Database tests delete every sample row they may have written, so they never run
 against `stock_news` (which keeps retained sample records). Before any setup,
@@ -1288,9 +1490,26 @@ against `stock_news` (which keeps retained sample records). Before any setup,
 (`current_database()`, not just `PGDATABASE`) and refuses a protected name, a
 name without `test`, a mismatch with the configured name, or any database that
 holds live (non-sample) documents; `cleanup_sample_rows` repeats the check. To
-create an empty test database with the full schema, copy a migrated empty one
-(`CREATE DATABASE stock_news_conflict_test TEMPLATE stock_news_test_fresh`) or
-create one and run `uv run datasources-db migrate` against it.
+create an empty test database with the full schema from the repository files:
+
+```powershell
+& "C:\Program Files\PostgreSQL\18\bin\createdb.exe" -U postgres stock_news_mytest
+$env:PGDATABASE = "stock_news_mytest"; uv run datasources-db migrate; uv run pytest
+```
+
+`tests/test_migrations.py` builds its own temporary databases (`stock_news_migtest_<random>_test`, dropped
+afterwards; the role needs CREATEDB) on the server of the configured test database: a new database from the
+repository files alone (and that `schema_expected.json` matches it), `migrate` a second time changing nothing,
+the `stock_news` legacy state (`tests/fixtures/legacy_003_drift.sql`) adopted only with `--adopt-baseline` and
+with every record kept byte for byte, a mismatched or partial base schema refused with the differences, 005 on
+a real migration-004 database and on a schema where it was applied by hand, and edited migrations refused.
+
+`tests/test_bounded_run.py` runs the real Anthropic SDK and the real comparison/summary adapters against a fake
+network: SDK retries counted as attempts, a retry beyond the cap never sent, comparison and summary sharing one
+cap, a summary deferred without a failed attempt when the cap runs out, a timed-out comparison left stored and
+resumable, an interruption during a model call leaving nothing half recorded, re-runs duplicating nothing and
+repeating no model call, the Alpaca cursor never moving past unprocessed articles, and consent required for
+paid calls.
 
 `tests/test_conflict_notice.py` replays the fictional Veltrani Photonics
 acquisition (`tests/fixtures/synthetic_conflict_notice_veltrani.json`: the

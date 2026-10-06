@@ -13,7 +13,9 @@
         --decision not_a_conflict|confirmed_conflict|different_events|insufficient_evidence --explanation "..."
 
 Commands that can call the model need --confirm-paid-calls and are bounded by
---limit and SUMMARY_MAX_REQUESTS_PER_RUN. They use job leases, so they may run
+--limit and SUMMARY_MAX_REQUESTS_PER_RUN (logical requests); --max-model-attempts N
+also caps the HTTP requests actually sent, SDK retries included, and reports the
+token usage the API returned. They use job leases, so they may run
 next to the ingestion worker without generating the same summary twice. Add
 --sample to work on sample data.
 """
@@ -28,9 +30,10 @@ from datetime import datetime, timezone
 
 from ..db import Database, DatabaseError, load_db_settings
 from ..ingest.settings import ConfigurationError
+from ..llm_budget import AttemptLedger, counting_anthropic
 from ..similarity.store import missing_schema as similarity_missing_schema
 from . import review, store
-from .generation import credentials_available
+from .generation import AnthropicSummaryBackend, credentials_available
 from .models import INITIAL, NEW_INFORMATION
 from .pipeline import SummaryBudget, SummaryContext, build_summary_runtime, process_event
 from .settings import load_summary_settings
@@ -46,23 +49,34 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _runtime(database):
+def _runtime(database, ledger=None):
     settings = load_summary_settings()
     if not settings.enabled:
         print("note: SUMMARY_ENABLED is false, so the ingestion worker does not summarize new records; this command "
               "still uses the configured model.", file=sys.stderr)
-    return build_summary_runtime(database, settings)
+    if ledger is None or settings.backend != "anthropic":
+        return build_summary_runtime(database, settings)
+    if not credentials_available():
+        raise ConfigurationError("SUMMARY_BACKEND=anthropic needs API credentials: set ANTHROPIC_API_KEY in .env")
+    client = counting_anthropic(ledger, "summary", timeout=settings.llm_timeout_seconds,
+                                max_retries=settings.llm_max_retries)
+    return build_summary_runtime(database, settings, backend=AnthropicSummaryBackend(settings, client=client))
 
 
 def _context(database, args, *, limit: int | None = None) -> SummaryContext | None:
-    runtime = _runtime(database)
+    attempts = getattr(args, "max_model_attempts", None)
+    if attempts is not None and attempts < 1:
+        raise ConfigurationError("--max-model-attempts must be at least 1")
+    ledger = AttemptLedger(attempts) if attempts else None
+    runtime = _runtime(database) if ledger is None else _runtime(database, ledger)
     if runtime.provider == "anthropic" and not args.confirm_paid_calls:
+        cap = f", at most {attempts} HTTP attempt(s) including SDK retries" if attempts else ""
         print(f"This can send up to {limit or runtime.settings.max_requests_per_run} request(s) to "
-              f"{runtime.model} (paid API calls). Re-run with --confirm-paid-calls to proceed; "
+              f"{runtime.model} (paid API calls{cap}). Re-run with --confirm-paid-calls to proceed; "
               "`datasources-summary pending` shows what would run.", file=sys.stderr)
         return None
     cap = runtime.settings.max_requests_per_run if limit is None else min(limit, runtime.settings.max_requests_per_run)
-    return SummaryContext(database, runtime, SummaryBudget(cap))
+    return SummaryContext(database, runtime, SummaryBudget(cap, attempts=ledger))
 
 
 def _run(event_ids: list[str], sctx: SummaryContext, *, trigger: str = "job", refresh: bool = False,
@@ -72,8 +86,11 @@ def _run(event_ids: list[str], sctx: SummaryContext, *, trigger: str = "job", re
     counts: dict[str, int] = {}
     for report in reports:
         counts[report["result"] or "none"] = counts.get(report["result"] or "none", 0) + 1
-    return {"selected": len(event_ids), "results": counts, "model_requests": sctx.budget.used,
-            "request_cap": sctx.budget.limit, "events": reports}
+    out = {"selected": len(event_ids), "results": counts, "model_requests": sctx.budget.used,
+           "request_cap": sctx.budget.limit, "events": reports}
+    if sctx.budget.attempts is not None:
+        out["http_attempts"] = sctx.budget.attempts.summary()
+    return out
 
 
 # ----------------------------------------------------------------------------- commands
@@ -229,6 +246,8 @@ def main(argv: list[str] | None = None) -> int:
     p_show.add_argument("--event-id", required=True)
     paid = argparse.ArgumentParser(add_help=False)
     paid.add_argument("--confirm-paid-calls", action="store_true", help="Allow requests to the configured model")
+    paid.add_argument("--max-model-attempts", type=int,
+                      help="Hard cap on HTTP requests sent to the model API by this command, SDK retries included")
     paid.add_argument("--sample", action="store_true")
     p_run = sub.add_parser("run-event", parents=[paid], help="Summarize ONE event now (at most one model request)")
     p_run.add_argument("--event-id", required=True)

@@ -480,8 +480,12 @@ def call_json_model(client, params: dict[str, Any], *, fallbacks: bool, model: s
     Maps SDK exceptions onto ``error(kind=..., retryable=...)`` and checks
     ``stop_reason`` before reading content: a refusal or a truncated answer is an
     error, never a result. Timeouts and retries are the client's own settings.
+    ``budget_exhausted``: a run-wide attempt cap (``llm_budget``) refused to send
+    the request; retryable later, but the caller must not try again in this run.
     """
     import anthropic
+
+    from ..llm_budget import AttemptBudgetExhausted
 
     started = time.monotonic()
     try:
@@ -489,6 +493,8 @@ def call_json_model(client, params: dict[str, Any], *, fallbacks: bool, model: s
             response = client.beta.messages.create(**params, betas=[FALLBACK_BETA], fallbacks="default")
         else:
             response = client.messages.create(**params)
+    except AttemptBudgetExhausted as exc:
+        raise error(f"{purpose} stopped: {exc}", kind="budget_exhausted", retryable=True) from exc
     except anthropic.APITimeoutError as exc:
         raise error(f"{purpose} timed out: {exc}", kind="timeout", retryable=True) from exc
     except anthropic.APIConnectionError as exc:

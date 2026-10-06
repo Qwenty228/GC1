@@ -56,6 +56,7 @@ from .validation import validate_summary
 LOGGER = logging.getLogger(__name__)
 MAX_EVENTS_PER_RECORD = 10  # more are queued as durable pending jobs (bounded graph recursion)
 NON_RETRYABLE_KINDS = frozenset({"authentication", "model_not_found", "bad_request", "refusal"})
+LEASED_ELSEWHERE = "summary work is running in another process"  # skip reason while another lease is live
 
 
 # ----------------------------------------------------------------------------- runtime
@@ -102,14 +103,24 @@ def build_summary_runtime(database, settings: SummarySettings, *, backend=None,
 
 
 class SummaryBudget:
-    """Cap on summary requests for one run (one graph invocation or one CLI command)."""
+    """Cap on summary requests for one run (one graph invocation or one CLI command).
 
-    def __init__(self, limit: int):
+    ``attempts`` is an optional run-wide cap on actual model HTTP attempts (``llm_budget.AttemptLedger``),
+    shared with the comparison calls: once it is used up, no further request is started.
+    """
+
+    def __init__(self, limit: int, attempts=None):
         self.limit = limit
         self.used = 0
+        self.attempts = attempts
 
     def available(self) -> bool:
-        return self.used < self.limit
+        return self.used < self.limit and (self.attempts is None or not self.attempts.exhausted())
+
+    def exhausted_reason(self) -> str:
+        if self.attempts is not None and self.attempts.exhausted():
+            return f"the run's model-attempt budget ({self.attempts.limit} HTTP attempts) is used up"
+        return f"this run's cap of {self.limit} summary request(s) reached (SUMMARY_MAX_REQUESTS_PER_RUN / --limit)"
 
     def spend(self) -> None:
         self.used += 1
@@ -132,7 +143,8 @@ def context_from(ctx) -> SummaryContext | None:
     if runtime is None or getattr(ctx, "database", None) is None or not getattr(ctx, "persist", True):
         return None
     if getattr(ctx, "summary_budget", None) is None:
-        ctx.summary_budget = SummaryBudget(runtime.settings.max_requests_per_run)
+        ctx.summary_budget = SummaryBudget(runtime.settings.max_requests_per_run,
+                                           attempts=getattr(ctx, "model_budget", None))
     return SummaryContext(ctx.database, runtime, ctx.summary_budget, getattr(ctx, "now", None))
 
 
@@ -200,7 +212,7 @@ def decide(task: SummaryTask, *, has_published: bool, blocking_conflicts: int, j
         return CONFLICT, f"{blocking_conflicts} open conflict review(s) block a new summary", None
     status = job["status"] if job else None
     if status == "running" and job.get("lease_expires_at") and job["lease_expires_at"] > now:
-        return SKIP, "summary work is running in another process", None
+        return SKIP, LEASED_ELSEWHERE, None
     queued_reason = job["reason"] if job and status in ("pending", "awaiting_review", "running") else None
     if trigger == "manual":
         return GENERATE, "manual refresh", MANUAL_REFRESH
@@ -284,7 +296,7 @@ def generate(task: SummaryTask, sctx: SummaryContext, *, refresh: bool = False, 
             # Otherwise a pending job is retried as it is: its backoff and attempt count are kept.
             if not sctx.budget.available():
                 task.result = "deferred"
-                task.reason += f"; SUMMARY_MAX_REQUESTS_PER_RUN={runtime.settings.max_requests_per_run} reached"
+                task.reason += f"; {sctx.budget.exhausted_reason()}"
                 task.job = store.get_job(conn, task.event_id, task.language)
                 return
             task.job = store.claim_job(conn, task.event_id, task.language, owner=runtime.owner,

@@ -229,7 +229,7 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
 
 def _check_database(report: Preflight, *, collectors: bool, similarity, summary) -> None:
     from .db import Database, DatabaseError, db_enabled, load_db_settings
-    from .db.migrate import applied_migrations, migration_files
+    from .db.migrate import BASELINE, applied_migrations, migration_files
     from .ingest.settings import ConfigurationError
 
     try:
@@ -266,13 +266,17 @@ def _check_database(report: Preflight, *, collectors: bool, similarity, summary)
         if missing:
             # Without collectors only the page is affected (its Events tab needs the event tables).
             (report.problems if collectors else report.warnings).append(
-                f"database {info.database} is missing {', '.join(missing)}; apply the schema migrations yourself "
-                "with `uv run datasources-db migrate` (this launcher never changes the schema)")
+                f"database {info.database} is missing {', '.join(missing)}; `uv run datasources-db migrate --dry-run` "
+                "shows what the migrations would do, `uv run datasources-db migrate` applies them (this launcher "
+                "never changes the schema)")
         unrecorded = sorted(p.name for p in migration_files() if p.name not in applied_migrations(database))
         if unrecorded and not missing:
+            adopt = ("; the existing base schema is recorded with `migrate --adopt-baseline` (checked first, never "
+                     "executed)" if BASELINE in unrecorded else "")
             report.warnings.append(f"migration file(s) not recorded in schema_migration: {', '.join(unrecorded)}. "
-                                   "The required tables and columns are present, so the launch continues; "
-                                   "`uv run datasources-db migrate` records them (additive, idempotent)")
+                                   "The required tables and columns are present, so the launch continues. "
+                                   "`uv run datasources-db migrate --dry-run` shows what migrate would do "
+                                   f"(read-only){adopt}")
         if collectors and (holder := _graph_writer_holder(database)):
             report.problems.append(f"another process is writing grouping results for the live data ({holder}): "
                                    "an ingestion worker, or a `datasources-similarity backfill`/`retry`. Stop it "
