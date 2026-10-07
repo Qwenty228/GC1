@@ -114,7 +114,7 @@ def offline_env(monkeypatch, tmp_path):
     values = {"DATASOURCES_DB_ENABLED": "false", "SIMILARITY_ENABLED": "false", "SUMMARY_ENABLED": "false",
               "INGEST_OUTPUT_DIR": str(tmp_path / "output"), "INGEST_SYMBOLS": "NVDA", "INGEST_DEMO_MODE": "false",
               "ALPACA_AUTH_MODE": "trading", "ALPACA_API_KEY": "test-key-id", "ALPACA_SECRET_KEY": "test-secret-key",
-              "SEC_USER_AGENT": "TestSuite tests@example.test"}
+              "SEC_USER_AGENT": "TestSuite tests@example.test", "INGEST_LIVE_ONLY": "false"}
     for name, value in values.items():
         monkeypatch.setenv(name, value)
     return values

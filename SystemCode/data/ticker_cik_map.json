@@ -1,14 +1,57 @@
 {
-  "AAPL": {
-    "cik": "0000320193",
-    "name": "Apple Inc."
-  },
   "NVDA": {
     "cik": "0001045810",
-    "name": "NVIDIA Corporation"
+    "name": "NVIDIA Corporation",
+    "market": "NASDAQ"
   },
   "MSFT": {
     "cik": "0000789019",
-    "name": "Microsoft Corporation"
+    "name": "Microsoft Corporation",
+    "market": "NASDAQ"
+  },
+  "AAPL": {
+    "cik": "0000320193",
+    "name": "Apple Inc.",
+    "market": "NASDAQ"
+  },
+  "GOOGL": {
+    "cik": "0001652044",
+    "name": "Alphabet Inc.",
+    "market": "NASDAQ"
+  },
+  "AMZN": {
+    "cik": "0001018724",
+    "name": "Amazon.com, Inc.",
+    "market": "NASDAQ"
+  },
+  "META": {
+    "cik": "0001326801",
+    "name": "Meta Platforms, Inc.",
+    "market": "NASDAQ"
+  },
+  "NFLX": {
+    "cik": "0001065280",
+    "name": "Netflix, Inc.",
+    "market": "NASDAQ"
+  },
+  "DIS": {
+    "cik": "0001744489",
+    "name": "The Walt Disney Company",
+    "market": "NYSE"
+  },
+  "JPM": {
+    "cik": "0000019617",
+    "name": "JPMorgan Chase & Co.",
+    "market": "NYSE"
+  },
+  "V": {
+    "cik": "0001403161",
+    "name": "Visa Inc.",
+    "market": "NYSE"
+  },
+  "GS": {
+    "cik": "0000886982",
+    "name": "The Goldman Sachs Group, Inc.",
+    "market": "NYSE"
   }
 }

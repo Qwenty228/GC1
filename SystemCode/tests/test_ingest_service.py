@@ -153,7 +153,8 @@ def test_poll_bypasses_12h_cache_and_refreshes_it(settings):
 
 
 def test_first_run_lookback_scope_and_recovery_floor(settings):
-    old, new = filing(1, date="2020-01-01"), filing(2, date="2026-09-01")
+    recent = (datetime.now(timezone.utc).date() - timedelta(days=5)).isoformat()  # inside the 30-day window, always
+    old, new = filing(1, date="2020-01-01"), filing(2, date=recent)
     session = FakeSession({SUBMISSIONS_URL: json_response(synthetic_submissions([new, old]))})
     service = sec_service(settings.with_overrides(sec_initial_lookback_days=30), session)
     items = service.sec_poll_once("SYNX")
@@ -444,6 +445,7 @@ def test_non_transient_stream_error_raises(monkeypatch):
 # ---------------------------------------------------------------- demo / live separation
 def test_demo_and_live_use_separate_roots_and_markers(tmp_path, monkeypatch):
     monkeypatch.setenv("INGEST_OUTPUT_DIR", str(tmp_path / "out"))
+    monkeypatch.setenv("INGEST_SYMBOLS", "NVDA")  # not whatever the local .env collects
     live, demo = load_settings(demo=False), load_settings(demo=True)
     assert live.root == tmp_path / "out" and demo.root == tmp_path / "out" / "demo"
     service = cli.run_demo(demo)
@@ -518,6 +520,7 @@ def test_full_queue_blocks_producers_and_reports_pressure(settings):
 
 def test_file_only_and_demo_runs_label_analysis_disabled(tmp_path, monkeypatch):
     monkeypatch.setenv("INGEST_OUTPUT_DIR", str(tmp_path / "out"))
+    monkeypatch.setenv("INGEST_SYMBOLS", "NVDA")  # not whatever the local .env collects
     service = cli.run_demo(load_settings(demo=True))
     saved = service.stats["sec_saved"] + service.stats["alpaca_saved"]
     assert saved and service.stats["analysis_disabled"] == saved

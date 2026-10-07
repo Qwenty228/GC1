@@ -80,6 +80,19 @@ def _in_citation_order(rows: list[dict], cited: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda c: (rank.get(c["unit_id"], len(rank)), c["unit_id"], c["quote_index"]))
 
 
+# The companies linked to the event's current sources, each once however many sources mention it: CIK (the stable
+# id a watchlist stores), name and registered tickers.
+_COMPANIES_COLUMN = """
+    COALESCE((SELECT jsonb_agg(x.company ORDER BY x.company->>'name', x.company->>'cik') FROM (
+        SELECT DISTINCT jsonb_build_object('cik', co.cik, 'name', co.name, 'symbols', to_jsonb(ARRAY(
+                   SELECT DISTINCT cs.symbol FROM company_symbol cs WHERE cs.company_id = co.company_id
+                    ORDER BY cs.symbol))) AS company
+          FROM current_event_membership m
+          JOIN revision_company rc ON rc.revision_id = m.revision_id
+          JOIN company co ON co.company_id = rc.company_id
+         WHERE m.event_id = e.event_id) x), '[]'::jsonb) AS companies
+"""
+
 # List cards only: the company symbols of the current sources, and the most recent source (a link to show while
 # no summary is published). The inner ``s`` is the filing row SOURCE_TIME expects, not the outer summary.
 _LIST_COLUMNS = f"""
@@ -87,6 +100,7 @@ _LIST_COLUMNS = f"""
             JOIN revision_company rc ON rc.revision_id = m.revision_id
             JOIN company_symbol cs ON cs.company_id = rc.company_id
            WHERE m.event_id = e.event_id ORDER BY cs.symbol) AS symbols,
+    {_COMPANIES_COLUMN},
     (SELECT jsonb_build_object('title', r.title, 'url', COALESCE(r.original_url, s.primary_document_url),
                                'name', COALESCE(pub.name, co.name), 'record_type', d.record_type,
                                'published_at', {SOURCE_TIME})
@@ -102,8 +116,12 @@ _LIST_COLUMNS = f"""
 
 
 def list_events(conn: Connection, *, include_sample: bool, language: str, limit: int, offset: int,
-                state: str | None = None, symbol: str | None = None) -> list[dict[str, Any]]:
-    """``symbol`` keeps events with at least one current source linked to that company symbol."""
+                state: str | None = None, symbol: str | None = None,
+                ciks: list[str] | None = None) -> list[dict[str, Any]]:
+    """``symbol`` keeps events with at least one current source linked to that company symbol; ``ciks`` (a
+    watchlist) keeps events with a current source linked to ANY of those companies. Both filters run in SQL before
+    LIMIT/OFFSET, so a page is the newest matching events, and an event linked to several of the companies is one
+    row (it is selected from ``news_event``; the company links are only tested with EXISTS)."""
     rows = conn.execute(
         f"""
         SELECT * FROM (
@@ -114,13 +132,18 @@ def list_events(conn: Connection, *, include_sample: bool, language: str, limit:
                     SELECT 1 FROM current_event_membership m
                       JOIN revision_company rc ON rc.revision_id = m.revision_id
                       JOIN company_symbol cs ON cs.company_id = rc.company_id
-                     WHERE m.event_id = e.event_id AND cs.symbol = %(symbol)s::text))) x
+                     WHERE m.event_id = e.event_id AND cs.symbol = %(symbol)s::text))
+               AND (%(ciks)s::text[] IS NULL OR EXISTS (
+                    SELECT 1 FROM current_event_membership m
+                      JOIN revision_company rc ON rc.revision_id = m.revision_id
+                      JOIN company co ON co.company_id = rc.company_id
+                     WHERE m.event_id = e.event_id AND co.cik = ANY(%(ciks)s::text[])))) x
          WHERE %(state)s::text IS NULL OR {_STATE_SQL} = %(state)s::text
          ORDER BY x.last_source_time DESC NULLS LAST, x.event_id
          LIMIT %(limit)s OFFSET %(offset)s
         """,
         {"lang": language, "sample": include_sample, "limit": limit, "offset": offset, "state": state,
-         "symbol": symbol},
+         "symbol": symbol, "ciks": ciks},
     ).fetchall()
     conflict_status = conflicts.list_status(conn, [{**r, "input_manifest": r["input_manifest"] if r["summary_id"]
                                                      else None} for r in rows])
@@ -131,7 +154,8 @@ def list_events(conn: Connection, *, include_sample: bool, language: str, limit:
                 "last_source_time": row["last_source_time"], "documents": int(row["documents"]),
                 "pending_relations": int(row["pending_relations"]), **summary_state(row),
                 "conflict": conflict_status[str(row["event_id"])], "symbols": list(row["symbols"] or []),
-                "latest_source": _latest_source(row["latest_source"]), "summary": None}
+                "companies": row["companies"], "latest_source": _latest_source(row["latest_source"]),
+                "summary": None}
         if row["summary_id"]:
             item["summary"] = {"version": row["version"], "headline": row["headline"],
                                "overview": row["summary_text"], "key_points": row["key_points"],
@@ -147,13 +171,14 @@ def _latest_source(source: dict[str, Any] | None) -> dict[str, Any] | None:
 
 
 def event_detail(conn: Connection, event_id: str, *, include_sample: bool, language: str) -> dict[str, Any] | None:
-    row = conn.execute(f"SELECT {_EVENT_COLUMNS} {_EVENT_FROM} WHERE e.event_id = %(event)s",
+    row = conn.execute(f"SELECT {_EVENT_COLUMNS}, {_COMPANIES_COLUMN} {_EVENT_FROM} WHERE e.event_id = %(event)s",
                        {"lang": language, "event": event_id}).fetchone()
     if row is None or (row["is_sample"] and not include_sample):
         return None
     detail: dict[str, Any] = {
         "event_id": str(row["event_id"]), "title": row["title"], "event_status": row["status"],
         "is_sample": row["is_sample"], "superseded_by": str(row["superseded_by"]) if row["superseded_by"] else None,
+        "companies": row["companies"],
         "first_source_time": row["first_source_time"], "last_source_time": row["last_source_time"],
         "documents": int(row["documents"]), "pending_relations": int(row["pending_relations"]),
         "language": language, **summary_state(row), "summary": None,

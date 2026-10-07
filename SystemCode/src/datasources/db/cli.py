@@ -5,6 +5,10 @@
     uv run datasources-db migrate                   # build a new database / apply pending migrations
     uv run datasources-db migrate --adopt-baseline  # existing database: record the verified base schema
     uv run datasources-db verify                    # compare the schema with the migrations (read-only)
+    uv run datasources-db register-companies --dry-run   # which coverage companies would be added (read-only)
+    uv run datasources-db register-companies        # add them to company/company_symbol (insert-only, repeatable)
+    uv run datasources-db relink-companies --dry-run     # links stored articles lack for companies registered later
+    uv run datasources-db relink-companies          # add those links (insert-only, repeatable)
     uv run datasources-db inspect                   # row counts per table
     uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
@@ -35,6 +39,7 @@ from ..ingest.service import IngestionService
 from ..ingest.settings import ConfigurationError, load_settings, require_sec_user_agent
 from . import migrate as migrations
 from . import schema as schema_check
+from .companies import CoverageError
 from .connection import Database, DatabaseError
 from .repository import ALPACA_NAMESPACE, persist_record
 from .settings import load_db_settings
@@ -204,6 +209,71 @@ def cmd_verify(db: Database, args) -> int:
     return 0 if comparison.ok else 1
 
 
+def cmd_register_companies(db: Database, args) -> int:
+    """Add the coverage list's companies and tickers to `company` / `company_symbol` (insert-only, repeatable)."""
+    from .companies import coverage_companies, register_companies
+
+    companies = coverage_companies(parse_symbols(args.symbols) if args.symbols else None)
+    with db.connection() as conn, conn.transaction():
+        if args.dry_run:
+            conn.execute("SET TRANSACTION READ ONLY")
+        database = conn.execute("SELECT current_database() AS db").fetchone()["db"]
+        report = register_companies(conn, companies, dry_run=args.dry_run)
+    if args.json:
+        print(json.dumps({"database": database, **report.as_dict()}, indent=2))
+        return 1 if report.conflicts else 0
+    print(f"Company registration for {database} ({config.TICKER_MAP_FILE.name}, {len(companies)} companies)")
+    if args.dry_run:
+        print("READ ONLY: nothing was changed.")
+    verb = {"insert": "would add" if args.dry_run else "added", "exists": "kept",
+            "exists_other_market": "kept", "conflict": "CONFLICT"}
+    for a in report.actions:
+        company = "CONFLICT" if a.conflict else verb[a.company]
+        print(f"  {a.symbol:<6} {a.market:<7} CIK {a.cik}  {a.name:<32} "
+              f"company {company:<9} ticker {verb[a.symbol_row]}")
+        if a.stored_name:
+            print(f"         stored name kept: {a.stored_name!r}")
+        if a.note:
+            print(f"         {a.note}")
+    added = "to add" if args.dry_run else "added"
+    print(f"\nResult: {report.companies_added} compan{'y' if report.companies_added == 1 else 'ies'} and "
+          f"{report.symbols_added} ticker(s) {added}; {len(report.conflicts)} conflict(s). Existing rows are never "
+          "changed. Collectors are not affected: they follow INGEST_SYMBOLS.")
+    if report.conflicts:
+        print("Conflicting tickers were left alone; resolve them by hand before registering those companies.",
+              file=sys.stderr)
+    return 1 if report.conflicts else 0
+
+
+def cmd_relink_companies(db: Database, args) -> int:
+    """Link stored articles to companies registered after they were stored (insert-only, repeatable)."""
+    from .companies import relink_articles
+
+    with db.connection() as conn, conn.transaction():
+        if args.dry_run:
+            conn.execute("SET TRANSACTION READ ONLY")
+        database = conn.execute("SELECT current_database() AS db").fetchone()["db"]
+        report = relink_articles(conn, is_sample=args.sample, dry_run=args.dry_run)
+    if args.json:
+        print(json.dumps({"database": database, **report.as_dict()}, indent=2))
+        return 0
+    partition = "sample" if args.sample else "live"
+    print(f"Company links for stored {partition} articles in {database}")
+    if args.dry_run:
+        print("READ ONLY: nothing was changed.")
+    for item in report.revisions:
+        print(f"  + {', '.join(item['added']):<24} {(item['title'] or 'Untitled')[:90]}")
+    verb = "to add" if args.dry_run else "added"
+    print(f"\nResult: {report.links_added} link(s) {verb} on {len(report.revisions)} of {report.scanned} article "
+          f"revision(s); {report.without_payload} without a stored payload left as they are. Existing links, articles, "
+          "events and summaries are never changed.")
+    return 0
+
+
+def parse_symbols(value: str) -> list[str]:
+    return [s.strip().upper() for s in value.split(",") if s.strip()]
+
+
 def cmd_backfill(db: Database, args) -> int:
     """Store already-processed records from `output/processed/` into PostgreSQL.
 
@@ -370,7 +440,7 @@ class Smoke:
             print(f"[3/8] SEC SKIPPED: {error}")
             return
         client = SecClient(agent, requests_per_second=self.settings.sec_requests_per_second,
-                           timeout=self.settings.http_timeout_seconds, max_retries=self.settings.sec_max_retries)
+                           timeout=self.settings.sec_http_timeout_seconds, max_retries=self.settings.sec_max_retries)
         self.service.sec_client = client
         cik10 = config.cik_for(self.symbol)
         try:
@@ -677,6 +747,20 @@ def main(argv: list[str] | None = None) -> int:
     p_migrate.add_argument("--json", action="store_true", help="Print the plan as JSON")
     p_verify = sub.add_parser("verify", help="Compare the schema with what the migrations define (read-only)")
     p_verify.add_argument("--json", action="store_true")
+    p_register = sub.add_parser("register-companies",
+                                help="Add the companies of data/ticker_cik_map.json to company/company_symbol "
+                                     "(insert-only, repeatable; starts no collector)")
+    p_register.add_argument("--dry-run", action="store_true",
+                            help="Show what would be added, in a read-only transaction; change nothing")
+    p_register.add_argument("--symbols", help="Only these tickers (comma-separated); default: the whole list")
+    p_register.add_argument("--json", action="store_true")
+    p_relink = sub.add_parser("relink-companies",
+                              help="Link stored articles to companies registered after they were stored "
+                                   "(insert-only, repeatable; no model call)")
+    p_relink.add_argument("--dry-run", action="store_true",
+                          help="Show the links that would be added, in a read-only transaction; change nothing")
+    p_relink.add_argument("--sample", action="store_true", help="The sample partition instead of live articles")
+    p_relink.add_argument("--json", action="store_true")
     sub.add_parser("inspect", help="Row counts per table")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
@@ -704,6 +788,10 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_migrate(database, args)
         if command == "verify":
             return cmd_verify(database, args)
+        if command == "register-companies":
+            return cmd_register_companies(database, args)
+        if command == "relink-companies":
+            return cmd_relink_companies(database, args)
         if command == "inspect":
             return cmd_inspect(database)
         if command == "backfill":
@@ -712,7 +800,7 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_smoke(database, args)
         parser.print_help()
         return 2
-    except (ConfigurationError, DatabaseError, AlpacaConfigError, KeyError) as error:
+    except (ConfigurationError, DatabaseError, AlpacaConfigError, KeyError, CoverageError) as error:
         message = error.args[0] if isinstance(error, KeyError) and error.args else str(error)
         sys.stderr.write(f"Configuration error: {message}\n")
         return 2

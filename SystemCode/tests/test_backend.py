@@ -13,9 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SUBMISSIONS = ROOT / "data" / "submissions_CIK0001045810.json"
 
 
-def test_ticker_map_has_three_companies():
+def test_ticker_map_has_the_eleven_coverage_companies():
     mapping = config.load_ticker_map()
-    assert set(mapping) == {"AAPL", "NVDA", "MSFT"}
+    assert list(mapping) == ["NVDA", "MSFT", "AAPL", "GOOGL", "AMZN", "META", "NFLX", "DIS", "JPM", "V", "GS"]
+    assert all(set(info) == {"cik", "name", "market"} for info in mapping.values())
     assert config.cik_for("nvda") == "0001045810"
 
 
