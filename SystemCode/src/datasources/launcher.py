@@ -188,7 +188,8 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
             from .alpaca import AlpacaConfigError, auth_from_env
 
             try:
-                parts.append(f"Alpaca news WebSocket + REST recovery ({auth_from_env().mode} credentials present)")
+                recovery = "" if settings.live_only else " + REST recovery"
+                parts.append(f"Alpaca news WebSocket{recovery} ({auth_from_env().mode} credentials present)")
             except AlpacaConfigError as error:
                 report.problems.append(str(error))
         if sec:
@@ -201,9 +202,7 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
             except (ConfigurationError, KeyError) as error:
                 report.problems.append(error.args[0] if isinstance(error, KeyError) else str(error))
         add(("Collectors", f"{'; '.join(parts) or 'none'} — symbols {', '.join(settings.symbols)}"))
-        add(("Recovery", f"at startup: Alpaca news since the last sync (at most {settings.alpaca_recovery_max_hours} h, "
-                         f"{settings.alpaca_backfill_max_pages} pages) and SEC filings from the last "
-                         f"{settings.sec_initial_lookback_days} days not yet stored"))
+        add(("Recovery", recovery_summary(settings)))
         try:
             with ProcessLock(settings.root):
                 pass
@@ -221,14 +220,42 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
     else:
         add(("Collectors", "not started (--no-collectors): the page shows stored data only"))
 
-    _check_database(report, collectors=collectors, similarity=similarity, summary=summary)
+    _check_database(report, collectors=collectors, similarity=similarity, summary=summary,
+                    symbols=settings.symbols if collectors else ())
     if collectors and similarity is not None and summary is not None:
-        _describe_processing(report, similarity, summary)
+        _describe_processing(report, similarity, summary, live_only=settings.live_only)
     return report
 
 
-def _check_database(report: Preflight, *, collectors: bool, similarity, summary) -> None:
+def recovery_summary(settings) -> str:
+    """The startup summary's Recovery line. Live-only mode also lists the saved recovery state it leaves untouched,
+    read from the ledger file (read-only; nothing is created)."""
+    if not settings.live_only:
+        return (f"at startup: Alpaca news since the last sync (at most {settings.alpaca_recovery_max_hours} h, "
+                f"{settings.alpaca_backfill_max_pages} pages) and SEC filings from the last "
+                f"{settings.sec_initial_lookback_days} days not yet stored")
+    saved: dict = {}
+    path = settings.root / "state" / "ledger.json"
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8")).get("cursors") or {}
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError):
+        saved = {"unreadable": True}
+    floors = sorted(k.split(":", 1)[1] for k in saved if k.startswith("sec_scope_floor:"))
+    cursor = saved.get("alpaca_synced_through")
+    kept = ("unreadable ledger, left as it is" if saved.get("unreadable") else
+            f"Alpaca cursor {cursor or 'none'}, SEC scope floor(s) for {len(floors)} compan"
+            f"{'y' if len(floors) == 1 else 'ies'}")
+    return ("OFF (INGEST_LIVE_ONLY=true): each startup takes a fresh UTC cutoff and only news and SEC filings "
+            "published after it are collected; no SEC catch-up, no Alpaca REST backfill at startup or after a "
+            "reconnect, and after a reconnect only news published from then on. Saved recovery state is kept "
+            f"untouched for later ({kept})")
+
+
+def _check_database(report: Preflight, *, collectors: bool, similarity, summary, symbols=()) -> None:
     from .db import Database, DatabaseError, db_enabled, load_db_settings
+    from .db.companies import unregistered_symbols
     from .db.migrate import BASELINE, applied_migrations, migration_files
     from .ingest.settings import ConfigurationError
 
@@ -257,12 +284,21 @@ def _check_database(report: Preflight, *, collectors: bool, similarity, summary)
             from .summary.store import missing_schema as summary_missing
 
             missing = []
+            unlinked: list[str] = []
             if not conn.execute("SELECT to_regclass('public.document') IS NOT NULL AS ok").fetchone()["ok"]:
                 missing.append("the base stock_news tables (document, document_revision, ...)")
-            elif similarity is None or similarity.enabled or summary is None or summary.enabled:
-                missing += grouping_missing(conn)
-                if summary is None or summary.enabled:
-                    missing += summary_missing(conn)
+            else:
+                unlinked = unregistered_symbols(conn, symbols)
+                if similarity is None or similarity.enabled or summary is None or summary.enabled:
+                    missing += grouping_missing(conn)
+                    if summary is None or summary.enabled:
+                        missing += summary_missing(conn)
+        if unlinked:
+            report.warnings.append(
+                f"INGEST_SYMBOLS includes {', '.join(unlinked)}, which {'has' if len(unlinked) == 1 else 'have'} no "
+                "company_symbol row in this database: those articles would be stored without a company link (not "
+                "shown under that company or in watchlists). `uv run datasources-db register-companies --dry-run` "
+                "shows what registration would add")
         if missing:
             # Without collectors only the page is affected (its Events tab needs the event tables).
             (report.problems if collectors else report.warnings).append(
@@ -287,7 +323,7 @@ def _check_database(report: Preflight, *, collectors: bool, similarity, summary)
         database.close()
 
 
-def _describe_processing(report: Preflight, similarity, summary) -> None:
+def _describe_processing(report: Preflight, similarity, summary, live_only: bool = False) -> None:
     from .similarity.comparison import anthropic_credentials_available
 
     add = report.lines.append
@@ -317,9 +353,11 @@ def _describe_processing(report: Preflight, similarity, summary) -> None:
         add(("Event summaries", "OFF (SUMMARY_ENABLED=false): no summaries are generated; stored ones stay visible"))
     report.paid_calls = bool(paid)
     if paid:
-        add(("Paid model calls", "POSSIBLE. Each newly ingested article or filing (including ones recovered at "
-                                 f"startup) can send {' and '.join(paid)} to the Anthropic API. Page views and API "
-                                 "polling never call a model"))
+        which = ("published after the startup cutoff (live-only: nothing is recovered)" if live_only
+                 else "(including ones recovered at startup)")
+        add(("Paid model calls", f"POSSIBLE. Each newly ingested article or filing {which} can send "
+                                 f"{' and '.join(paid)} to the Anthropic API. Page views and API polling never call "
+                                 "a model"))
     else:
         add(("Paid model calls", "none with these settings (no enabled step uses a paid backend)"))
     add(("Not scheduled", "deferred work is not retried automatically: pending groupings need "

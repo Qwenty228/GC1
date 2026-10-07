@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -154,6 +155,44 @@ def isolated_test_database():
         database.close()
         pytest.skip(str(error))
     return database
+
+
+@contextmanager
+def temporary_database(label: str, *, migrate: bool = True):
+    """A new database ``stock_news_<label>_<random>_test`` built from the repository's migration files, dropped
+    afterwards (``WITH (FORCE)``). Created on the server of the configured isolated test database, which itself is
+    not touched; the same gate applies (never next to stock_news unless PGDATABASE names a verified test database).
+    Skips when the role may not CREATE DATABASE."""
+    import uuid
+    from dataclasses import replace
+
+    import psycopg
+
+    from datasources.db import Database, load_db_settings
+    from datasources.db import migrate as migrations
+
+    gate = isolated_test_database()
+    try:
+        with gate.connection() as conn:
+            allowed = conn.execute("SELECT rolcreatedb OR rolsuper AS ok FROM pg_roles "
+                                   "WHERE rolname = current_user").fetchone()["ok"]
+    finally:
+        gate.close()
+    if not allowed:
+        pytest.skip("the database role may not CREATE DATABASE; these tests need a temporary database")
+    server = load_db_settings()
+    name = f"stock_news_{label}_{uuid.uuid4().hex[:10]}_test"
+    with psycopg.connect(replace(server, dbname="postgres").conninfo(), autocommit=True) as admin:
+        admin.execute(f"CREATE DATABASE {name}")
+    database = Database(replace(server, dbname=name))
+    try:
+        if migrate:
+            migrations.apply_migrations(database)
+        yield database
+    finally:
+        database.close()
+        with psycopg.connect(replace(server, dbname="postgres").conninfo(), autocommit=True) as admin:
+            admin.execute(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)")
 
 
 def cleanup_sample_rows(database) -> None:

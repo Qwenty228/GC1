@@ -87,7 +87,7 @@ def live_collectors(settings: IngestSettings, *, enable_sec: bool,
     if enable_sec:
         sec_client = SecClient(require_sec_user_agent(settings),
                                requests_per_second=settings.sec_requests_per_second,
-                               timeout=settings.http_timeout_seconds, max_retries=settings.sec_max_retries)
+                               timeout=settings.sec_http_timeout_seconds, max_retries=settings.sec_max_retries)
         for symbol in settings.symbols:
             config.cik_for(symbol)  # fail fast on an unknown ticker (KeyError)
     auth: AlpacaAuth | None = None
@@ -101,12 +101,30 @@ def build_live_service(settings: IngestSettings, *, enable_sec: bool, enable_alp
     sec_client, auth = live_collectors(settings, enable_sec=enable_sec, enable_alpaca=enable_alpaca)
     stage("connecting to the database")
     database = open_database()
+    if database is not None:
+        warn_unregistered_symbols(database, settings.symbols)
     stage("loading the embedding model and grouping settings (local files; no model API call)")
     analyzer = open_similarity(database)
     stage("preparing event summaries (no model API call)")
     summarizer = open_summary(database, analyzer)
     return IngestionService(settings, sec_client=sec_client, alpaca_auth=auth,
                             database=database, analyzer=analyzer, summarizer=summarizer)
+
+
+def warn_unregistered_symbols(database, symbols) -> list[str]:
+    """Collected tickers with no company_symbol row are stored unlinked; say so once at startup (never fatal)."""
+    from ..db.companies import unregistered_symbols
+
+    try:
+        with database.connection() as conn:
+            missing = unregistered_symbols(conn, symbols)
+    except Exception as error:  # e.g. no base tables yet: reported by the schema checks, not here
+        LOGGER.warning("could not check the company registration of INGEST_SYMBOLS: %s", type(error).__name__)
+        return []
+    if missing:
+        LOGGER.warning("INGEST_SYMBOLS %s have no company_symbol row: their articles are stored without a company "
+                       "link. Register them with `uv run datasources-db register-companies`", ", ".join(missing))
+    return missing
 
 
 def open_similarity(database):
@@ -179,6 +197,7 @@ async def run_service(service: IngestionService, *, enable_sec: bool, enable_alp
     if startup:
         startup.stage("reconciling the ingestion ledger")
     service.startup()
+    live_cutoff = service.begin_live_only()  # INGEST_LIVE_ONLY=true: a fresh cutoff now; None otherwise
     service._ensure_async_state()
     writer = asyncio.create_task(service.writer(), name="writer")
     producers: list[asyncio.Task] = []
@@ -206,7 +225,8 @@ async def run_service(service: IngestionService, *, enable_sec: bool, enable_alp
                 producers.append(asyncio.create_task(service.sec_poller(symbol, index * spacing), name=f"sec:{symbol}"))
         if enable_alpaca:
             assert service.alpaca_auth is not None
-            producers.append(asyncio.create_task(service.alpaca_backfill("startup"), name="alpaca:startup-backfill"))
+            if live_cutoff is None:  # live-only collection has no startup (or reconnect) REST recovery
+                producers.append(asyncio.create_task(service.alpaca_backfill("startup"), name="alpaca:startup-backfill"))
             producers.append(asyncio.create_task(run_forever(
                 _news_settings(settings, service.alpaca_auth),
                 on_articles=service.on_ws_articles,
@@ -219,7 +239,8 @@ async def run_service(service: IngestionService, *, enable_sec: bool, enable_alp
         if startup:
             # Preparation ends here. Collectors connect and backlog recovery (the startup backfill) runs in
             # the background from now on; readiness never waits for either, nor for any model call.
-            startup.finish("collectors starting; backlog recovery runs in the background")
+            startup.finish("collectors starting; backlog recovery runs in the background" if live_cutoff is None else
+                           f"collectors starting, live-only from {live_cutoff.isoformat()} (no backlog recovery)")
         # output/state/worker_status.json: the collector state the web page and `datasources-dev` show.
         producers.append(asyncio.create_task(service.status_heartbeat(), name="status"))
         await asyncio.gather(*producers)
@@ -321,7 +342,7 @@ def run_process_file(settings: IngestSettings, path: Path, provider: str, html_d
     sec_client = None  # without --sec-html-dir, primary documents are downloaded live
     if provider == "sec_edgar" and fetcher is None:
         sec_client = SecClient(require_sec_user_agent(settings), requests_per_second=settings.sec_requests_per_second,
-                               timeout=settings.http_timeout_seconds, max_retries=settings.sec_max_retries)
+                               timeout=settings.sec_http_timeout_seconds, max_retries=settings.sec_max_retries)
     service = IngestionService(settings, sec_client=sec_client, document_fetcher=fetcher, update_shared_cache=False)
     service.startup()
     for payload in _load_payloads(path):

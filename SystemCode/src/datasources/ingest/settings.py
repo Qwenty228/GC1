@@ -87,6 +87,11 @@ class IngestSettings:
     # Worker
     queue_size: int = 200
     http_timeout_seconds: float = 30.0
+    sec_http_timeout_seconds: float = 60.0
+    # Live-only collection (INGEST_LIVE_ONLY): every worker startup takes a fresh UTC cutoff and nothing published
+    # before it is collected; no SEC catch-up, no Alpaca REST backfill at startup or after reconnects, and the saved
+    # recovery state (Alpaca cursor, SEC scope floors) is left as it is. See IngestionService.begin_live_only.
+    live_only: bool = False
 
     @property
     def root(self) -> Path:
@@ -125,10 +130,14 @@ def load_settings(demo: bool | None = None) -> IngestSettings:
         alpaca_page_size=min(max(_env_int("ALPACA_PAGE_SIZE", 50), 1), 50),
         queue_size=_env_int("INGEST_QUEUE_SIZE", 200),
         http_timeout_seconds=_env_float("HTTP_TIMEOUT_SECONDS", 30.0),
+        sec_http_timeout_seconds=_env_float("SEC_HTTP_TIMEOUT_SECONDS", 60.0),
+        live_only=_env_bool("INGEST_LIVE_ONLY", False),
     )
     if settings.sec_requests_per_second <= 0 or settings.sec_requests_per_second > 5:
         # SEC's published aggregate limit is 10 req/s; stay well below it.
         raise ConfigurationError("SEC_REQUESTS_PER_SECOND must be > 0 and <= 5")
+    if settings.sec_http_timeout_seconds <= 0:
+        raise ConfigurationError("SEC_HTTP_TIMEOUT_SECONDS must be greater than 0")
     return settings
 
 

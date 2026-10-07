@@ -1,0 +1,350 @@
+{
+  "_comment": "REAL identifiers recorded from SEC EDGAR on 2026-10-07 for the 11 companies in data/ticker_cik_map.json: the SEC ticker/CIK/exchange table, each company's submissions JSON (tickers, exchanges) and the registrant name tagged on its latest 8-K cover page. Fetched with the project's rate-limited SEC client (34 requests in total). tests/test_company_coverage.py checks the ticker map against this record. Company names in the ticker map are display labels; CIK, ticker and exchange are the verified identifiers.",
+  "company_tickers_exchange": {
+    "url": "https://www.sec.gov/files/company_tickers_exchange.json",
+    "retrieved_at": "2026-10-07T11:21:28.577764+00:00",
+    "fields": [
+      "cik",
+      "name",
+      "ticker",
+      "exchange"
+    ],
+    "GOOG": [
+      {
+        "cik": 1652044,
+        "name": "Alphabet Inc.",
+        "ticker": "GOOG",
+        "exchange": "Nasdaq"
+      }
+    ]
+  },
+  "companies": {
+    "NVDA": {
+      "cik": "0001045810",
+      "company_tickers_exchange": {
+        "name": "NVIDIA CORP",
+        "ticker": "NVDA",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001045810.json",
+        "retrieved_at": "2026-10-07T11:21:28.957272+00:00",
+        "cik": "0001045810",
+        "name": "NVIDIA CORP",
+        "tickers": [
+          "NVDA"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000078/nvda-20260902.htm",
+        "filing_date": "2026-09-03",
+        "dei_EntityRegistrantName": [
+          "NVIDIA CORP"
+        ]
+      }
+    },
+    "MSFT": {
+      "cik": "0000789019",
+      "company_tickers_exchange": {
+        "name": "MICROSOFT CORP",
+        "ticker": "MSFT",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0000789019.json",
+        "retrieved_at": "2026-10-07T11:21:29.132716+00:00",
+        "cik": "0000789019",
+        "name": "MICROSOFT CORP",
+        "tickers": [
+          "MSFT"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526380280/d291965d8k.htm",
+        "filing_date": "2026-09-02",
+        "dei_EntityRegistrantName": [
+          "Microsoft Corporation"
+        ]
+      }
+    },
+    "AAPL": {
+      "cik": "0000320193",
+      "company_tickers_exchange": {
+        "name": "Apple Inc.",
+        "ticker": "AAPL",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0000320193.json",
+        "retrieved_at": "2026-10-07T11:21:29.905633+00:00",
+        "cik": "0000320193",
+        "name": "Apple Inc.",
+        "tickers": [
+          "AAPL"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000018/aapl-20260730.htm",
+        "filing_date": "2026-07-30",
+        "dei_EntityRegistrantName": [
+          "Apple Inc."
+        ]
+      }
+    },
+    "GOOGL": {
+      "cik": "0001652044",
+      "company_tickers_exchange": {
+        "name": "Alphabet Inc.",
+        "ticker": "GOOGL",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001652044.json",
+        "retrieved_at": "2026-10-07T11:21:30.124366+00:00",
+        "cik": "0001652044",
+        "name": "Alphabet Inc.",
+        "tickers": [
+          "GOOGL",
+          "GOOG",
+          "GOOGM",
+          "GOOGN"
+        ],
+        "exchanges": [
+          "Nasdaq",
+          "Nasdaq",
+          "Nasdaq",
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1652044/000119312526342390/d171253d8k.htm",
+        "filing_date": "2026-08-10",
+        "dei_EntityRegistrantName": [
+          "ALPHABET INC."
+        ]
+      }
+    },
+    "AMZN": {
+      "cik": "0001018724",
+      "company_tickers_exchange": {
+        "name": "AMAZON COM INC",
+        "ticker": "AMZN",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001018724.json",
+        "retrieved_at": "2026-10-07T11:21:30.627697+00:00",
+        "cik": "0001018724",
+        "name": "AMAZON COM INC",
+        "tickers": [
+          "AMZN"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1018724/000110465926107526/tm2624614d5_8k.htm",
+        "filing_date": "2026-09-14",
+        "dei_EntityRegistrantName": [
+          "AMAZON COM INC"
+        ]
+      }
+    },
+    "META": {
+      "cik": "0001326801",
+      "company_tickers_exchange": {
+        "name": "Meta Platforms, Inc.",
+        "ticker": "META",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001326801.json",
+        "retrieved_at": "2026-10-07T11:21:31.371737+00:00",
+        "cik": "0001326801",
+        "name": "Meta Platforms, Inc.",
+        "tickers": [
+          "META"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1326801/000162828026050596/meta-20260729.htm",
+        "filing_date": "2026-07-29",
+        "dei_EntityRegistrantName": [
+          "Meta Platforms, Inc."
+        ]
+      }
+    },
+    "NFLX": {
+      "cik": "0001065280",
+      "company_tickers_exchange": {
+        "name": "NETFLIX INC",
+        "ticker": "NFLX",
+        "exchange": "Nasdaq"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001065280.json",
+        "retrieved_at": "2026-10-07T11:21:31.858136+00:00",
+        "cik": "0001065280",
+        "name": "NETFLIX INC",
+        "tickers": [
+          "NFLX"
+        ],
+        "exchanges": [
+          "Nasdaq"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1065280/000106528026000214/nflx-20260726.htm",
+        "filing_date": "2026-07-30",
+        "dei_EntityRegistrantName": [
+          "NETFLIX INC"
+        ]
+      }
+    },
+    "DIS": {
+      "cik": "0001744489",
+      "company_tickers_exchange": {
+        "name": "Walt Disney Co",
+        "ticker": "DIS",
+        "exchange": "NYSE"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001744489.json",
+        "retrieved_at": "2026-10-07T11:21:32.469351+00:00",
+        "cik": "0001744489",
+        "name": "Walt Disney Co",
+        "tickers": [
+          "DIS"
+        ],
+        "exchanges": [
+          "NYSE"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1744489/000174448926000056/dis-20260805.htm",
+        "filing_date": "2026-08-05",
+        "dei_EntityRegistrantName": [
+          "WALT DISNEY CO/"
+        ]
+      }
+    },
+    "JPM": {
+      "cik": "0000019617",
+      "company_tickers_exchange": {
+        "name": "JPMORGAN CHASE & CO",
+        "ticker": "JPM",
+        "exchange": "NYSE"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0000019617.json",
+        "retrieved_at": "2026-10-07T11:21:32.911963+00:00",
+        "cik": "0000019617",
+        "name": "JPMORGAN CHASE & CO",
+        "tickers": [
+          "JPM",
+          "JPM-PC",
+          "AMJB",
+          "JPM-PD",
+          "JPM-PJ",
+          "JPM-PK",
+          "JPM-PL",
+          "JPM-PM",
+          "VYLD"
+        ],
+        "exchanges": [
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE",
+          "NYSE"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/19617/000119312526314128/d103985d8k.htm",
+        "filing_date": "2026-07-23",
+        "dei_EntityRegistrantName": [
+          "JPMORGAN CHASE & CO"
+        ]
+      }
+    },
+    "V": {
+      "cik": "0001403161",
+      "company_tickers_exchange": {
+        "name": "VISA INC.",
+        "ticker": "V",
+        "exchange": "NYSE"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0001403161.json",
+        "retrieved_at": "2026-10-07T11:21:33.361484+00:00",
+        "cik": "0001403161",
+        "name": "VISA INC.",
+        "tickers": [
+          "V"
+        ],
+        "exchanges": [
+          "NYSE"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/1403161/000140316126000121/v-20260918.htm",
+        "filing_date": "2026-09-23",
+        "dei_EntityRegistrantName": [
+          "VISA INC."
+        ]
+      }
+    },
+    "GS": {
+      "cik": "0000886982",
+      "company_tickers_exchange": {
+        "name": "GOLDMAN SACHS GROUP INC",
+        "ticker": "GS",
+        "exchange": "NYSE"
+      },
+      "submissions": {
+        "url": "https://data.sec.gov/submissions/CIK0000886982.json",
+        "retrieved_at": "2026-10-07T11:21:33.887350+00:00",
+        "cik": "0000886982",
+        "name": "GOLDMAN SACHS GROUP INC",
+        "tickers": [
+          "GS",
+          "GSCE",
+          "GS-PA",
+          "GS-PC",
+          "GS-PD"
+        ],
+        "exchanges": [
+          "NYSE",
+          "OTC",
+          "NYSE",
+          "NYSE",
+          "NYSE"
+        ]
+      },
+      "latest_8k_cover": {
+        "url": "https://www.sec.gov/Archives/edgar/data/886982/000119312526344912/d179572d8k.htm",
+        "filing_date": "2026-08-11",
+        "dei_EntityRegistrantName": [
+          "GOLDMAN SACHS GROUP INC"
+        ]
+      }
+    }
+  }
+}

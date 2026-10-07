@@ -108,6 +108,21 @@ def list_articles(conn: Connection, *, include_sample: bool, limit: int, offset:
     return {"articles": articles, "total": int(total), "limit": limit, "offset": offset}
 
 
+def list_companies(conn: Connection) -> list[dict[str, Any]]:
+    """Companies a reader can follow: registered with a CIK (the stable id a watchlist stores) and at least one
+    ticker, ordered by ticker. Companies created only as an SEC issuer, without a ticker, are not listed."""
+    return [{"cik": r["cik"], "name": r["name"], "symbols": list(r["symbols"]), "markets": list(r["markets"])}
+            for r in conn.execute(
+                """
+                SELECT c.cik, c.name, array_agg(DISTINCT s.symbol ORDER BY s.symbol) AS symbols,
+                       array_agg(DISTINCT s.market ORDER BY s.market) AS markets
+                  FROM company c JOIN company_symbol s ON s.company_id = c.company_id
+                 WHERE c.cik IS NOT NULL
+                 GROUP BY c.company_id, c.cik, c.name
+                 ORDER BY min(s.symbol), c.cik
+                """)]
+
+
 def stored_counts(conn: Connection, *, include_sample: bool) -> dict[str, Any]:
     """How much is stored, so empty views can say why they are empty (e.g. records stored but not grouped)."""
     row = conn.execute(

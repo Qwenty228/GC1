@@ -1,9 +1,11 @@
 """Detachable web layer: a thin FastAPI wrapper over the backend core.
 
 The EDGAR and Alpaca endpoints only call the pure functions in `sec` and
-`alpaca`. The event and article endpoints only READ persisted records, summaries
-and sources from PostgreSQL (`summary.read`, `db.read`): they never write, never
-call a model, and never summarize on a page view. `/api/status` reads the
+`alpaca`. The event, timeline, article and coverage endpoints only READ persisted
+records, summaries and sources from PostgreSQL (`summary.read`,
+`summary.timeline`, `db.read`): they never write, never call a model, and never
+summarize on a page view. A reader's watchlist lives in their browser; the API
+only filters by the companies it is given. `/api/status` reads the
 ingestion worker's status file; it never starts or contacts a collector.
 Review decisions are recorded with the `datasources-summary review` CLI, not over
 HTTP. The frontend can be replaced or removed without touching the backend modules.
@@ -61,6 +63,8 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Node 1 - Data Sources", version="0.1.0", lifespan=lifespan)
 SYMBOL_RE = re.compile(r"^[A-Z0-9.\-]{1,12}$")
+CIK_RE = re.compile(r"^[0-9]{1,10}$")
+MAX_WATCHLIST = 50
 
 
 @app.middleware("http")
@@ -78,6 +82,21 @@ def _symbol(value: str | None) -> str | None:
     if not SYMBOL_RE.match(symbol):
         raise ValueError("symbol must be a ticker such as NVDA")
     return symbol
+
+
+def _ciks(values: list[str] | None) -> list[str] | None:
+    """A watchlist filter: SEC CIKs, repeated (company=...&company=...) or comma-separated, zero-padded to 10."""
+    if values is None:
+        return None
+    ciks = [part.strip() for value in values for part in value.split(",") if part.strip()]
+    if not ciks:
+        raise ValueError("company needs at least one CIK")
+    if not all(CIK_RE.match(c) for c in ciks):
+        raise ValueError("company must be an SEC CIK (digits only), such as 0001045810")
+    ciks = list(dict.fromkeys(c.zfill(10) for c in ciks))
+    if len(ciks) > MAX_WATCHLIST:
+        raise ValueError(f"at most {MAX_WATCHLIST} companies per request")
+    return ciks
 
 
 @app.get("/api/companies")
@@ -132,12 +151,17 @@ def _database_unavailable(exc: Exception) -> JSONResponse:
 def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                state: str | None = Query(None, description="Filter by summary_state"),
                symbol: str | None = Query(None, description="Only events with a source linked to this ticker"),
+               company: list[str] | None = Query(None, description="Only events with a source linked to ANY of "
+                                                                     "these companies (SEC CIKs; a watchlist)"),
                include_sample: bool = False, database=Depends(get_database)) -> JSONResponse:
     """Grouped events, newest first, each with its current summary (or pending / review state), a
-    compact `conflict` status and count from the stored conflict reviews, the company `symbols` of its
-    sources and its `latest_source` (title, publisher, time, http(s) link) for cards without a summary.
+    compact `conflict` status and count from the stored conflict reviews, the company `symbols` and
+    `companies` of its sources and its `latest_source` (title, publisher, time, http(s) link) for cards
+    without a summary.
 
-    Sample (demo/test) events are excluded unless `include_sample=true`.
+    `company` (repeatable, or comma-separated) is the reader's watchlist: it is applied in SQL before
+    `limit`/`offset`, and an event linked to several of the companies is returned once. Sample (demo/test)
+    events are excluded unless `include_sample=true`.
     """
     from fastapi.encoders import jsonable_encoder
 
@@ -147,15 +171,44 @@ def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0
         return JSONResponse({"error": f"state must be one of {', '.join(SUMMARY_STATES)}"}, status_code=422)
     try:
         ticker = _symbol(symbol)
+        ciks = _ciks(company)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=422)
     try:
         with database.connection() as conn:
             events = list_events(conn, include_sample=include_sample, language=_summary_language(), limit=limit,
-                                 offset=offset, state=state, symbol=ticker)
+                                 offset=offset, state=state, symbol=ticker, ciks=ciks)
     except Exception as exc:
         return _database_unavailable(exc)
     return JSONResponse(jsonable_encoder({"events": events, "limit": limit, "offset": offset}))
+
+
+@app.get("/api/coverage")
+def api_coverage(database=Depends(get_database)) -> JSONResponse:
+    """The companies a reader can follow (registered with a CIK and a ticker) and which tickers the collectors
+    are configured for (`INGEST_SYMBOLS`). Read-only: following a company on the page only filters what is
+    stored; it never starts or stops a collector."""
+    from .db.read import list_companies
+    from .ingest.settings import load_settings
+
+    try:
+        with database.connection() as conn:
+            companies = list_companies(conn)
+    except Exception as exc:
+        return _database_unavailable(exc)
+    try:
+        collecting: list[str] | None = list(load_settings().symbols)
+    except Exception as exc:  # invalid settings are reported by the worker and the launcher, not here
+        LOGGER.warning("coverage endpoint could not read the ingestion settings: %s", type(exc).__name__)
+        collecting = None
+    try:
+        listed = set(config.load_ticker_map())
+    except (OSError, ValueError):
+        listed = set()
+    for item in companies:
+        item["symbol"] = next((s for s in item["symbols"] if s in listed), item["symbols"][0])
+        item["collecting"] = None if collecting is None else bool(set(item["symbols"]) & set(collecting))
+    return JSONResponse({"companies": companies, "collecting_symbols": collecting})
 
 
 @app.get("/api/articles")
@@ -260,12 +313,34 @@ def api_event(event_id: uuid.UUID, include_sample: bool = False, database=Depend
     return JSONResponse(jsonable_encoder(detail))
 
 
+@app.get("/api/events/{event_id}/timeline")
+def api_event_timeline(event_id: uuid.UUID, include_sample: bool = False,
+                       database=Depends(get_database)) -> JSONResponse:
+    """The event's reports and updates in chronological order, from stored records only: first report,
+    additional coverage, substantive updates, conflicting reports, when conflicts were detected and decided,
+    and summary versions. Each entry says which stored time it uses; a missing time is reported as missing,
+    never replaced by the retrieval time. No reviewer identities or notes, no model explanations."""
+    from fastapi.encoders import jsonable_encoder
+
+    from .summary.timeline import event_timeline
+
+    try:
+        with database.connection() as conn:
+            timeline = event_timeline(conn, str(event_id), include_sample=include_sample,
+                                      language=_summary_language())
+    except Exception as exc:
+        return _database_unavailable(exc)
+    if timeline is None:
+        return JSONResponse({"error": "event not found"}, status_code=404)
+    return JSONResponse(jsonable_encoder(timeline))
+
+
 @app.exception_handler(LookupError)
 def _lookup_error(_request, exc: LookupError) -> JSONResponse:
     return JSONResponse({"error": str(exc)}, status_code=503)
 
 
-_ASSET_REF = re.compile(r'(?P<attr>src|href)="(?P<name>[\w.-]+\.(?:js|css))"')
+_ASSET_REF = re.compile(r'(?P<attr>src|href)="(?P<slash>/?)(?P<name>[\w.-]+\.(?:js|css))"')
 
 
 def _page_html(name: str) -> str:
@@ -282,7 +357,7 @@ def _page_html(name: str) -> str:
             digest = hashlib.sha256((config.WEB_DIR / match["name"]).read_bytes()).hexdigest()[:12]
         except OSError:
             return match[0]
-        return f'{match["attr"]}="{match["name"]}?v={digest}"'
+        return f'{match["attr"]}="{match["slash"]}{match["name"]}?v={digest}"'
 
     return _ASSET_REF.sub(versioned, html)
 
@@ -297,6 +372,13 @@ def index_page() -> HTMLResponse:
 def tools_page() -> HTMLResponse:
     """Stored articles, collector status and the source explorer, kept off the news summaries page."""
     return HTMLResponse(_page_html("tools.html"), headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/events/{event_id}", include_in_schema=False)
+def event_page(event_id: str) -> HTMLResponse:
+    """One story's stable page (summary, sources, conflict status and timeline). The page itself reads the
+    event over the API, so a direct load, an unknown event and a malformed link are all handled there."""
+    return HTMLResponse(_page_html("event.html"), headers={"Cache-Control": "no-cache"})
 
 
 # Serve the static frontend at the root. Mounted last so /api/* wins.

@@ -62,10 +62,18 @@ from .store import OutputStore, atomic_write_json
 LOGGER = logging.getLogger(__name__)
 ALPACA_CURSOR = "alpaca_synced_through"
 WS_ENDPOINT = "wss://stream.data.alpaca.markets/v1beta1/news"
-
-
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def sec_before_cutoff(row: dict, cutoff: datetime) -> bool:
+    """A filing accepted before the cutoff. Without an acceptance time only an earlier filing date counts: a filing
+    dated the cutoff's day or later is never assumed to be older."""
+    accepted, _ = parse_timestamp(row.get("acceptanceDateTime"), "acceptanceDateTime")
+    if accepted is not None:
+        return accepted < cutoff
+    filing_date = str(row.get("filingDate") or "")
+    return bool(filing_date) and filing_date < cutoff.date().isoformat()
 
 
 @dataclass
@@ -153,6 +161,11 @@ class IngestionService:
         self.health: dict[str, Any] = {"subscribed_at": None, "disconnected_at": None, "last_article_at": None,
                                        "backfill_ok_at": None, "backfill_error_at": None,
                                        "sec_poll_ok_at": {}, "sec_poll_error_at": {}}
+        # Live-only mode (`begin_live_only`): the startup cutoff (SEC, and Alpaca until a reconnect moves it forward).
+        # Both stay None in the normal recovery mode.
+        self.live_cutoff: datetime | None = None
+        self.alpaca_live_cutoff: datetime | None = None
+        self._subscriptions = 0
 
     # ------------------------------------------------------------------ lifecycle
     def startup(self) -> dict[str, int]:
@@ -161,6 +174,33 @@ class IngestionService:
         summary = self.ledger.reconcile()
         LOGGER.info("ledger reconciled: %s; totals %s", summary, self.ledger.counts())
         return summary
+
+    def begin_live_only(self, now: datetime | None = None) -> datetime | None:
+        """INGEST_LIVE_ONLY=true (the live worker only): take a fresh UTC cutoff for this startup.
+
+        From then on nothing published before the cutoff is collected: SEC filings accepted earlier are skipped
+        (no catch-up, no older submissions files), there is no Alpaca REST backfill at startup or after a
+        reconnect, and after a reconnect the news cutoff moves to that moment, so the stream resumes with newly
+        published articles only. The cutoff is not saved: the next startup takes a new one. The saved recovery
+        state (the Alpaca cursor, the SEC scope floors) is neither read nor advanced, so turning live-only off
+        later resumes normal recovery from where it was. Polling while running, duplicate prevention, storage,
+        grouping and summaries are unchanged. Returns the cutoff, or None in the normal recovery mode.
+        """
+        if not self.settings.live_only or self.settings.demo:
+            return None
+        self.live_cutoff = self.alpaca_live_cutoff = (now or utcnow()).astimezone(timezone.utc)
+        LOGGER.info("live-only collection (INGEST_LIVE_ONLY=true): cutoff %s; nothing published earlier is "
+                    "collected, and saved recovery state is left untouched", self.live_cutoff.isoformat())
+        return self.live_cutoff
+
+    def before_live_cutoff(self, article: dict) -> bool:
+        """Live-only mode: an article published (else last updated) before the current news cutoff, such as an
+        update to an older article. One without any timestamp is kept: nothing shows it is old."""
+        if self.alpaca_live_cutoff is None:
+            return False
+        published = (parse_timestamp(article.get("created_at"), "created_at")[0]
+                     or parse_timestamp(article.get("updated_at"), "updated_at")[0])
+        return published is not None and published < self.alpaca_live_cutoff
 
     def _ensure_async_state(self) -> None:
         if self.queue is None:
@@ -309,9 +349,15 @@ class IngestionService:
         """Select filings to process from raw submissions JSON or the /api/edgar wrapper."""
         cik10 = str(submissions.get("cik") or config.cik_for(symbol)).zfill(10)
         rows, info = unwrap_payload(submissions, provider="sec_edgar", sec_forms=set(self.settings.sec_forms), cik=cik10)
-        floor = self._sec_floor(cik10) if not self.settings.demo else "0000-00-00"
+        cutoff = self.live_cutoff if transport != "file" else None
+        if cutoff is not None:
+            # Live-only: the day before the cutoff (filing dates are US dates; the cutoff is checked per filing).
+            # Kept in memory only: the saved scope floor stays as it was for when recovery is enabled again.
+            floor = (cutoff - timedelta(days=1)).date().isoformat()
+        else:
+            floor = self._sec_floor(cik10) if not self.settings.demo else "0000-00-00"
         candidates = list(rows)
-        if not self.settings.demo and "filings" in submissions:
+        if cutoff is None and not self.settings.demo and "filings" in submissions:
             ctx = sec_context_from_submissions(submissions, cik10)
             candidates += [(row, ctx) for row in self._historical_rows(cik10, submissions, floor, ctx)]
         items: list[WorkItem] = []
@@ -322,6 +368,9 @@ class IngestionService:
             if not accession or accession in seen or filing_date < floor:
                 continue
             seen.add(accession)
+            if cutoff is not None and sec_before_cutoff(row, cutoff):
+                self.stats["before_live_cutoff_sec"] += 1  # not marked: re-checked in memory on each poll
+                continue
             identity = f"sec_edgar:{ctx.cik}:{accession}"
             decision = self.ledger.sec_decide(identity)
             if not decision.process:
@@ -425,6 +474,9 @@ class IngestionService:
             if not isinstance(article, dict):
                 self.stats["alpaca_invalid_payload"] += 1
                 continue
+            if transport != "file" and self.before_live_cutoff(article):
+                self.stats["before_live_cutoff_alpaca"] += 1  # live-only: published before the cutoff
+                continue
             fingerprint = alpaca_fingerprint(article)
             identity = f"alpaca:{article.get('id')}"
             updated_at, _ = parse_timestamp(article.get("updated_at"), "updated_at")
@@ -491,6 +543,8 @@ class IngestionService:
         return "saved"
 
     def _advance_cursor(self, value: datetime) -> None:
+        if self.live_cutoff is not None:
+            return  # live-only: the saved cursor is kept for when recovery is enabled again
         current = self.ledger.get_cursor(ALPACA_CURSOR)
         if current is None or value > current:
             self.ledger.set_cursor(ALPACA_CURSOR, value)
@@ -511,6 +565,10 @@ class IngestionService:
 
     async def alpaca_backfill(self, reason: str) -> None:
         """REST backfill/recovery for [cursor - overlap, now]; advances the cursor when done."""
+        if self.live_cutoff is not None:
+            self.stats["alpaca_backfill_skipped_live_only"] += 1  # live-only: no historical window, no request
+            LOGGER.info("Alpaca REST backfill (%s) not run: live-only collection", reason)
+            return
         self._ensure_async_state()
         assert self._backfill_lock is not None
         if self._backfill_lock.locked():
@@ -577,6 +635,15 @@ class IngestionService:
     async def on_ws_subscribed(self) -> None:
         self.stream_subscribed = True
         self.health["subscribed_at"] = utcnow()
+        self._subscriptions += 1
+        if self.live_cutoff is not None:
+            if self._subscriptions > 1:
+                # Live-only: nothing missed while disconnected is recovered; resume with articles published now on.
+                self.alpaca_live_cutoff = max(self.alpaca_live_cutoff or self.health["subscribed_at"],
+                                              self.health["subscribed_at"])
+                LOGGER.info("Alpaca stream resubscribed (live-only): news cutoff moved to %s",
+                            self.alpaca_live_cutoff.isoformat())
+            return
         # Recovery runs as its own task so frame reading is never blocked by it.
         asyncio.create_task(self.alpaca_backfill("websocket_subscribed"))
 
@@ -637,6 +704,8 @@ class IngestionService:
             "version": STATUS_VERSION, "state": state, "pid": os.getpid(),
             "started_at": iso(self.started_at), "updated_at": iso(utcnow()),
             "heartbeat_seconds": HEARTBEAT_SECONDS, "symbols": list(self.settings.symbols),
+            "collection_mode": "live_only" if self.live_cutoff is not None else "recovery",
+            "live_cutoff": {"sec": iso(self.live_cutoff), "alpaca": iso(self.alpaca_live_cutoff)},
             "alpaca": {"enabled": self.alpaca_auth is not None,
                        "stream_connected": self.stream_subscribed and state == "running",
                        "subscribed_at": iso(health["subscribed_at"]),

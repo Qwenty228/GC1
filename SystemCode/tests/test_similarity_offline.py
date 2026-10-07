@@ -458,6 +458,17 @@ def test_plausibility_is_semantic_or_top_lexical_rank_never_a_fixed_same_event_s
                                                         "lexical_score": 0.9}), settings)
 
 
+def test_full_text_rank_alone_never_reaches_the_llm_by_default():
+    settings = SimilaritySettings(min_semantic_similarity=0.78)
+    assert settings.lexical_plausible_rank == 0
+    passage = CandidatePassage("u", "r", "d", "t", "t", "news_article", None, None, None, [])
+    top_lexical = passage.__class__(**{**passage.__dict__, "lexical_rank": 1, "lexical_score": 0.9})
+    assert not retrieval._plausible(top_lexical, settings)
+    assert retrieval._plausible(passage.__class__(**{**top_lexical.__dict__, "semantic_similarity": 0.8}), settings)
+    with pytest.raises(ConfigurationError, match="SIMILARITY_LEXICAL_PLAUSIBLE_RANK"):
+        SimilaritySettings(lexical_plausible_rank=-1).validate()
+
+
 def test_anchor_prefers_source_time_and_falls_back_deterministically():
     subject = news_subject("t", "b")
     assert subject.anchor() == (T0, "published_at")

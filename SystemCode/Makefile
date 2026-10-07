@@ -11,6 +11,8 @@
 #   make db-check          report the PostgreSQL connection and pgvector
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
+#   make db-companies-plan which coverage companies registration would add (read-only)
+#   make db-companies      register the coverage companies (insert-only, repeatable)
 #   make db-smoke          bounded live end-to-end test into PostgreSQL
 #   make graph             print the compiled ingestion graph
 #   make similarity-status semantic analysis / event grouping status
@@ -24,7 +26,7 @@ LIMIT ?= 10
 
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db-check db-plan db-migrate db-verify db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -87,6 +89,12 @@ db-migrate: sync ## New database: the whole schema; existing one: pending files 
 
 db-verify: ## Compare the schema with the migration files (read-only)
 	$(UV) run datasources-db verify
+
+db-companies-plan: ## Which coverage companies registration would add (read-only)
+	$(UV) run datasources-db register-companies --dry-run
+
+db-companies: ## Register the coverage companies in company/company_symbol (insert-only; starts no collector)
+	$(UV) run datasources-db register-companies
 
 db-inspect: sync ## Row counts per table
 	$(UV) run datasources-db inspect

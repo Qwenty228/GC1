@@ -1,7 +1,8 @@
 # Data Sources
 
 Node 1 of the pipeline collects **SEC EDGAR 8-K filings** and **Alpaca news** for a
-configurable list of symbols (default `NVDA`), runs each record through a
+configurable list of symbols (default `NVDA`; 11 supported companies, see
+[Company coverage](#company-coverage-11-companies)), runs each record through a
 **LangGraph** graph, writes one versioned JSON record per filing / article
 revision under `output/`, and stores every record in the local **PostgreSQL**
 `stock_news` database.
@@ -14,7 +15,9 @@ it, and groups the records into *events*. See
 No summarisation, sentiment or recommendations.
 
 **Daily use:** `uv run datasources-dev` starts the web page, the API and the
-collectors together; see [Local application](#local-application-one-command).
+collectors together; see [Local application](#local-application-one-command). The page
+has an *All companies* feed, a *My watchlist* feed of the companies a reader follows
+(saved in that browser only), and a page per story with its timeline; see [The page](#the-page).
 
 The original pieces still work as before:
 
@@ -42,6 +45,7 @@ Copy-Item .env.example .env                   # then fill in credentials and the
 uv run datasources-db migrate --dry-run       # read-only: lists 000_base_schema.sql ... 005 as "execute"
 uv run datasources-db migrate                 # builds the whole schema from the repository files
 uv run datasources-db verify                  # read-only structural check: expect "Result: OK"
+uv run datasources-db register-companies      # the 11 coverage companies (insert-only, repeatable; see Company coverage)
 uv run datasources-similarity download-model  # once, for SIMILARITY_EMBEDDING_BACKEND=sentence-transformers
 uv run datasources-dev --check                # every startup check; starts nothing
 ```
@@ -49,8 +53,9 @@ uv run datasources-dev --check                # every startup check; starts noth
 `000_base_schema.sql` creates the base tables (the project ERD: providers, companies, publishers, documents,
 revisions, SEC details, text units, embeddings, ...), their trigger functions and the `current_live_document`
 view, plus the reference rows ingestion needs but never creates: the providers `sec_edgar` and `alpaca`, and
-NVIDIA (CIK 0001045810, `NVDA` on NASDAQ). Another symbol in `INGEST_SYMBOLS` needs its own `company` and
-`company_symbol` rows; unknown tickers are reported, never invented. Migrations 001-005 follow. See
+NVIDIA (CIK 0001045810, `NVDA` on NASDAQ). The other coverage companies get their `company` and `company_symbol`
+rows from `datasources-db register-companies` ([Company coverage](#company-coverage-11-companies)); a ticker without
+those rows is reported, never invented. Migrations 001-005 follow. See
 [Migrations](#migrations-baseline-checksums-and-legacy-objects).
 
 ### Existing database (created before the baseline file existed)
@@ -115,6 +120,87 @@ not been exercised against a live Broker account.
 
 Missing credentials are a **configuration error**, not a silent fallback. Sample
 data is served only in explicit demo mode (see below).
+
+## Company coverage (11 companies)
+
+| Company | Ticker | Exchange | SEC CIK |
+| --- | --- | --- | --- |
+| NVIDIA Corporation | `NVDA` | NASDAQ | 0001045810 |
+| Microsoft Corporation | `MSFT` | NASDAQ | 0000789019 |
+| Apple Inc. | `AAPL` | NASDAQ | 0000320193 |
+| Alphabet Inc. | `GOOGL` | NASDAQ | 0001652044 |
+| Amazon.com, Inc. | `AMZN` | NASDAQ | 0001018724 |
+| Meta Platforms, Inc. | `META` | NASDAQ | 0001326801 |
+| Netflix, Inc. | `NFLX` | NASDAQ | 0001065280 |
+| The Walt Disney Company | `DIS` | NYSE | 0001744489 |
+| JPMorgan Chase & Co. | `JPM` | NYSE | 0000019617 |
+| Visa Inc. | `V` | NYSE | 0001403161 |
+| The Goldman Sachs Group, Inc. | `GS` | NYSE | 0000886982 |
+
+The list lives in [data/ticker_cik_map.json](data/ticker_cik_map.json) (ticker -> CIK, name, market), the same
+file the SEC pollers resolve CIKs from. CIK, ticker and exchange were checked against SEC EDGAR on 2026-10-07: the
+SEC ticker table (`company_tickers_exchange.json`), each company's submissions JSON and the registrant tagged on its
+latest 8-K cover. That record is kept in
+[tests/fixtures/sec_company_identifiers.json](tests/fixtures/sec_company_identifiers.json) and
+`tests/test_company_coverage.py` checks the list against it. Names are display labels: SEC's own spellings differ
+in case and punctuation (`AMAZON COM INC`), and a company row that already exists keeps its stored name.
+
+**Registering the companies.** Articles and filings are linked to companies through `company` / `company_symbol`
+(an article is linked to every registered company among its tickers). Registration copies the list into those
+tables:
+
+```powershell
+uv run datasources-db register-companies --dry-run   # READ ONLY: what would be added, and any conflict
+uv run datasources-db register-companies             # add what is missing; repeatable
+uv run datasources-db register-companies --symbols MSFT,AAPL   # only some of them
+```
+
+It only inserts. A company that already exists (matched by CIK, for example an issuer created by an earlier SEC
+filing) and an existing ticker row are kept as they are; documents, revisions and company links are never touched,
+so existing NVDA data stays exactly as it is. A ticker already registered for another company is reported as a
+conflict (exit code 1) and left alone. It is not a migration and changes no schema, so it also works on a
+`stock_news` whose baseline is not adopted yet. Registration starts no collector.
+
+Links are made when an article is stored, so articles stored **before** a company was registered are not linked
+to it. `relink-companies` adds those links from the tickers in each article's stored original payload, resolved
+exactly as ingestion resolves them:
+
+```powershell
+uv run datasources-db relink-companies --dry-run   # READ ONLY: the links each stored article would gain
+uv run datasources-db relink-companies             # add them (--sample for the sample partition)
+```
+
+It only inserts `revision_company` rows: no link is removed, and articles, events, summaries and reviews are not
+changed (no model call). SEC filings need nothing: they are linked to their issuer by CIK. It is safe to run while
+the worker runs, and repeatable.
+
+**Collecting all 11 companies** (not enabled by default; `.env.example` keeps `INGEST_SYMBOLS=NVDA`):
+
+```powershell
+uv run datasources-db register-companies --dry-run
+uv run datasources-db register-companies
+# in .env:  INGEST_SYMBOLS=NVDA,MSFT,AAPL,GOOGL,AMZN,META,NFLX,DIS,JPM,V,GS
+#           INGEST_LIVE_ONLY=true     (optional: no historical catch-up, see Live-only collection)
+uv run datasources-dev --check        # lists the symbols; warns about any without a company row
+uv run datasources-dev
+```
+
+What changes with more symbols:
+
+* **SEC**: one poller per company, staggered across `SEC_POLL_INTERVAL_SECONDS`, all sharing the one
+  `SEC_REQUESTS_PER_SECOND` budget (2/s): about 11 submissions requests a minute plus the 8-K documents. A failing
+  company never stops another, and each company keeps its own scope floor and retry state, so a company added
+  later inspects its own last `SEC_INITIAL_LOOKBACK_DAYS` (30) on its first poll.
+* **Alpaca**: one WebSocket subscription and one REST recovery window cover all configured symbols. An article
+  tagged with several companies is one article id: it is stored once and linked to each registered company it
+  names; tickers that are not registered are counted (`db_unresolved_symbols`), never invented.
+* **Paid model calls**: with `SIMILARITY_ENABLED` / `SUMMARY_ENABLED` on, each new record can make paid calls (see
+  [Model calls and cost](#model-calls-and-cost)), and 11 large companies bring many times NVIDIA's article volume.
+  The worker has no run-wide cap. Collect with both switched off first, or measure with the
+  [bounded live test](#bounded-live-test-paid-hard-capped) before turning them on.
+
+Coverage, registration and a reader's watchlist are separate: `INGEST_SYMBOLS` decides what is collected, the
+registered rows decide what can be linked, and following a company on the page only filters what is stored.
 
 ## Local application: one command
 
@@ -207,6 +293,29 @@ commands can make paid calls.
 | `--no-sec` / `--no-alpaca` | Leave one collector out |
 | `--port 8001` | Serve the page on another port |
 
+### Live-only collection (no backfill, no recovery)
+
+`INGEST_LIVE_ONLY=true` makes the worker collect only what is published while it runs:
+
+| | Normal (`false`, default) | Live-only (`true`) |
+| --- | --- | --- |
+| Start | Alpaca REST backfill since the saved cursor (bounded); SEC filings since each company's saved scope floor (a new company: the last `SEC_INITIAL_LOOKBACK_DAYS`) | A fresh UTC cutoff at **every** startup (logged, shown in `worker_status.json`, never saved); nothing published before it is collected |
+| SEC | Every filing in scope not stored yet, including older `filings.files` when the floor needs them | Only filings accepted at or after the cutoff (a filing without an acceptance time: only if dated the cutoff's day or later); no older submissions files; pending retries of older filings wait |
+| Alpaca stream | Everything delivered | Only articles published at or after the cutoff; an update to an older article is skipped |
+| Reconnect | REST backfill since the cursor | No backfill; the news cutoff moves to the reconnect, so the stream resumes with newly published articles only |
+| Saved state | The Alpaca cursor advances; floors are set | Neither read nor changed: the cursor, the SEC scope floors and pending retries stay as they were |
+
+Polling while running, duplicate prevention, storage, grouping and summaries are the same in both modes. Records
+published while the worker is stopped or the stream is disconnected are **not** collected in live-only mode.
+Setting `INGEST_LIVE_ONLY=false` later resumes normal recovery from the saved state; that first start then
+backfills Alpaca since the saved cursor (at most `ALPACA_RECOVERY_MAX_HOURS`) and re-inspects each company's saved
+SEC scope. Lowering `SEC_INITIAL_LOOKBACK_DAYS` or `ALPACA_INITIAL_LOOKBACK_HOURS` to zero does not give this
+behaviour: they only apply to a company or a cursor that has no saved state yet, SEC dates have no time of day, and
+reconnect backfills and stream updates of older articles would still be processed. The mode applies to the worker
+(`datasources-ingest run`, also under `datasources-dev`); `datasources-ingest bounded-run --source collect` and
+`process-file` keep their own behaviour. `uv run datasources-dev --check` shows the mode on its *Recovery* line,
+with the saved state it keeps.
+
 ### Duplicates, failures and shutdown
 
 * A second `datasources-dev` for the same output directory refuses to start and reports where the first one
@@ -241,7 +350,20 @@ commands can make paid calls.
 
 ### The page
 
-**News summaries** (`/`) is a single feed for readers, newest story first, with a company selector.
+**News summaries** (`/`) is a single feed for readers, newest story first, in two views:
+
+* **All companies**, optionally narrowed to one company with the *Company* selector (`#company=NVDA`).
+* **My watchlist** (`#view=watchlist`): stories about any company the reader follows. **Follow companies** in
+  the header opens a list of the supported companies (those registered with a CIK and a ticker; ones the
+  collectors are not configured for are marked *Not collected now*). The watchlist is **saved in this browser on
+  this device only** (`localStorage`, by SEC CIK): it is not an account setting and does not sync anywhere. It
+  survives reloads, the last view chosen is reopened, and other tabs follow changes. An empty watchlist shows a
+  message with *Choose companies to follow*. A saved value that cannot be read, or names a company the site no
+  longer offers, is ignored with a note and cleaned up on the next change; a browser that blocks storage keeps the
+  watchlist for the current page only. The filter is sent to the API (`company=<cik>`), which applies it before
+  paging, so no story is missed and a story about several followed companies is one card. Followed companies'
+  tickers are starred on the cards. Following changes nothing on the server and calls no model.
+
 Each card shows the published summary headline (the event title while no summary exists), the ticker, one
 labelled time ("Published" for one source, "Latest report" for several) and a short preview marked
 *AI summary*: two or three stored key points when they are short, otherwise the overview's opening sentences,
@@ -259,6 +381,19 @@ cut at a sentence boundary. Nothing is rewritten or generated for the page.
   hidden, backs off after failures (up to 5 minutes), and keeps showing the last data with a notice when a
   refresh fails. A note says when collectors are not running (the feed cannot get newer). Open summaries and
   sources, focus and scroll position are kept.
+* **Story & timeline** opens the story's own page, `/events/<event id>` (stable; add `?sample=1` for a sample
+  story). It shows the headline, the companies, the conflict/review status, the latest published summary with the
+  quote behind each statement, the original sources, and a **timeline** built from stored records only: *First
+  report* (the report the story was created from), *Additional coverage* (repeats known information; *Revised
+  report* when a source re-published without new information), *Substantive update* and *Conflicting report*
+  (grouping's stored labels, with the verbatim quotes grouping verified), *Conflict detected* and *Review
+  completed* (when they were recorded; reviewer names and notes are never shown), and *AI summary published /
+  revised*. Each entry says which time it uses: the source's publication or update time, a filing's SEC acceptance
+  time (or its filing date, shown as a date only), or when the site detected, decided or published something. A
+  report with no stated time is listed under *Without a stated time*, with the collection time labelled as such.
+  A filing that covers several stories lists only its sections about this one. *Back to the news* returns to the
+  feed view the reader came from, at that story. Unknown or malformed links, loading and API errors have their own
+  states.
 * Sample records never appear in the feed. Add `#sample=1` to the address for demos and tests; sample
   stories are then marked *Sample*.
 
@@ -364,6 +499,7 @@ directories and across `datasources-similarity backfill` / `retry`, so stop the
 worker before running those. It is released automatically if the process dies.
 
 Makefile shortcuts: `make ingest`, `make ingest-once`, `make ingest-demo`, `make graph`, `make test`,
+`make db-companies-plan`, `make db-companies`,
 `make similarity-status`, `make similarity-backfill LIMIT=100`, `make similarity-retry LIMIT=100`,
 `make summary-check`, `make summary-status`, `make summary-pending`, `make summary-reviews` (no paid calls;
 the paid `datasources-summary` commands have no shortcut on purpose).
@@ -503,6 +639,7 @@ uv run datasources-db migrate --dry-run         # what migrate would do (READ ON
 uv run datasources-db migrate                   # new database: the whole schema; otherwise pending files
 uv run datasources-db migrate --adopt-baseline  # existing database: record the verified base schema
 uv run datasources-db verify                    # compare the schema with the migrations (READ ONLY)
+uv run datasources-db register-companies        # the coverage companies (--dry-run: READ ONLY preview)
 uv run datasources-db inspect                   # row counts per table
 uv run datasources-db backfill                  # store existing output/processed records (idempotent)
 uv run datasources-db smoke                     # bounded live end-to-end test (see Tests)
@@ -829,8 +966,11 @@ under the same profile reuses the stored vector instead of recomputing it.
   score are stored in `retrieval_candidate` for every hit, with the reason a hit
   was not compared.
 * **Plausibility** decides what may reach the LLM, never what is "the same
-  event": cosine ≥ `SIMILARITY_MIN_SEMANTIC_SIMILARITY` (0.78) **or** a top-3
-  full-text hit (`SIMILARITY_LEXICAL_PLAUSIBLE_RANK`). Calibration on the 58
+  event": cosine ≥ `SIMILARITY_MIN_SEMANTIC_SIMILARITY` (0.78). A top-N
+  full-text hit qualifies on its own only when `SIMILARITY_LEXICAL_PLAUSIBLE_RANK`
+  is above 0 (default 0, off): the OR-query ranks some same-company article in the
+  top N almost every time, so that route sent nearly every record to the model.
+  Full-text hits still shape the fused ranking. Calibration on the 58
   stored NVIDIA revisions (1,653 document pairs, max unit-to-unit cosine):
   median 0.69, 90th percentile 0.77, 99th 0.86 — and three recurring "whale
   activity" articles from different days scored 0.98–0.999 while genuinely
@@ -1183,6 +1323,25 @@ that arrived later is listed but never shown as evidence of an older version).
 listed event carries `symbols` (the tickers of its current sources) and `latest_source` (`title`, `name`,
 `record_type`, `published_at` and an http(s) `url` or `null`), which the feed shows before a summary exists.
 
+A watchlist is `company=<CIK>`, repeated or comma-separated (up to 50; digits only, zero-padded to 10): events
+with a current source linked to **any** of those companies. It is applied in SQL before `limit`/`offset`, an event
+linked to several of them is returned once, and it combines with `symbol` and `state`. Listed events and the detail
+response also carry `companies` (`cik`, `name`, `symbols`) for the companies their current sources are linked to.
+
+* `GET /api/coverage`: the companies a reader can follow (`cik`, `name`, `symbol`, `symbols`, `markets`) and, from
+  `INGEST_SYMBOLS`, whether each is `collecting`.
+* `GET /api/events/{event_id}/timeline?include_sample=false`: the timeline described under
+  [The page](#the-page). Each entry has `kind` (`first_report`, `additional_coverage`, `substantive_update`,
+  `conflicting_report`, `conflict_detected`, `review_decision`, `summary_published`, `summary_revised`), `time` and
+  `time_basis` (`published`, `source_updated`, `sec_accepted`, `sec_filing_date` with a date-only `date`,
+  `missing`, `detected`, `decided`, `summary_published`). Reports add `relation`, `revised_report`, `match`
+  (`identical_text` for an exact copy), `source` (titles, links, the source's own times, `retrieved_at`, revision
+  number), the filing `sections` about this event, the comparison's `aspects` and verbatim `quotes` for updates and
+  conflicts, and the conflict `review`. `excluded` counts pending relations and reports moved out by a review;
+  `counts` has the reports, report versions and undated entries. Built in `summary/timeline.py` from memberships,
+  revisions, comparisons, summary versions and review decisions: no new table, no model call, no reviewer
+  identities, notes or model explanations.
+
 Two more read-only endpoints serve the page:
 
 * `GET /api/articles?limit=50&offset=0&source=all|news|sec&symbol=NVDA&include_sample=false` returns stored
@@ -1521,6 +1680,34 @@ sockets fail the test), and, in headless Edge/Chrome when available, that the
 page renders the notice and shows hostile article text and `javascript:` links
 as inert text.
 
+Company coverage, the watchlist and the story timeline have their own tests (no model calls, no outbound
+network; the guard above applies):
+
+* `tests/test_company_coverage.py`: the coverage list against the recorded SEC identifiers; SEC polling and
+  recovery per company with one shared rate limit; the Alpaca subscription and REST window carrying every
+  configured symbol; registration twice on a temporary database (`stock_news_coverage_<random>_test`, dropped
+  afterwards) with pre-existing NVDA and SEC-issuer rows kept byte for byte, a conflicting ticker reported, the
+  CLI's dry run writing nothing; a multi-company article delivered by REST and the stream stored once and linked
+  to each registered company; the launcher and worker warnings for unregistered tickers.
+* `tests/test_watchlist_api.py` (temporary database): the watchlist filter applied before paging, a story about
+  several followed companies listed once, the single-company filter unchanged, input validation, sample stories
+  hidden, `/api/coverage`, and reads changing no row and calling no model.
+* `tests/test_event_timeline.py` (isolated test database): labels from stored relations, publication-time order,
+  an earlier report collected later, revised reports (a new timestamp alone is never an update), conflict
+  detection and review decisions at their own times without reviewer identity, summary versions, missing
+  timestamps and date-only filings, a two-Item filing showing only its own section per event, no duplicates from
+  chunks or repeated delivery, sample hiding, no model calls.
+* `tests/test_live_only.py` (mocked SEC and Alpaca): only filings and articles published after the startup cutoff
+  are collected, no historical submissions file or REST request is made, the worker loop resumes after a
+  reconnect with newly published news only, duplicates are still caught, a fresh cutoff is taken at every
+  startup, the saved cursor, scope floors and pending retries are left untouched, switching the mode off resumes
+  recovery from them, and the startup summary describes the mode.
+* `tests/test_reader_browser.py` (headless Edge or Chrome over DevTools, `tests/cdp_browser.py`; skipped without
+  one): following companies, both views, persistence across reloads, empty / unreadable / outdated saved
+  watchlists, blocked storage, the story page from a card and back to the same view, direct loads, unknown and
+  malformed links, an API failure and retry, and a 375 px wide screen without sideways scrolling. On this
+  machine the browser tests run from PowerShell; a browser started from Git Bash produced no output.
+
 `datasources-db smoke` uses a **bounded historical** REST window, so it does not
 wait for a live news event, and it writes its files to a temporary directory
 while keeping the real records in the database. It fails loudly if it is pointed
@@ -1638,10 +1825,21 @@ process lock, and clean shutdown.
   request budget (they are cached for 12 h and triggered manually).
 * `langgraph`'s dependencies cap `websockets` below 17, so the lock resolves
   `websockets` 16.1.1 (the project only requires `>=15`).
-* **Tickers other than the configured symbols are not linked.** An article that
-  also mentions `AAPL` links only the companies present in `company_symbol`;
-  unknown tickers are counted (`db_unresolved_symbols`) and kept in
-  `provenance.requested_symbols` rather than guessed into new `company` rows.
+* **Only registered tickers are linked.** An article links only the companies present in `company_symbol`
+  (`datasources-db register-companies` adds the 11 coverage companies); other tickers are counted
+  (`db_unresolved_symbols`) and kept in the stored payload rather than guessed into new `company` rows. Only the
+  listed ticker of each company is registered: an article tagged only with Alphabet's Class C ticker `GOOG`, or
+  with a preferred-share ticker such as `JPM-PC`, is not linked (SEC filings still link through the issuer's CIK).
+  Linking applies when a record is stored; `datasources-db relink-companies` links articles stored before a
+  company was registered.
+* Collecting 11 companies is configured, documented and tested offline, but has not been run live here: Alpaca's
+  per-account limits on stream symbols (error 405) and the real article volume for all 11 were not measured.
+* **The watchlist is per browser.** It lives in `localStorage` on one device; there are no accounts, and it does
+  not sync between browsers or devices. Clearing site data clears it.
+* The timeline orders entries by the times the sources state. Dates without a time (a filing date) are placed at
+  the start of that UTC day, and records without any stated time are listed apart. Labels are grouping's stored
+  judgments (validated for traceability, not truth); a report collected before grouping was enabled has no
+  timeline entry until it is grouped.
 * Records completed in the file ledger **before** the database existed are not
   re-persisted by a normal run (the ledger already calls them done). Run
   `uv run datasources-db backfill` once for those.

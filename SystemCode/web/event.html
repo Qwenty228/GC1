@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Story · Stock News</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="story-page">
+  <a class="skip-link" href="#main">Skip to the story</a>
+  <header class="site-header">
+    <div class="wrap header-row">
+      <p class="site-title"><a href="/" class="home-link">Stock News</a></p>
+    </div>
+  </header>
+  <div id="sample-banner" class="banner sample" hidden>
+    <div class="wrap"><strong>Sample mode.</strong> This is a fictional demo or test story.</div>
+  </div>
+  <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+
+  <main id="main" class="wrap" tabindex="-1">
+    <nav class="story-nav" aria-label="Back"><a id="back-link" class="back-link" href="/"><span aria-hidden="true">←</span>
+      Back to the news</a></nav>
+    <article id="story" class="card story-card" aria-busy="true">
+      <div class="state" role="status">Loading the story…</div>
+    </article>
+  </main>
+
+  <footer class="wrap site-footer">
+    <p>AI summaries can contain mistakes: check the original sources before relying on them. SEC filings are company
+      disclosures, not statements verified by the SEC.</p>
+  </footer>
+
+  <noscript><p class="wrap">This page needs JavaScript to load the story.</p></noscript>
+  <script src="/render.js"></script>
+  <script src="/watchlist.js"></script>
+  <script src="/event.js"></script>
+</body>
+</html>
