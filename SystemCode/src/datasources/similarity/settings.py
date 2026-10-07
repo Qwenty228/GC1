@@ -75,7 +75,9 @@ class SimilaritySettings:
     # 0.78 sits near the 90th percentile of unrelated NVIDIA-news pairs measured with
     # bge-small-en-v1.5 on the stored data; it is a starting point to re-measure.
     min_semantic_similarity: float = 0.78
-    lexical_plausible_rank: int = 3
+    # 0 = a full-text hit alone never reaches the LLM: an OR-query ranks some same-company
+    # article in the top N almost every time, so a rank gate sent nearly every record to the model.
+    lexical_plausible_rank: int = 0
     min_lexical_score: float = 0.0
     exact_match_min_chars: int = 400
 
@@ -117,7 +119,6 @@ class SimilaritySettings:
             "SIMILARITY_LEXICAL_MAX_TERMS": self.lexical_max_terms,
             "SIMILARITY_RRF_K": self.rrf_k,
             "SIMILARITY_MAX_CANDIDATE_EVENTS": self.max_candidate_events,
-            "SIMILARITY_LEXICAL_PLAUSIBLE_RANK": self.lexical_plausible_rank,
             "SIMILARITY_EXACT_MATCH_MIN_CHARS": self.exact_match_min_chars,
             "SIMILARITY_MAX_ANALYSIS_ATTEMPTS": self.max_analysis_attempts,
             "SIMILARITY_RETRY_BASE_MINUTES": self.retry_base_minutes,
@@ -129,6 +130,8 @@ class SimilaritySettings:
             problems.append("SIMILARITY_LLM_MAX_RETRIES must be >= 0")
         if not -1.0 <= self.min_semantic_similarity <= 1.0:
             problems.append("SIMILARITY_MIN_SEMANTIC_SIMILARITY must be between -1 and 1")
+        if self.lexical_plausible_rank < 0:
+            problems.append("SIMILARITY_LEXICAL_PLAUSIBLE_RANK must be >= 0 (0 = full-text rank alone never reaches the LLM)")
         if self.min_lexical_score < 0:
             problems.append("SIMILARITY_MIN_LEXICAL_SCORE must be >= 0")
         if problems:
@@ -174,7 +177,7 @@ def load_similarity_settings() -> SimilaritySettings:
         rrf_k=_env_int("SIMILARITY_RRF_K", 60),
         max_candidate_events=_env_int("SIMILARITY_MAX_CANDIDATE_EVENTS", 6),
         min_semantic_similarity=_env_float("SIMILARITY_MIN_SEMANTIC_SIMILARITY", 0.78),
-        lexical_plausible_rank=_env_int("SIMILARITY_LEXICAL_PLAUSIBLE_RANK", 3),
+        lexical_plausible_rank=_env_int("SIMILARITY_LEXICAL_PLAUSIBLE_RANK", 0),
         min_lexical_score=_env_float("SIMILARITY_MIN_LEXICAL_SCORE", 0.0),
         exact_match_min_chars=_env_int("SIMILARITY_EXACT_MATCH_MIN_CHARS", 400),
         max_analysis_attempts=_env_int("SIMILARITY_MAX_ANALYSIS_ATTEMPTS", 5),

@@ -966,8 +966,11 @@ under the same profile reuses the stored vector instead of recomputing it.
   score are stored in `retrieval_candidate` for every hit, with the reason a hit
   was not compared.
 * **Plausibility** decides what may reach the LLM, never what is "the same
-  event": cosine ≥ `SIMILARITY_MIN_SEMANTIC_SIMILARITY` (0.78) **or** a top-3
-  full-text hit (`SIMILARITY_LEXICAL_PLAUSIBLE_RANK`). Calibration on the 58
+  event": cosine ≥ `SIMILARITY_MIN_SEMANTIC_SIMILARITY` (0.78). A top-N
+  full-text hit qualifies on its own only when `SIMILARITY_LEXICAL_PLAUSIBLE_RANK`
+  is above 0 (default 0, off): the OR-query ranks some same-company article in the
+  top N almost every time, so that route sent nearly every record to the model.
+  Full-text hits still shape the fused ranking. Calibration on the 58
   stored NVIDIA revisions (1,653 document pairs, max unit-to-unit cosine):
   median 0.69, 90th percentile 0.77, 99th 0.86 — and three recurring "whale
   activity" articles from different days scored 0.98–0.999 while genuinely
