@@ -24,7 +24,12 @@ psycopg = pytest.importorskip("psycopg")
 from datasources.ingest.graph import get_graph, run_pipeline, run_reanalysis  # noqa: E402
 from datasources.ingest.service import IngestionService  # noqa: E402
 from datasources.similarity import store  # noqa: E402
-from datasources.similarity.comparison import ComparisonError, ScriptedComparisonBackend, build_output  # noqa: E402
+from datasources.similarity.comparison import (  # noqa: E402
+    PROMPT_VERSION,
+    ComparisonError,
+    ScriptedComparisonBackend,
+    build_output,
+)
 from datasources.similarity.embeddings import EmbeddingError, HashingEmbeddingBackend  # noqa: E402
 from datasources.similarity.lock import GraphWriterLock, WriterLockError  # noqa: E402
 from datasources.similarity.pipeline import PipelineContext, build_runtime  # noqa: E402
@@ -185,7 +190,7 @@ def test_second_article_finds_the_first_and_is_compared_before_it_is_stored(db):
     comparison = q(db, "SELECT label, method, model, prompt_version FROM event_comparison WHERE revision_id = %s",
                    second_revision)[0]
     assert comparison == {"label": "same_event_repeated", "method": "llm", "model": "scripted-test",
-                          "prompt_version": "compare-1"}
+                          "prompt_version": PROMPT_VERSION}
     scores = q(db, "SELECT semantic_rank, lexical_rank, fused_score, shortlisted FROM retrieval_candidate rc "
                    "JOIN revision_analysis a ON a.analysis_id = rc.analysis_id WHERE a.revision_id = %s",
                second_revision)

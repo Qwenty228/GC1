@@ -58,11 +58,11 @@ class RedactSecrets(logging.Filter):
         return True
 
 
-def configure_logging(root: Path, verbose: bool = False) -> None:
+def configure_logging(root: Path, verbose: bool = False, filename: str = "ingest.log") -> None:
     (root / "logs").mkdir(parents=True, exist_ok=True)
     handlers: list[logging.Handler] = [
         logging.StreamHandler(),
-        logging.handlers.RotatingFileHandler(root / "logs" / "ingest.log", maxBytes=5_000_000,
+        logging.handlers.RotatingFileHandler(root / "logs" / filename, maxBytes=5_000_000,
                                              backupCount=5, encoding="utf-8"),
     ]
     redactor = RedactSecrets([os.getenv(name, "") for name in (
@@ -448,11 +448,16 @@ def main(argv: list[str] | None = None) -> int:
                                                   purpose="ingestion worker").acquire()
                 LOGGER.info("starting ingestion: symbols=%s root=%s sec=%s alpaca=%s", settings.symbols,
                             settings.root, enable_sec, enable_alpaca)
+                from ..activity import ActivityTracker
+
+                service.activity = ActivityTracker(settings.root, "worker")  # each record's steps, for the page
                 try:
                     asyncio.run(run_service(service, enable_sec=enable_sec, enable_alpaca=enable_alpaca, once=args.once,
                                             startup=startup))
                 except KeyboardInterrupt:
                     LOGGER.info("interrupted")
+                finally:
+                    service.activity.close("stopped")
             elif command == "demo":
                 analyzer = summarizer = None
                 if args.with_database:

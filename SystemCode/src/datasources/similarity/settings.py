@@ -70,7 +70,9 @@ class SimilaritySettings:
     lexical_top_k: int = 20
     lexical_max_terms: int = 48
     rrf_k: int = 60
-    max_candidate_events: int = 6
+    # About as many events as fit one comparison call at SIMILARITY_LLM_MAX_INPUT_CHARS=30000; more splits the
+    # record into a second call that repeats the incoming text.
+    max_candidate_events: int = 3
     # Plausibility floors decide what reaches the LLM, never what is "the same event".
     # 0.78 sits near the 90th percentile of unrelated NVIDIA-news pairs measured with
     # bge-small-en-v1.5 on the stored data; it is a starting point to re-measure.
@@ -175,7 +177,7 @@ def load_similarity_settings() -> SimilaritySettings:
         lexical_top_k=_env_int("SIMILARITY_LEXICAL_TOP_K", 20),
         lexical_max_terms=_env_int("SIMILARITY_LEXICAL_MAX_TERMS", 48),
         rrf_k=_env_int("SIMILARITY_RRF_K", 60),
-        max_candidate_events=_env_int("SIMILARITY_MAX_CANDIDATE_EVENTS", 6),
+        max_candidate_events=_env_int("SIMILARITY_MAX_CANDIDATE_EVENTS", 3),
         min_semantic_similarity=_env_float("SIMILARITY_MIN_SEMANTIC_SIMILARITY", 0.78),
         lexical_plausible_rank=_env_int("SIMILARITY_LEXICAL_PLAUSIBLE_RANK", 0),
         min_lexical_score=_env_float("SIMILARITY_MIN_LEXICAL_SCORE", 0.0),

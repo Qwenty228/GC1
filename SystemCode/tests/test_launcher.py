@@ -33,6 +33,9 @@ FAKE_SERVICE = textwrap.dedent("""
     print(f"{name}: started, token {os.environ.get('ALPACA_SECRET_KEY', '')}", flush=True)
     if mode == "crash-at-start":
         sys.exit(4)
+    if mode == "done":  # a one-shot task that finishes by itself
+        print(f"{name}: done", flush=True)
+        sys.exit(0)
     open(marker, "w").close()
     if mode == "crash-later":
         time.sleep(0.3)
@@ -107,6 +110,46 @@ def test_a_service_that_ignores_the_stop_request_is_terminated(fake):
     assert launched.services[0].proc.returncode != 0
 
 
+def oneshot(spec: ServiceSpec) -> ServiceSpec:
+    spec.oneshot = True
+    return spec
+
+
+def stop_when_settled(launched: Launcher) -> None:
+    if all(s.ready for s in launched.services) and all(s.finished for s in launched.services if s.spec.oneshot):
+        raise KeyboardInterrupt
+
+
+@pytest.mark.parametrize("mode,code", [("done", 0), ("crash-at-start", 4)])
+def test_a_one_shot_task_ends_on_its_own_and_stops_nothing(fake, mode, code):
+    out = io.StringIO()
+    launched = Launcher([fake("web"), oneshot(fake("summary", mode)), fake("ingest")], out=out)
+    assert launched.run(monitor=stop_when_settled) == 0
+    log = out.getvalue()
+    assert ("summary finished" if code == 0 else "summary finished with exit code 4") in log
+    assert "ERROR" not in log and log.count("summary finished") == 1 and "summary stopped" not in log
+    assert "web: STDIN-EOF" in log and "ingest: STDIN-EOF" in log  # the others ran on and stopped normally
+    assert [s.proc.returncode for s in launched.services] == [0, code, 0]
+
+
+def test_a_running_one_shot_task_is_asked_to_stop_first(fake):
+    out = io.StringIO()
+    launched = Launcher([fake("web"), oneshot(fake("summary")), fake("ingest")], out=out)
+    assert launched.run(monitor=stop_when_ready) == 0
+    log = out.getvalue()
+    assert log.index("stopping summary (letting its current step finish)") < log.index("stopping ingest")
+    assert "summary: STDIN-EOF" in log and log.index("ingest: STDIN-EOF") < log.index("web: STDIN-EOF")
+    assert [s.proc.returncode for s in launched.services] == [0, 0, 0]
+
+
+def test_the_summary_catch_up_runs_between_the_web_app_and_the_worker_only_when_enabled(tmp_path):
+    names = [s.name for s in launcher.build_services(port=8000, collectors=True, root=tmp_path, ingest_args=[])]
+    assert names == ["web", "ingest"]
+    specs = launcher.build_services(port=8000, collectors=False, root=tmp_path, ingest_args=[], catchup=True)
+    assert [s.name for s in specs] == ["web", "summary"] and specs[1].oneshot
+    assert specs[1].argv[-2:] == ["--service", "summary"]
+
+
 # ----------------------------------------------------------------------------- startup checks
 @pytest.fixture
 def offline_env(monkeypatch, tmp_path):
@@ -162,6 +205,58 @@ def test_paid_model_calls_are_announced_from_the_settings(monkeypatch):
     blocked = launcher.Preflight()
     launcher._describe_processing(blocked, SimilaritySettings(enabled=False), SummarySettings(enabled=True))
     assert any("needs SIMILARITY_ENABLED=true" in p for p in blocked.problems)
+
+
+def test_the_startup_summary_catch_up_is_announced_and_only_runs_with_its_prerequisites(monkeypatch):
+    from datasources.similarity.settings import SimilaritySettings
+    from datasources.summary.settings import SummarySettings
+
+    credentials = {"present": True}
+    monkeypatch.setattr("datasources.similarity.comparison.anthropic_credentials_available",
+                        lambda: credentials["present"])
+
+    def catchup(summary: SummarySettings, database_ok: bool = True) -> launcher.Preflight:
+        report = launcher.Preflight(database_ok=database_ok)
+        launcher._describe_catchup(report, summary)
+        return report
+
+    on = catchup(SummarySettings(enabled=True, model="model-b"))
+    line = dict(on.lines)["Summary catch-up"]
+    assert on.catchup and on.paid_calls and on.warnings == [] and on.problems == []
+    assert "ON, once per start" in line and "last 3 day(s)" in line and "at most 10 PAID request(s) to model-b" in line
+
+    off = {"OFF (SUMMARY_ENABLED=false)": catchup(SummarySettings(enabled=False)),
+           "OFF (SUMMARY_STARTUP_CATCHUP_DAYS=0)": catchup(SummarySettings(enabled=True, startup_catchup_days=0)),
+           "OFF: it needs PostgreSQL": catchup(SummarySettings(enabled=True), database_ok=False)}
+    credentials["present"] = False
+    off["OFF: SUMMARY_BACKEND=anthropic needs ANTHROPIC_API_KEY"] = catchup(SummarySettings(enabled=True))
+    for text, report in off.items():
+        assert dict(report.lines)["Summary catch-up"].startswith(text)
+        assert not report.catchup and not report.paid_calls and report.problems == []  # the page still starts
+    assert off["OFF: SUMMARY_BACKEND=anthropic needs ANTHROPIC_API_KEY"].warnings
+
+    with_catchup = launcher.Preflight()
+    credentials["present"] = True
+    launcher._describe_processing(with_catchup, SimilaritySettings(enabled=True, comparison_backend="mock"),
+                                  SummarySettings(enabled=True))
+    assert "older than the startup catch-up window" in dict(with_catchup.lines)["Not scheduled"]
+
+
+def test_the_summary_child_without_summaries_enabled_reports_off_and_exits(offline_env):
+    # stdin stays open: closing it is the launcher's stop request
+    proc = subprocess.Popen([sys.executable, "-m", "datasources.launcher", "--service", "summary"],
+                            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            env=child_env(offline_env))
+    try:
+        code = proc.wait(timeout=120)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+        proc.stdin.close()
+    log = proc.stdout.read().decode("utf-8", "replace")
+    assert code == 0, log
+    assert "summary catch-up: off (SUMMARY_ENABLED=false" in log
+    assert (Path(offline_env["INGEST_OUTPUT_DIR"]) / "logs" / "summary_catchup.log").exists()
 
 
 def test_a_second_launcher_is_refused_with_the_first_ones_address(offline_env, capsys):

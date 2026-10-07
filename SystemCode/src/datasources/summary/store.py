@@ -289,64 +289,76 @@ def open_reviews(conn: Connection, *, is_sample: bool, include_resolved: bool = 
 
 
 # ----------------------------------------------------------------------------- discovery
-def select_missing(conn: Connection, *, is_sample: bool, language: str, limit: int) -> list[str]:
+# ``since``: only events with a current member whose source time is at or after it (None = every event).
+_RECENT_MEMBER = """(%(since)s::timestamptz IS NULL OR EXISTS (
+               SELECT 1 FROM current_event_membership recent
+                WHERE recent.event_id = {event} AND recent.source_time >= %(since)s::timestamptz))"""
+
+
+def select_missing(conn: Connection, *, is_sample: bool, language: str, limit: int,
+                   since: datetime | None = None) -> list[str]:
     """Active events with current members but no published summary and nothing blocking or failed."""
     rows = conn.execute(
-        """
+        f"""
         SELECT e.event_id
           FROM news_event e
-         WHERE e.is_sample = %s AND e.status <> 'superseded'
+         WHERE e.is_sample = %(sample)s AND e.status <> 'superseded'
            AND EXISTS (SELECT 1 FROM current_event_membership m WHERE m.event_id = e.event_id)
-           AND NOT EXISTS (SELECT 1 FROM event_summary s WHERE s.event_id = e.event_id AND s.language_code = %s
+           AND NOT EXISTS (SELECT 1 FROM event_summary s WHERE s.event_id = e.event_id AND s.language_code = %(lang)s
                              AND s.status = 'published')
            AND NOT EXISTS (SELECT 1 FROM event_summary_job j WHERE j.event_id = e.event_id
-                             AND j.language_code = %s AND j.status IN ('running', 'failed', 'awaiting_review'))
+                             AND j.language_code = %(lang)s AND j.status IN ('running', 'failed', 'awaiting_review'))
+           AND {_RECENT_MEMBER.format(event="e.event_id")}
          ORDER BY e.first_source_time NULLS LAST, e.event_id
-         LIMIT %s
+         LIMIT %(limit)s
         """,
-        (is_sample, language, language, limit),
+        {"sample": is_sample, "lang": language, "since": since, "limit": limit},
     ).fetchall()
     return [str(r["event_id"]) for r in rows]
 
 
-def select_uncovered(conn: Connection, *, is_sample: bool, language: str, limit: int) -> list[str]:
+def select_uncovered(conn: Connection, *, is_sample: bool, language: str, limit: int,
+                     since: datetime | None = None) -> list[str]:
     """Events whose published summary predates an update or origin member (e.g. the process
     stopped after the article was stored, before its summary job was written)."""
     rows = conn.execute(
-        """
+        f"""
         SELECT DISTINCT s.event_id, s.published_at
           FROM event_summary s
           JOIN news_event e ON e.event_id = s.event_id
           JOIN current_event_membership m ON m.event_id = s.event_id
-         WHERE e.is_sample = %s AND s.language_code = %s AND s.status = 'published'
+         WHERE e.is_sample = %(sample)s AND s.language_code = %(lang)s AND s.status = 'published'
            AND m.relation IN ('origin', 'same_event_update', 'same_event_conflict')
            AND NOT COALESCE(s.input_manifest -> 'member_revision_ids', '[]'::jsonb) ? m.revision_id::text
            AND NOT EXISTS (SELECT 1 FROM event_summary_job j WHERE j.event_id = s.event_id
                              AND j.language_code = s.language_code
                              AND j.status IN ('pending', 'running', 'failed', 'awaiting_review'))
+           AND {_RECENT_MEMBER.format(event="s.event_id")}
          ORDER BY s.published_at, s.event_id
-         LIMIT %s
+         LIMIT %(limit)s
         """,
-        (is_sample, language, limit),
+        {"sample": is_sample, "lang": language, "since": since, "limit": limit},
     ).fetchall()
     return [str(r["event_id"]) for r in rows]
 
 
 def select_due_jobs(conn: Connection, *, is_sample: bool, language: str, limit: int, now: datetime,
-                    ignore_backoff: bool = False, event_ids: list[str] | None = None) -> list[str]:
+                    ignore_backoff: bool = False, event_ids: list[str] | None = None,
+                    since: datetime | None = None) -> list[str]:
     rows = conn.execute(
-        """
+        f"""
         SELECT j.event_id
           FROM event_summary_job j JOIN news_event e ON e.event_id = j.event_id
          WHERE e.is_sample = %(sample)s AND j.language_code = %(lang)s
            AND ((j.status = 'pending' AND (%(ignore)s OR j.next_retry_at IS NULL OR j.next_retry_at <= %(now)s))
                 OR (j.status = 'running' AND j.lease_expires_at <= %(now)s))
            AND (%(ids)s::uuid[] IS NULL OR j.event_id = ANY(%(ids)s::uuid[]))
+           AND {_RECENT_MEMBER.format(event="j.event_id")}
          ORDER BY j.next_retry_at NULLS FIRST, j.updated_at, j.event_id
          LIMIT %(limit)s
         """,
         {"sample": is_sample, "lang": language, "ignore": ignore_backoff, "now": now, "ids": event_ids,
-         "limit": limit},
+         "since": since, "limit": limit},
     ).fetchall()
     return [str(r["event_id"]) for r in rows]
 

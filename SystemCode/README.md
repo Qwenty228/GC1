@@ -212,11 +212,12 @@ uv run datasources-dev
 
 Then open **http://127.0.0.1:8000**. Ctrl+C in that window stops everything.
 
-The launcher runs two child processes and prefixes every log line with its name:
+The launcher runs these child processes and prefixes every log line with its name:
 
 | Service | What runs |
 | --- | --- |
 | `[web]` | FastAPI serving the page and the read-only API on 127.0.0.1 (no auto-reload). It never starts collectors or calls a model. |
+| `[summary]` | The [startup summary catch-up](#startup-summary-catch-up), with or without collectors, when it is on: summarizes recent events that have no current summary (capped paid requests), then exits. |
 | `[ingest]` | The existing worker, `datasources-ingest run`: Alpaca WebSocket with REST recovery at startup and after every reconnect, SEC EDGAR polling, and whichever inline steps `.env` enables (event grouping with `SIMILARITY_ENABLED`, event summaries with `SUMMARY_ENABLED`). |
 
 Before it starts anything, the launcher checks the configuration, the database
@@ -248,6 +249,7 @@ Nothing here starts a collector, calls a model or writes to the database:
 ```powershell
 uv run datasources-dev --check              # configuration, database, schema, port, locks and a paid-call summary
 uv run datasources-dev --no-collectors      # the page and the API over stored data; no worker is started
+                                            # (read-only only with SUMMARY_STARTUP_CATCHUP_DAYS=0: see below)
 uv run datasources-db migrate --dry-run     # the schema plan, read in a READ ONLY transaction
 uv run datasources-db verify                # the schema compared with the migrations, READ ONLY
 uv run datasources-summary pending          # summary work backfill/retry would do (no model calls)
@@ -258,7 +260,7 @@ uv run datasources-similarity status        # grouping status, events and index 
 
 Page views, API polling and extra browser tabs never call a model and never start
 collectors: the page only reads what is stored. Model calls happen only inside
-the ingestion worker, for records it ingests:
+the ingestion worker, for records it ingests, and in the startup summary catch-up:
 
 * `SIMILARITY_ENABLED=true` with `SIMILARITY_COMPARISON_BACKEND=anthropic`: each new article or filing can send
   up to `SIMILARITY_LLM_MAX_CALLS_PER_RECORD` comparison requests (default 3). Each request can be retried by
@@ -268,6 +270,9 @@ the ingestion worker, for records it ingests:
 * At startup the worker recovers Alpaca news since its last sync (at most `ALPACA_RECOVERY_MAX_HOURS`) and SEC
   filings from its lookback window that are not stored yet. Recovered records go through the same steps, so
   the first start after a long break can make many more calls than a normal hour.
+* `SUMMARY_ENABLED=true` and `SUMMARY_STARTUP_CATCHUP_DAYS` > 0 (default 3): every `datasources-dev` start, **with
+  or without collectors**, runs the [startup summary catch-up](#startup-summary-catch-up) once: at most
+  `SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS` summary requests (default 10), SDK retries counted and capped too.
 
 With the defaults, one record can therefore cost up to 3 × (1 + 2) + 5 × (1 + 2) = 24 HTTP requests in the
 worst case; a record with no plausible candidate usually costs one summary request, and one that matches an
@@ -276,20 +281,45 @@ can bring up to 40 pages of 50 articles after a long break (72 h at most). Befor
 worker, run the [bounded live test](#bounded-live-test-paid-hard-capped), which has a hard cap.
 
 To run without paid calls, set `SIMILARITY_ENABLED=false` and `SUMMARY_ENABLED=false`, or use
-`uv run datasources-dev --no-collectors` to browse stored data only.
+`uv run datasources-dev --no-collectors` with `SUMMARY_STARTUP_CATCHUP_DAYS=0` to browse stored data only.
 
-**Deferred work is not scheduled.** The launcher adds no retry loop. Records whose grouping is still pending
-wait for `uv run datasources-similarity retry` (run it with the worker stopped) or a bounded run with
-`--source stored`. Queued or failed summaries wait for `uv run datasources-summary retry --confirm-paid-calls`
-(add `--max-model-attempts N` for a hard cap), or for a later record that touches the same event. These
-commands can make paid calls.
+**Deferred work is not scheduled while running.** The launcher adds no retry loop; only the startup catch-up
+runs, once per start. Records whose grouping is still pending wait for `uv run datasources-similarity retry`
+(run it with the worker stopped) or a bounded run with `--source stored`. Queued summaries from the catch-up
+window are retried at the next start; failed ones (attempts used up) and older ones wait for
+`uv run datasources-summary retry --confirm-paid-calls` (add `--max-model-attempts N` for a hard cap), or for a
+later record that touches the same event. These commands can make paid calls.
+
+### Startup summary catch-up
+
+Each `uv run datasources-dev` start, with or without `--no-collectors`, starts a one-shot `[summary]` task next
+to the web server (which itself still never calls a model). It looks at live events with an article published in
+the last `SUMMARY_STARTUP_CATCHUP_DAYS` days (default 3), newest first, and summarizes the ones that need it:
+
+| Event | What the catch-up does |
+| --- | --- |
+| No published summary | First summary (queued as a durable job first) |
+| Summary older than a newer member | New version |
+| Pending job whose retry backoff is over | Retried |
+| `running` job whose lease expired (a process was stopped mid-summary) | Taken over and finished |
+| Pending job still in its retry backoff | Left for a later start (no call) |
+| `failed` job (attempts used up), open conflict review | Left alone (`summary retry --include-failed`, `summary review`) |
+| Article not grouped into an event yet | Counted and reported only; grouping does not run here |
+
+At most `SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS` requests (default 10) per start, with a hard cap on HTTP attempts
+that counts SDK retries; the rest stays queued for the next start. Ctrl+C lets the summary in progress finish
+(within 90 s) and starts no other; a summary cut off by the timeout is taken over at a later start once its lease
+expires. The task logs one line per event and a total (requests, attempts, tokens) to the console and to
+`output/logs/summary_catchup.log`, then exits; the other services keep running. It is off with
+`SUMMARY_ENABLED=false`, `SUMMARY_STARTUP_CATCHUP_DAYS=0`, without the database, or without `ANTHROPIC_API_KEY`;
+`--check` shows which on its *Summary catch-up* line.
 
 ### Options
 
 | Option | Effect |
 | --- | --- |
 | `--check` | Run the startup checks and print the summary; start nothing |
-| `--no-collectors` | Web app and API only |
+| `--no-collectors` | Web app and API only (plus the startup summary catch-up, when it is on) |
 | `--no-sec` / `--no-alpaca` | Leave one collector out |
 | `--port 8001` | Serve the page on another port |
 
@@ -346,7 +376,7 @@ with the saved state it keeps.
 | "port 8000 ... already in use" | Another server runs there. Stop it or use `--port 8001`. |
 | The worker "was not ready within 180 s" | Its last stage is printed. Usually the embedding model is not downloaded (`uv run datasources-similarity download-model`) or the database is slow to answer. |
 | A bounded run stopped with `attempt_budget` | Expected: its cap is used up. Unfinished grouping is `partial`/`pending`, summaries are queued; run it again with a new cap, or `datasources-summary retry --confirm-paid-calls --max-model-attempts N`. |
-| A summary reported as "held by another lease" | A run stopped while generating it. The lease expires after `SUMMARY_LEASE_MINUTES` (10); the next run or `summary retry` picks it up. |
+| A summary reported as "held by another lease" | A run stopped while generating it. The lease expires after `SUMMARY_LEASE_MINUTES` (10); the next run, the next start's summary catch-up or `summary retry` picks it up. |
 
 ### The page
 
@@ -397,11 +427,23 @@ cut at a sentence boundary. Nothing is rewritten or generated for the page.
 * Sample records never appear in the feed. Add `#sample=1` to the address for demos and tests; sample
   stories are then marked *Sample*.
 
-**Data tools** (`/tools.html`, not linked from the feed) keeps the developer views: collector status, every
+**Data tools** (`/tools.html`, linked from the header of the feed and of each story page) keeps the developer views:
+collector status, the live processing activity, every
 stored news article and SEC filing (original headline, publisher or issuer, the source's own times, the
 excerpt supplied with the article, labelled as not AI-generated, and its grouping status), with company,
 source and sample filters, and the original Alpaca / EDGAR data-dictionary **source explorer**, which makes
 live requests only when you press a button.
+
+**Processing activity** (`/tools.html#activity`) shows, live, what the ingestion worker and the
+[startup summary catch-up](#startup-summary-catch-up) are doing: the article, filing or story in progress with
+each step (*Looking for related stories*, *Comparing with N stories*, *Saving and grouping*, *Writing the
+summary*), which steps use an AI model, how long the running step has taken, and the last 25 finished items with
+their results (for example "same story, new details", "published as version 2" or "rejected by the citation
+checks"). The section refreshes every 2 seconds while the page is visible. While something is being processed,
+the news page shows the running step in one line under its heading. Each process writes its own
+`output/state/activity_worker.json` / `activity_summary.json` (titles, ids, model names and outcomes only; no
+article text, prompts or model output), rewritten every 10 s while it runs; a file not rewritten for 45 s is shown
+as *not answering* (the process was stopped or hung).
 
 ## Bounded live test (paid, hard-capped)
 
@@ -976,7 +1018,9 @@ under the same profile reuses the stored vector instead of recomputing it.
   activity" articles from different days scored 0.98–0.999 while genuinely
   related IonQ/NVIDIA coverage scored 0.84–0.89. A high score alone therefore
   never links anything. The shortlist keeps the best `SIMILARITY_MAX_CANDIDATE_EVENTS`
-  (6) events.
+  (3) events: about as many as fit one comparison call at the default
+  `SIMILARITY_LLM_MAX_INPUT_CHARS`, so a record rarely needs a second call that
+  repeats its text.
 * **Self-matches** are impossible: the incoming document is excluded from the
   pool and events the revision already belongs to are never candidates.
 * **Coverage.** Each analysis records how many revisions in its window have no
@@ -1022,6 +1066,12 @@ not decide which source is true.
   evidence quote must occur verbatim in the passage it cites, and a same-event
   label without verified evidence on both sides is downgraded to `uncertain`.
   Requested pairs the model did not judge are recorded as unevaluated.
+* **Brief answers** (prompt `compare-2`): output tokens are most of a comparison's
+  cost, so the prompt asks for one quote per side (at most 150 characters) and at
+  most 3 matching facts on same-event labels; differences only on updates and
+  conflicts (the kinds the summary, timeline and conflict review read); empty
+  facts and evidence on `different_event` / `uncertain`; and a one-sentence
+  explanation.
 * **Untrusted input:** all article and filing text is XML-escaped inside
   delimited elements, and the system prompt tells the model to treat it as data
   and never follow instructions inside it.
@@ -1231,6 +1281,11 @@ stored labels; no model call decides anything here.
 * **Output** (structured JSON): a headline `H1`, an overview of one to three
   sentences `O1`..`O3`, up to three key points `K1`..`K3`, each with passage refs
   and verbatim quotes; plus facts the sources do not state (`evidence_gaps`).
+  The prompt (`summary-2`) asks for the shortest quote that supports a statement
+  (a sentence or less, at most 300 characters) and for no calculated figures;
+  validation rejects quotes over 600 characters. With `summary-1`, whose 300 was
+  also the hard limit, the model copied whole sentences that ran just over it
+  (up to 354 characters) and 40% of summaries were rejected and paid for again.
 * **Validation** establishes traceability, not truth: schema and ids; every
   statement cited; every ref was provided (so it belongs to this event's active
   members, in its sample/live partition, re-checked in SQL at publication and by
@@ -1353,6 +1408,10 @@ Two more read-only endpoints serve the page:
 * `GET /api/status` returns `collector` (from the worker's status file: `running`, `stale`, `stopped` or
   `not_running`, with the times of its last WebSocket subscription and SEC poll), the configured
   `features` flags, `database` availability and stored `counts` (records, events, grouping statuses).
+* `GET /api/activity` returns `worker` and `summary`, each with `state` (`running`, `stale`, `stopped`,
+  `finished` or `not_running`), the `current` item with its `steps` (`key`, `label`, `model`, `state`, `result`,
+  times), the `recent` finished items, the catch-up's `progress` and its final `note`. It only reads the activity
+  files.
 
 The existing `/api/edgar` and `/api/alpaca` endpoints are unchanged. API responses are sent with
 `Cache-Control: no-store`.
@@ -1878,8 +1937,9 @@ process lock, and clean shutdown.
   why the previous output was rejected.
 * Only English summaries are generated; there is no translation.
 * Summary work queued by a review decision, a deferral or a failure runs when a
-  later record touches the event or with `datasources-summary retry`; the
-  worker has no periodic summary sweep.
+  later record touches the event, at the next `datasources-dev` start (events
+  from the catch-up window only) or with `datasources-summary retry`; the
+  worker has no periodic summary sweep while it runs.
 * A conflict review is created per comparison; a later revision of the same
   article does not close an older revision's open review automatically.
 * Reprocessing through `datasources-similarity retry`/`backfill` does not
