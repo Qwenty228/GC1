@@ -28,7 +28,9 @@ from .models import EvidencePack
 from .settings import PROMPT_VERSION, SummarySettings
 
 LOGGER = logging.getLogger(__name__)
-MAX_QUOTE_CHARS = 300
+# Validation's hard limit, twice what the prompt asks for (300): a quote that runs a little long (summary-1 quotes
+# ran to 354) is kept instead of rejecting the whole summary and paying for another request.
+MAX_QUOTE_CHARS = 600
 
 RELATION_LABELS = {
     "origin": "first source of this event",
@@ -97,6 +99,8 @@ Facts
 figures, dates, names or causes that the passages do not state.
 - Copy figures exactly as written in the passages: amounts, units, currencies, percentages, dates and fiscal periods. \
 Keep status words exact (planned, announced, agreed, completed, cancelled) and keep negations ("did not", "no").
+- Every number in a statement must appear in a passage that statement cites. Do not calculate totals, differences, \
+counts or percentages the passages do not state: "five sectors rose and six fell" must not become "11 sectors".
 - If the passages do not state something a reader might expect (a closing date, a price, a reason), leave it out and \
 list it under evidence_gaps instead of guessing.
 - Earlier text in <previous_summary> and the grouping notes in <comparison_notes> are context only. They show what was \
@@ -125,7 +129,9 @@ Output
 - key_points: at most three short points with details not already in the overview, ids "K1", "K2", "K3". Give fewer, \
 or none, when the evidence is limited. Never pad.
 - For every statement, cite one or more passage refs (P1, P2, ...) that support it, each with a quote copied verbatim \
-from that passage (at most 300 characters). The quote must directly support the statement.
+from that passage: the shortest span that directly supports the statement (a sentence or less, at most 300 \
+characters). Never quote several sentences in one citation; when a statement needs more support, add another \
+citation with its own short quote.
 """
 
 

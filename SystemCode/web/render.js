@@ -8,7 +8,7 @@
 (function (root) {
   "use strict";
 
-  const ICONS = { warn: "⚠", info: "ℹ", ok: "✓", off: "■", error: "✕" };
+  const ICONS = { warn: "⚠", info: "ℹ", ok: "✓", off: "■", error: "✕", skip: "–" };
   const icon = (name) => `<span class="icon" aria-hidden="true">${ICONS[name]}</span>`;
 
   function esc(s) {
@@ -731,10 +731,116 @@
     return `Event grouping ${word(grouping)} · AI summaries ${word(summaries)}${running ? "" : " (as configured)"}`;
   }
 
+  // ------------------------------------------------------------------ processing activity (/api/activity)
+  // What the ingestion worker and the startup summary catch-up report about each article, filing or story, step
+  // by step. Durations are measured against the server's clock (`now`), not this browser's.
+  const STEP_MARK = { done: "✓", skipped: "–", failed: "✕", interrupted: "■" };
+  const STEP_WORD = { running: "In progress", done: "Done", skipped: "Skipped", failed: "Failed",
+                      interrupted: "Interrupted" };
+  const KIND_WORD = { article: "Article", filing: "SEC filing", event: "Story" };
+  const EVENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function duration(ms) {
+    if (!(ms >= 0)) return "";
+    if (ms < 1000) return "under 1 s";
+    const s = Math.round(ms / 1000);
+    return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+  }
+
+  function activityStep(step, now, stale) {
+    const running = step.state === "running";
+    const end = running ? now : new Date(step.finished_at);
+    const took = duration(end - new Date(step.started_at));
+    const state = running && stale ? "stale" : step.state;
+    const mark = state === "running" ? `<span class="spinner" aria-hidden="true"></span>`
+      : `<span class="step-mark" aria-hidden="true">${state === "stale" ? "?" : STEP_MARK[state] || "•"}</span>`;
+    const ai = step.model ? ` <span class="badge info" title="AI model: ${esc(step.model)}">AI</span>` : "";
+    const result = step.result ? ` <span class="step-result">· ${esc(step.result)}</span>`
+      : state === "running" ? ` <span class="step-result">…</span>` : "";
+    const time = state === "running" ? `${took} so far` : state === "stale" ? "no answer" : step.started_at === step.finished_at ? "" : took;
+    return `<li class="step step-${esc(state)}">${mark}<span class="sr-only">${esc(STEP_WORD[step.state] || step.state)}:
+      </span><span class="step-label">${esc(step.label)}</span>${ai}${result}${time ? ` <span class="step-time">${
+      esc(time)}</span>` : ""}</li>`;
+  }
+
+  function activityHead(item) {
+    const tickers = (item.symbols || []).slice(0, 4).map((s) => `<span class="ticker">${esc(s)}</span>`).join("");
+    const story = item.event_id && EVENT_ID.test(item.event_id)
+      ? ` <a class="small" href="/events/${encodeURIComponent(item.event_id)}">Open the story</a>` : "";
+    return `<span class="badge">${esc(KIND_WORD[item.kind] || "Item")}</span>${tickers ? ` <span class="tickers">${
+      tickers}</span>` : ""} <span class="activity-title">${esc(item.title)}</span>${story}`;
+  }
+
+  // The item being worked on now: its steps so far, the running one with a spinner and its time so far.
+  function activityCurrent(proc, now) {
+    const item = proc && proc.current;
+    if (!item) return "";
+    const stale = proc.state === "stale";
+    const steps = (item.steps || []).map((s) => activityStep(s, now, stale)).join("") ||
+      `<li class="step step-running"><span class="spinner" aria-hidden="true"></span>Starting…</li>`;
+    return `<div class="activity-now${stale ? " stale" : ""}"><p class="kicker">${stale ? "Last reported" : "Working on"}
+      · started ${shortWhen(item.started_at)}</p><p class="activity-item-head">${activityHead(item)}</p>
+      <ol class="steps">${steps}</ol>${stale ? `<p class="small status-warn">${icon("warn")}The process stopped answering
+      during this step. Unfinished work is picked up again later.</p>` : ""}</div>`;
+  }
+
+  // Finished items, newest first; each opens to show its steps. The page keeps which ones the reader opened.
+  function activityRecent(proc, now) {
+    const items = (proc && proc.recent) || [];
+    if (!items.length) return "";
+    const MARK = { done: ["status-ok", "ok", "Done"], skipped: ["status-off", "skip", "Nothing needed doing"],
+                   failed: ["status-error", "error", "Needs another try"], interrupted: ["status-warn", "warn", "Interrupted"] };
+    return `<h4 class="activity-recent-head">Recently finished</h4><ul class="activity-recent">${items.map((item) => {
+      const [cls, mark, word] = MARK[item.state] || MARK.done;
+      return `<li><details class="activity-item" data-key="${esc(item.id)}">
+        <summary><span class="${cls}">${icon(mark)}<span class="sr-only">${esc(word)}: </span></span>${
+        activityHead(item)}${item.result ? ` <span class="step-result">· ${
+        esc(item.result)}</span>` : ""} <span class="step-time">${shortWhen(item.finished_at)}</span></summary>
+        <ol class="steps">${(item.steps || []).map((s) => activityStep(s, now, false)).join("") ||
+        `<li class="step muted">No steps were reported.</li>`}</ol></details></li>`;
+    }).join("")}</ul>`;
+  }
+
+  // One line on the state of the process (and the catch-up's "event 2 of 5").
+  function activityStatus(proc, name, now) {
+    const state = proc ? proc.state : "not_running";
+    const p = proc && proc.state === "running" ? proc.progress : null;
+    const progress = p && p.total ? ` · ${esc(Math.min(p.done + (proc.current ? 1 : 0), p.total))} of ${
+      esc(plural(p.total, "story", "stories"))}` : "";
+    switch (state) {
+      case "running":
+        return { cls: "status-ok", html: proc.current ? `${icon("ok")}${esc(name)} is working${progress}`
+          : `${icon("ok")}${esc(name)} is running and waiting for new articles and filings` };
+      case "stale":
+        return { cls: "status-warn", html: `${icon("warn")}${esc(name)} has not answered since ${when(proc.updated_at)};
+          it may have stopped` };
+      case "finished":
+        return { cls: "status-ok", html: `${icon("ok")}${esc(name)} finished ${when(proc.updated_at)}${
+          proc.note ? `: ${esc(proc.note)}` : ""}` };
+      case "stopped":
+        return { cls: "status-off", html: `${icon("off")}${esc(name)} stopped ${when(proc.updated_at)}${
+          proc.note ? `: ${esc(proc.note)}` : ""}` };
+      default:
+        return { cls: "status-off", html: `${icon("off")}${esc(name)} has not run with this output folder yet` };
+    }
+  }
+
+  // The reader page's one line: the step running right now, or "" when nothing is being processed.
+  function activityLine(activity) {
+    const procs = activity ? [activity.worker, activity.summary] : [];
+    const busy = procs.find((p) => p && p.state === "running" && p.current);
+    if (!busy) return "";
+    const item = busy.current;
+    const step = [...(item.steps || [])].reverse().find((s) => s.state === "running");
+    const what = step ? `${step.label}${step.model ? " (AI)" : ""}` : "Processing";
+    return `<span class="spinner" aria-hidden="true"></span>${esc(what)}: <span class="activity-title">${
+      esc(item.title)}</span> <a href="/tools.html#activity">See activity</a>`;
+  }
+
   const api = { esc, safeUrl, extLink, when, clock, ago, plural, icon, notice, sentenceEnds, preview, cardHead,
                 tickerChips, conflictLine, summaryView, sourcesPanel, feedEmpty, watchlistEmpty, loadError,
                 articleCard, articlesEmpty, collectorStatus, processingStatus, dateOnly, timeline, timelineBlock,
-                storyPage };
+                storyPage, activityCurrent, activityRecent, activityStatus, activityLine };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StockNewsRender = api;
 })(this);

@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import socket
 import uuid
 from dataclasses import dataclass, field
@@ -132,6 +133,7 @@ class SummaryContext:
     runtime: SummaryRuntime
     budget: SummaryBudget
     now: Any = None  # callable returning an aware datetime (tests)
+    activity: Any = None  # live progress for the page (`activity.ActivityTracker`); None = not reported
 
     def clock(self) -> datetime:
         return self.now() if self.now else datetime.now(timezone.utc)
@@ -145,7 +147,8 @@ def context_from(ctx) -> SummaryContext | None:
     if getattr(ctx, "summary_budget", None) is None:
         ctx.summary_budget = SummaryBudget(runtime.settings.max_requests_per_run,
                                            attempts=getattr(ctx, "model_budget", None))
-    return SummaryContext(ctx.database, runtime, ctx.summary_budget, getattr(ctx, "now", None))
+    return SummaryContext(ctx.database, runtime, ctx.summary_budget, getattr(ctx, "now", None),
+                          getattr(ctx, "activity", None))
 
 
 def _error(stage: str, error: BaseException) -> dict[str, Any]:
@@ -336,6 +339,8 @@ def generate(task: SummaryTask, sctx: SummaryContext, *, refresh: bool = False, 
 
     sctx.budget.spend()
     task.model = runtime.model
+    if sctx.activity is not None:
+        sctx.activity.step("summary", "Writing the summary", model=runtime.model)
     try:
         call = runtime.backend.summarize(SummaryRequest(task.pack))
         task.output, task.model, task.usage = call.output, call.model or runtime.model, dict(call.usage)
@@ -415,6 +420,53 @@ def persist(task: SummaryTask, sctx: SummaryContext) -> None:
     task.result = outcome
 
 
+def report_activity(task: SummaryTask, sctx: SummaryContext | None) -> None:
+    """Show how this event's summary step ended on the page (`activity`): the step started before the model call
+    is closed with the outcome; a decision made without a model call becomes a step of its own."""
+    track = getattr(sctx, "activity", None)
+    if track is None:
+        return
+    result = task.result
+    if result == "published":
+        state, label, text = "done", "Summary written", f"published as version {task.version}"
+    elif result == "invalid":
+        first = task.validation_errors[0] if task.validation_errors else "unknown problem"
+        state, label, text = "failed", "Summary written", f"rejected by the citation checks ({first}); retried later"
+    elif result == "error":
+        message = (task.error or {}).get("message") or "unknown error"
+        state, label, text = "failed", "Summary", f"failed: {message[:160]}"
+    elif result == "unchanged":
+        state, label, text = "skipped", "Summary up to date", "the sources have not changed"
+    elif result == "stale":
+        state, label, text = "skipped", "Summary written", "the story changed meanwhile; it is written again"
+    elif result in ("blocked", "awaiting_review"):
+        state, label, text = "skipped", "Summary on hold", "conflicting reports: waiting for a reviewer"
+    elif result == "deferred":
+        state, label, text = "skipped", "Summary postponed", _postponed(task.reason or "")
+    elif result == "claimed_elsewhere" or task.reason == LEASED_ELSEWHERE:
+        state, label, text = "skipped", "Summary", "being written by another process"
+    else:
+        state, label, text = "skipped", "Summary not needed", task.reason or result or "nothing to do"
+    if track.running("summary"):
+        track.end_step(state, text, key="summary")
+    else:
+        track.note("summary", label, state, text)
+
+
+def _postponed(reason: str) -> str:
+    """The page's wording for a deferral: a retry wait (with its end in UTC) or a used-up request cap."""
+    match = re.search(r"retry backoff until (\S+)", reason)
+    if match:
+        try:
+            until = datetime.fromisoformat(match.group(1)).astimezone(timezone.utc)
+            return f"waiting before the next try (until {until:%H:%M} UTC)"
+        except ValueError:
+            return "waiting before the next try"
+    if "budget" in reason or "cap of" in reason:
+        return "this run's limit on AI requests is used up; it stays queued"
+    return reason or "postponed"
+
+
 def _finish(task: SummaryTask, sctx: SummaryContext, *, status: str, next_retry_at: datetime | None = None,
             last_error: str | None = None, summary_id: str | None = None, fingerprint: str | None = None) -> None:
     if task.job is None or task.lease_owner is None:
@@ -442,4 +494,5 @@ def process_event(event_id: str, sctx: SummaryContext, *, trigger: str = "job", 
         flag_conflict_review(task, sctx)
     else:
         skip_summary(task, sctx)
+    report_activity(task, sctx)
     return task

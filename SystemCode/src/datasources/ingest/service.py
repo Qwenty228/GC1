@@ -122,6 +122,7 @@ class IngestionService:
         analyzer=None,
         summarizer=None,
         model_budget=None,
+        activity=None,
     ):
         self.settings = settings
         self.store = OutputStore(settings.root)
@@ -138,6 +139,8 @@ class IngestionService:
         # Optional run-wide cap on model HTTP attempts (`llm_budget.AttemptLedger`), used by
         # `datasources-ingest bounded-run`; the worker runs without one.
         self.model_budget = model_budget
+        # Optional `activity.ActivityTracker`: each record's steps, live on the page (the worker's only).
+        self.activity = activity
         # The latest graph result, (RecordOutcome | None, RecordError | None), for per-record reports.
         self.last_graph: tuple[RecordOutcome | None, RecordError | None] | None = None
         self.sec_client = sec_client
@@ -264,7 +267,7 @@ class IngestionService:
     # ------------------------------------------------------------------ graph
     def pipeline_context(self) -> PipelineContext:
         return PipelineContext(database=self.database, analyzer=self.analyzer, persist=True,
-                               summarizer=self.summarizer, model_budget=self.model_budget)
+                               summarizer=self.summarizer, model_budget=self.model_budget, activity=self.activity)
 
     def run_graph(self, envelope: SourceEnvelope | dict) -> tuple[RecordOutcome | None, RecordError | None]:
         """Prepare, compare and store one record through the compiled graph.
@@ -277,7 +280,14 @@ class IngestionService:
         later poll or delivery retries it.
         """
         self.last_graph = None
-        result = run_pipeline([envelope], self.pipeline_context())
+        try:
+            result = run_pipeline([envelope], self.pipeline_context())
+        except BaseException:
+            if self.activity is not None:
+                self.activity.finish_item("failed", "stopped by an unexpected error; retried later")
+            raise
+        if self.activity is not None:
+            self.activity.finish_item()  # the record's steps are over
         if result.errors:
             self.last_graph = (None, result.errors[0])
             return None, result.errors[0]

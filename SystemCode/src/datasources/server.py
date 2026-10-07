@@ -7,6 +7,8 @@ records, summaries and sources from PostgreSQL (`summary.read`,
 summarize on a page view. A reader's watchlist lives in their browser; the API
 only filters by the companies it is given. `/api/status` reads the
 ingestion worker's status file; it never starts or contacts a collector.
+`/api/activity` reads the activity files in which the worker and the startup
+summary catch-up report each record's steps (comparing, summarizing, ...).
 Review decisions are recorded with the `datasources-summary review` CLI, not over
 HTTP. The frontend can be replaced or removed without touching the backend modules.
 
@@ -290,6 +292,28 @@ def api_status(include_sample: bool = False, pool=Depends(optional_database)) ->
     except Exception as exc:
         LOGGER.warning("status endpoint database error: %s", exc)
         body["database"]["error"] = f"database unavailable: {type(exc).__name__}"
+    return JSONResponse(jsonable_encoder(body))
+
+
+@app.get("/api/activity")
+def api_activity() -> JSONResponse:
+    """What the ingestion worker and the startup summary catch-up are doing, step by step (looking for related
+    stories, comparing, saving, writing the summary), from the activity files those processes write
+    (`activity.py`). Read-only: it never starts, stops or contacts either process."""
+    from fastapi.encoders import jsonable_encoder
+
+    from .activity import load_activity
+    from .ingest.settings import load_settings
+
+    now = datetime.now(timezone.utc)
+    body: dict = {"server_time": now, "worker": None, "summary": None, "error": None}
+    try:
+        root = load_settings().root
+        body["worker"] = load_activity(root, "worker", now)
+        body["summary"] = load_activity(root, "summary", now)
+    except Exception as exc:
+        LOGGER.warning("activity endpoint could not read the activity files: %s", type(exc).__name__)
+        body["error"] = "processing activity unavailable"
     return JSONResponse(jsonable_encoder(body))
 
 

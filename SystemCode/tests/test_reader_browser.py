@@ -255,9 +255,66 @@ def test_feed_and_story_page_fit_a_phone_screen(site, page):
     feed(page, f"{site['base']}/#sample=1")
     open_follow_panel(page)
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-    heights = page.evaluate("[...document.querySelectorAll('.view-switch button, .follow-item, .story-link')]"
-                            ".map(b => b.getBoundingClientRect().height)")
+    assert page.evaluate("document.querySelector('.site-header .header-link').getAttribute('href')") == "/tools.html"
+    heights = page.evaluate("[...document.querySelectorAll('.view-switch button, .follow-item, .story-link, "
+                            ".header-link')].map(b => b.getBoundingClientRect().height)")
     assert heights and min(heights) >= 44  # comfortable touch targets
     page.goto(f"{site['base']}/events/{site['shared']}?sample=1")
     page.wait_for("document.body.dataset.storyState === 'ready'")
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    assert page.evaluate("document.querySelector('.site-header .header-link').getAttribute('href')") == "/tools.html"
+
+
+def test_processing_activity_is_live_on_the_tools_page_and_named_on_the_feed(site, page, tmp_path, monkeypatch):
+    from datasources.activity import ActivityTracker
+
+    monkeypatch.setenv("INGEST_OUTPUT_DIR", str(tmp_path))  # the server reads the activity files from here
+    worker = ActivityTracker(tmp_path, "worker", heartbeat=0)
+    catchup = ActivityTracker(tmp_path, "summary", heartbeat=0)
+    try:
+        worker.start_item("article", "NVIDIA example contract", symbols=["NVDA"])
+        worker.step("similar", "Looking for related stories")
+        worker.end_step("done", "1 possibly related story")
+        worker.step("compare", "Comparing with 1 story", model="example-model")
+        catchup.start_item("event", "Example catch-up story", event_id=site["msft"])
+        catchup.step("summary", "Writing the summary", model="example-model")
+        catchup.end_step("failed", "rejected by the citation checks (K1: quote too long); retried later")
+        catchup.finish_item()
+        catchup.close("finished", note="invalid 1; 1 of at most 10 model request(s)")
+
+        page.goto(f"{site['base']}/tools.html")
+        page.wait_for("document.querySelector('#activity-worker-current .step-running .spinner') !== null")
+        text = page.evaluate("document.getElementById('activity').innerText")
+        assert "NVIDIA example contract" in text and "1 possibly related story" in text
+        assert "Comparing with 1 story" in text and "so far" in text
+        assert "The startup summary catch-up finished" in text and "invalid 1" in text
+        recent = page.evaluate("document.getElementById('activity-summary-recent').innerHTML")
+        assert "rejected by the citation checks" in recent and f'href="/events/{site["msft"]}"' in recent
+
+        # The comparison ends and the article finishes: it moves to the list, which the reader can open, and an
+        # opened item stays open when the list is redrawn for the next article.
+        worker.step("save", "Saving and grouping")
+        worker.end_step("done", "saved; added to an existing story")
+        worker.finish_item()
+        page.wait_for("document.querySelectorAll('#activity-worker-recent details').length === 1 && "
+                      "document.getElementById('activity-worker-current').innerHTML === ''")
+        page.evaluate("document.querySelector('#activity-worker-recent summary').click()")
+        worker.start_item("filing", "EXAMPLE CORP 8-K", symbols=["MSFT"])
+        worker.finish_item()
+        page.wait_for("document.querySelectorAll('#activity-worker-recent details').length === 2")
+        assert page.evaluate("[...document.querySelectorAll('#activity-worker-recent details')].map(d => d.open)") == [
+            False, True]
+
+        # The news page names the step running right now and links to the activity.
+        worker.start_item("article", "Microsoft example update", symbols=["MSFT"])
+        worker.step("summary", "Writing the summary", model="example-model")
+        feed(page, f"{site['base']}/#sample=1")
+        page.wait_for("!document.getElementById('activity-line').hidden")
+        line = page.evaluate("document.getElementById('activity-line').innerText")
+        assert "Writing the summary (AI)" in line and "Microsoft example update" in line
+        assert page.evaluate("document.querySelector('#activity-line a').getAttribute('href')") == "/tools.html#activity"
+        worker.finish_item()
+        page.evaluate("document.getElementById('retry-now').click()")  # refresh now instead of in 20 s
+        page.wait_for("document.getElementById('activity-line').hidden")
+    finally:
+        worker.close("stopped")

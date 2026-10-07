@@ -49,6 +49,8 @@ h1, h2, h3, h4 { color: var(--navy); line-height: 1.3; }
 .header-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
               padding-top: 12px; padding-bottom: 12px; }
 .site-title { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.header-link { display: inline-flex; align-items: center; min-height: 38px; font-size: 14.5px; font-weight: 600; }
 .company { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
 .company select { font: inherit; font-weight: 600; color: var(--navy); min-height: 36px; padding: 4px 8px;
                   border: 1px solid var(--border-strong); border-radius: 8px; background: var(--card); }
@@ -293,6 +295,44 @@ p.site-title { font-weight: 700; color: var(--navy); line-height: 1.3; }
 .tl-undated-head { font-size: 15px; margin: 18px 0 2px; }
 .timeline.undated { border-left-style: dashed; }
 
+/* ------------------------------------------------------------------ processing activity (tools page, reader line) */
+.spinner { display: inline-block; width: 12px; height: 12px; margin: 0 5px 0 3px; vertical-align: -1px;
+           border: 2px solid var(--blue-soft); border-top-color: var(--blue); border-radius: 50%;
+           animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; border-color: var(--blue); border-right-color: var(--blue-soft); }
+}
+.activity-line { margin: -10px 0 16px; font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.activity-title { font-weight: 600; color: var(--text); }
+.activity-panels { display: grid; gap: 16px; margin-top: 10px; }
+.activity-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+                  padding: 16px 20px; overflow-wrap: anywhere; }
+.activity-panel h3 { margin: 0 0 2px; font-size: 17px; }
+.activity-panel > p { margin: 2px 0 8px; }
+.activity-now { border: 1px solid #b9cff0; border-left: 4px solid var(--blue); border-radius: 8px;
+                background: #f7faff; padding: 10px 14px; margin: 8px 0 4px; }
+.activity-now.stale { border-color: #f0d9ab; border-left-color: var(--warn-border); background: var(--warn-soft); }
+.activity-now .kicker { margin: 0; }
+.activity-item-head { margin: 2px 0 6px; font-size: 15px; }
+.steps { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.step { padding: 3px 0; }
+.step-mark { display: inline-block; width: 1.4em; text-align: center; font-weight: 700; }
+.step-done .step-mark { color: var(--ok); }
+.step-skipped .step-mark { color: var(--muted); }
+.step-failed .step-mark { color: var(--error); }
+.step-interrupted .step-mark, .step-stale .step-mark { color: var(--warn); }
+.step-running .step-label { font-weight: 600; }
+.step-result { color: var(--muted); }
+.step-failed .step-result { color: var(--error); }
+.step-time { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.step-time::before { content: "· "; }
+.activity-recent-head { margin: 14px 0 4px; font-size: 14px; color: var(--muted); font-weight: 600; }
+.activity-recent { list-style: none; margin: 0; padding: 0; }
+.activity-recent > li { border-top: 1px solid #edf0f4; }
+.activity-item > summary { cursor: pointer; padding: 7px 0; font-size: 14px; min-height: 32px; }
+.activity-item .steps { padding: 0 0 8px 22px; }
+
 @media (max-width: 640px) {
   .wrap { padding: 0 16px; }
   main.wrap { padding-top: 20px; }
@@ -306,6 +346,7 @@ p.site-title { font-weight: 700; color: var(--navy); line-height: 1.3; }
   .conflict-line { padding: 8px 10px; }
   .inline-toggle { min-height: 32px; }
   .follow-toggle { padding: 6px 10px; }
+  .header-link { min-height: 44px; }
   .feed-toolbar { align-items: stretch; }
   .view-switch { width: 100%; }
   .view-switch button { flex: 1; min-height: 44px; padding: 6px 8px; }
@@ -317,4 +358,7 @@ p.site-title { font-weight: 700; color: var(--navy); line-height: 1.3; }
   .timeline { padding-left: 14px; }
   .tl-item { padding-left: 10px; }
   .tl-item::before { left: -21px; }
+  .activity-panel { padding: 14px; }
+  .activity-item > summary { min-height: 44px; }
+  .activity-line { margin-top: -6px; }
 }

@@ -11,9 +11,12 @@
   <header class="site-header">
     <div class="wrap header-row">
       <h1 class="site-title">Stock News</h1>
-      <button type="button" class="button secondary follow-toggle" id="follow-toggle" aria-expanded="false"
-        aria-controls="follow-panel"><span class="icon" aria-hidden="true">☆</span><span
-        id="follow-toggle-label">Follow companies</span></button>
+      <div class="header-actions">
+        <a class="header-link" href="/tools.html">Data tools</a>
+        <button type="button" class="button secondary follow-toggle" id="follow-toggle" aria-expanded="false"
+          aria-controls="follow-panel"><span class="icon" aria-hidden="true">☆</span><span
+          id="follow-toggle-label">Follow companies</span></button>
+      </div>
     </div>
     <section id="follow-panel" class="follow-panel" aria-labelledby="follow-heading" hidden>
       <div class="wrap">
@@ -43,6 +46,7 @@
       </div>
       <p id="refresh-status" class="refresh-status">Loading…</p>
     </div>
+    <p id="activity-line" class="activity-line" hidden></p>
     <div class="feed-toolbar">
       <div class="view-switch" role="group" aria-label="Which news to show">
         <button type="button" data-view="all" aria-pressed="true">All companies</button>

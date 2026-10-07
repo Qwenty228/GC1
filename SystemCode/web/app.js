@@ -50,6 +50,7 @@
     followOpen: false,
     gen: 0, // bumped when filters change: responses for the old filters are dropped
     status: null,
+    activity: null, // /api/activity: what the worker / summary catch-up is processing right now
     events: { items: null, limit: PAGE, error: null },
     details: new Map(), // event_id -> {data} | {gone: true} | {data?, error}
     sourcesOpen: new Set(), // cards whose Sources panel is open
@@ -167,6 +168,15 @@
     if (gen === state.gen) state.status = status;
   }
 
+  // Never fails the refresh: the line about what is being processed is extra.
+  async function loadActivity(signal) {
+    try {
+      state.activity = await getJson("/api/activity", signal);
+    } catch (_) {
+      if (!signal.aborted) state.activity = null;
+    }
+  }
+
   // Never fails the refresh: without the list the page still shows the news, and says the list is missing.
   async function loadCoverage(signal) {
     if (state.coverage && Date.now() - state.coverageAt < COVERAGE_MS) return;
@@ -243,6 +253,7 @@
     const watchlistView = state.view === "watchlist";
     const jobs = [
       drawn(loadStatus(controller.signal, gen)),
+      drawn(loadActivity(controller.signal)),
       drawn((async () => {
         // The watchlist is checked against the company list before it is used as a filter.
         if (watchlistView) await loadCoverage(controller.signal);
@@ -451,6 +462,9 @@
     el.className = `refresh-status${cls}`;
     setHtml(el, html);
     el.title = poll.lastOk ? `Last updated at ${poll.lastOk.toLocaleTimeString()}` : "";
+    const working = poll.error ? "" : R.activityLine(state.activity);
+    $("activity-line").hidden = !working;
+    setHtml($("activity-line"), working);
     const note = poll.error ? "" : collectionNote();
     $("feed-note").hidden = !note;
     setHtml($("feed-note"), note ? `${R.icon("info")}${R.esc(note)}` : "");

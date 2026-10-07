@@ -345,6 +345,21 @@ def test_verified_evidence_keeps_the_label_and_maps_refs_to_ids():
     assert result.event_id == "example:t" and result.candidate_unit_ids == ["example-unit"]
 
 
+def test_brief_non_match_without_evidence_keeps_its_label():
+    """compare-2 asks for empty facts and evidence on different_event / uncertain; that must not downgrade them."""
+    request = _request()
+    for label in ("different_event", "uncertain"):
+        output = build_output(request, lambda s, e: {
+            "label": label, "incoming_evidence": [], "candidate_evidence": [],
+            "explanation": "Different acquisition target."})
+        (result,) = validate_output(request, output, model="m", usage={}).judgments
+        assert result.label == label and result.validation_notes == []
+        assert result.evidence == {"incoming": [], "candidate": []}
+    assert "different_event and uncertain: leave matching_facts, differences and both evidence lists empty" \
+        in comparison.SYSTEM_PROMPT
+    assert SimilaritySettings().max_candidate_events == 3
+
+
 def test_missing_pairs_are_reported_not_assumed():
     request = _request()
     output = ComparisonOutput.model_validate({"segments": []})

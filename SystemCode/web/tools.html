@@ -24,6 +24,28 @@
       <p id="processing-status" class="muted small"></p>
     </section>
 
+    <section class="tools-section" id="activity" aria-labelledby="activity-heading">
+      <h2 id="activity-heading">Processing activity</h2>
+      <p class="muted small">What happens to each new article and filing (looking for related stories, comparing them
+        with the AI, saving, writing the summary) and to each story the startup summary catch-up works on. It updates
+        live while this page is open; nothing here starts or changes any processing.</p>
+      <p id="activity-status" class="small muted">Loading…</p>
+      <div class="activity-panels">
+        <section class="activity-panel" aria-labelledby="activity-worker-heading">
+          <h3 id="activity-worker-heading">Ingestion worker</h3>
+          <p id="activity-worker-status" class="small"></p>
+          <div id="activity-worker-current"></div>
+          <div id="activity-worker-recent"></div>
+        </section>
+        <section class="activity-panel" aria-labelledby="activity-summary-heading">
+          <h3 id="activity-summary-heading">Startup summary catch-up</h3>
+          <p id="activity-summary-status" class="small"></p>
+          <div id="activity-summary-current"></div>
+          <div id="activity-summary-recent"></div>
+        </section>
+      </div>
+    </section>
+
     <section class="tools-section" aria-labelledby="articles-heading">
       <h2 id="articles-heading">Stored articles</h2>
       <p class="muted small">Every stored news article and SEC filing, newest first, as published by its source.

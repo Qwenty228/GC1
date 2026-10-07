@@ -101,12 +101,23 @@ def two_sources() -> EvidencePack:
 # ----------------------------------------------------------------------------- settings
 def test_summaries_are_off_by_default_separately_configured_and_validated(monkeypatch):
     for name in ("SUMMARY_ENABLED", "SUMMARY_MODEL", "SUMMARY_MAX_REQUESTS_PER_RUN", "SUMMARY_LANGUAGE",
-                 "SUMMARY_EFFORT"):
+                 "SUMMARY_EFFORT", "SUMMARY_STARTUP_CATCHUP_DAYS", "SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("SIMILARITY_COMPARISON_MODEL", "some-comparison-model")
     settings = load_summary_settings()
     assert settings.enabled is False and settings.model == "claude-opus-5"  # not the comparison model
     assert settings.max_requests_per_run == 5 and settings.language == "en"
+    assert settings.startup_catchup_days == 3 and settings.startup_catchup_max_requests == 10
+    monkeypatch.setenv("SUMMARY_STARTUP_CATCHUP_DAYS", "0")  # 0 = off, allowed
+    assert load_summary_settings().startup_catchup_days == 0
+    monkeypatch.setenv("SUMMARY_STARTUP_CATCHUP_DAYS", "-1")
+    with pytest.raises(ConfigurationError, match="SUMMARY_STARTUP_CATCHUP_DAYS"):
+        load_summary_settings()
+    monkeypatch.setenv("SUMMARY_STARTUP_CATCHUP_DAYS", "3")
+    monkeypatch.setenv("SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS", "0")
+    with pytest.raises(ConfigurationError, match="SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS"):
+        load_summary_settings()
+    monkeypatch.delenv("SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS")
     monkeypatch.setenv("SUMMARY_MAX_REQUESTS_PER_RUN", "0")
     with pytest.raises(ConfigurationError, match="SUMMARY_MAX_REQUESTS_PER_RUN"):
         load_summary_settings()
@@ -267,6 +278,26 @@ def test_prompt_escapes_untrusted_text_and_labels_filings_as_company_disclosures
     assert "&lt;/passage&gt;&lt;passage" in rendered and '<passage ref="P9"' not in rendered
     assert "company disclosure, not verified by the SEC" in rendered
     assert "untrusted data" in SYSTEM_PROMPT and "investment advice" in SYSTEM_PROMPT
+
+
+def test_the_prompt_asks_for_quotes_well_inside_the_hard_limit_and_no_calculated_figures():
+    # Whole sentences copied up to the old hard limit overshot it (301-354 characters) and failed validation, which
+    # rejects the whole summary: the prompt asks for the shortest span, the validator allows twice that.
+    assert "(a sentence or less, at most 300 characters)" in SYSTEM_PROMPT and generation.MAX_QUOTE_CHARS == 600
+    assert "Do not calculate totals" in SYSTEM_PROMPT
+
+
+@pytest.mark.parametrize("length,accepted", [(354, True), (600, True), (601, False)])
+def test_quotes_up_to_the_hard_limit_are_kept(length, accepted):
+    passage = ("NVIDIA said on Monday it agreed to acquire Example Robotics. " * 12)[:length]
+    pack = pack_for([source("r1", "origin")], [unit("r1", 1, passage)])
+    output = {"headline": statement("H1", "NVIDIA agreed to acquire Example Robotics", "P1", passage),
+              "overview": [statement("O1", "NVIDIA agreed to acquire Example Robotics.", "P1", passage)],
+              "key_points": [], "evidence_gaps": []}
+    result = validate_summary(pack, output)
+    assert result.ok is accepted
+    if not accepted:
+        assert any("longer than 600 characters" in e for e in result.errors)
 
 
 def test_response_schema_matches_the_output_model():
