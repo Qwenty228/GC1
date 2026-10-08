@@ -11,9 +11,22 @@
   <header class="site-header">
     <div class="wrap header-row">
       <h1 class="site-title">Stock News</h1>
-      <label class="company" for="company-select">Company
-        <select id="company-select"><option value="NVDA" selected>NVDA</option></select></label>
+      <div class="header-actions">
+        <a class="header-link" href="/tools.html">Data tools</a>
+        <button type="button" class="button secondary follow-toggle" id="follow-toggle" aria-expanded="false"
+          aria-controls="follow-panel"><span class="icon" aria-hidden="true">☆</span><span
+          id="follow-toggle-label">Follow companies</span></button>
+      </div>
     </div>
+    <section id="follow-panel" class="follow-panel" aria-labelledby="follow-heading" hidden>
+      <div class="wrap">
+        <h2 id="follow-heading">Follow companies</h2>
+        <p class="follow-note">Your watchlist is saved in this browser on this device only. It is not linked to an
+          account and does not sync to other browsers or devices. Following a company only changes what this page
+          shows; it does not change how news is collected.</p>
+        <div id="follow-body"></div>
+      </div>
+    </section>
   </header>
   <div id="sample-banner" class="banner sample" hidden>
     <div class="wrap"><strong>Sample mode.</strong> Fictional demo and test stories are included and marked
@@ -33,6 +46,17 @@
       </div>
       <p id="refresh-status" class="refresh-status">Loading…</p>
     </div>
+    <p id="activity-line" class="activity-line" hidden></p>
+    <div class="feed-toolbar">
+      <div class="view-switch" role="group" aria-label="Which news to show">
+        <button type="button" data-view="all" aria-pressed="true">All companies</button>
+        <button type="button" data-view="watchlist" aria-pressed="false">My watchlist <span class="count"
+          id="watchlist-count"></span></button>
+      </div>
+      <label class="company" id="company-filter" for="company-select">Company
+        <select id="company-select"><option value="" selected>All companies</option></select></label>
+    </div>
+    <p id="view-note" class="view-note" hidden></p>
     <p id="feed-note" class="feed-note" hidden></p>
     <div id="events-state"></div>
     <div id="events-list" class="card-list" aria-busy="false"></div>
@@ -46,6 +70,7 @@
 
   <noscript><p class="wrap">This page needs JavaScript to load the news.</p></noscript>
   <script src="render.js"></script>
+  <script src="watchlist.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

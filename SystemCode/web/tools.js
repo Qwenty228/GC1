@@ -1,6 +1,7 @@
-// Data tools page (tools.html, not the reader view): collector status and every stored article.
-// It loads when opened and when asked (no polling). Like the reader it only reads stored data, so
-// nothing here calls a model or starts a collector.
+// Data tools page (tools.html, not the reader view): collector status, processing activity and every
+// stored article. The status and articles load when opened and when asked; the processing activity
+// is polled every few seconds while the page is visible. Like the reader it only reads stored data
+// and status files, so nothing here calls a model or starts a collector.
 
 (function () {
   "use strict";
@@ -97,6 +98,67 @@
     loadArticles();
   }
 
+  // ------------------------------------------------------------------ processing activity (live)
+  // Each part is redrawn only when its HTML changed, so an opened item, focus and scrolling survive the polling.
+  const ACTIVITY_MS = 2000;
+  const ACTIVITY_RETRY_MS = 15000;
+  const activity = { timer: null, failures: 0, open: new Set(), drawn: new Map() };
+
+  function patch(id, html) {
+    if (activity.drawn.get(id) === html) return false;
+    activity.drawn.set(id, html);
+    $(id).innerHTML = html;
+    return true;
+  }
+
+  async function loadActivity() {
+    clearTimeout(activity.timer);
+    activity.timer = null;
+    try {
+      const data = await getJson("/api/activity");
+      const now = new Date(data.server_time);
+      for (const [key, name] of [["worker", "The ingestion worker"], ["summary", "The startup summary catch-up"]]) {
+        const proc = data[key];
+        const status = R.activityStatus(proc, name, now);
+        $(`activity-${key}-status`).className = `small ${status.cls}`;
+        patch(`activity-${key}-status`, status.html);
+        patch(`activity-${key}-current`, R.activityCurrent(proc, now));
+        if (patch(`activity-${key}-recent`, R.activityRecent(proc, now) ||
+          `<p class="muted small">Nothing processed yet.</p>`)) {
+          for (const item of $(`activity-${key}-recent`).querySelectorAll("details[data-key]")) {
+            item.open = activity.open.has(item.dataset.key); // opened items stay open across redraws
+          }
+        }
+      }
+      activity.failures = 0;
+      $("activity-status").className = "small muted";
+      $("activity-status").textContent = `Live · checked at ${new Date().toLocaleTimeString()}`;
+    } catch (error) {
+      activity.failures += 1;
+      $("activity-status").className = "small status-error";
+      $("activity-status").innerHTML = `${R.icon("error")}Could not load the processing activity:
+        ${R.esc(describe(error))}. Trying again shortly.`;
+    } finally {
+      if (!document.hidden) activity.timer = setTimeout(loadActivity, activity.failures ? ACTIVITY_RETRY_MS : ACTIVITY_MS);
+    }
+  }
+
+  // `toggle` does not bubble, so it is caught on the way down.
+  document.addEventListener("toggle", (event) => {
+    const item = event.target;
+    if (!(item instanceof HTMLDetailsElement) || !item.dataset.key) return;
+    if (item.open) activity.open.add(item.dataset.key);
+    else activity.open.delete(item.dataset.key);
+  }, true);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      clearTimeout(activity.timer); // no polling while nobody can see the page
+      activity.timer = null;
+    } else {
+      loadActivity();
+    }
+  });
+
   $("source-filter").addEventListener("change", reload);
   $("company-select").addEventListener("change", reload);
   $("sample-toggle").addEventListener("change", () => {
@@ -114,5 +176,6 @@
     }
   });
 
+  loadActivity();
   loadStatus().then(loadArticles);
 })();

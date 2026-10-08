@@ -8,7 +8,7 @@
 (function (root) {
   "use strict";
 
-  const ICONS = { warn: "⚠", info: "ℹ", ok: "✓", off: "■", error: "✕" };
+  const ICONS = { warn: "⚠", info: "ℹ", ok: "✓", off: "■", error: "✕", skip: "–" };
   const icon = (name) => `<span class="icon" aria-hidden="true">${ICONS[name]}</span>`;
 
   function esc(s) {
@@ -135,12 +135,30 @@
   }
 
   // ------------------------------------------------------------------ news card
+  // Ticker chips; companies the reader follows come first and are marked with a star and in words.
+  function tickerChips(e, ctx, max) {
+    const followed = new Set();
+    const names = {};
+    for (const c of e.companies || []) {
+      for (const s of c.symbols || []) {
+        names[s] = c.name;
+        if (ctx.followed && ctx.followed.has(c.cik)) followed.add(s);
+      }
+    }
+    const base = (e.symbols || []).length ? e.symbols : ctx.company ? [ctx.company] : [];
+    const symbols = [...base].sort((a, b) => Number(followed.has(b)) - Number(followed.has(a)));
+    const chip = (s) => followed.has(s)
+      ? `<span class="ticker followed" title="${esc(`You follow ${names[s] || s}`)}"><span aria-hidden="true">★</span>${
+          esc(s)}<span class="sr-only"> (you follow this company)</span></span>`
+      : `<span class="ticker"${names[s] ? ` title="${esc(names[s])}"` : ""}>${esc(s)}</span>`;
+    return symbols.slice(0, max).map(chip).join("") +
+      (symbols.length > max ? `<span class="ticker more">+${esc(symbols.length - max)}</span>` : "");
+  }
+
   function cardHead(e, ctx) {
     const id = esc(e.event_id);
     const headline = (e.summary && e.summary.headline) || e.title || "Untitled story";
-    const symbols = (e.symbols || []).length ? e.symbols : ctx.company ? [ctx.company] : [];
-    const tickers = symbols.slice(0, 3).map((s) => `<span class="ticker">${esc(s)}</span>`).join("") +
-      (symbols.length > 3 ? `<span class="ticker more">+${esc(symbols.length - 3)}</span>` : "");
+    const tickers = tickerChips(e, ctx, 3);
     const time = e.last_source_time
       ? `<span>${e.documents > 1 ? "Latest report" : "Published"} ${shortWhen(e.last_source_time)}</span>` : "";
     const sample = e.is_sample ? `<span class="badge sample">Sample</span>` : "";
@@ -357,7 +375,8 @@
   }
 
   // ------------------------------------------------------------------ feed states
-  function feedEmpty(status, company) {
+  // `label` names what the feed is narrowed to: a ticker, "the companies you follow", or nothing.
+  function feedEmpty(status, label) {
     const counts = status && status.counts;
     if (counts && counts.articles === 0) {
       return `<div class="state"><h3>No news yet</h3><p>Stories appear here as articles are collected.</p></div>`;
@@ -366,8 +385,226 @@
       return `<div class="state"><h3>No summaries yet</h3><p>Articles have been collected but not grouped into
         stories yet. They appear here once they are.</p></div>`;
     }
-    return `<div class="state"><h3>No news${company ? ` for ${esc(company)}` : ""} yet</h3><p>New stories appear
+    return `<div class="state"><h3>No news${label ? ` for ${esc(label)}` : ""} yet</h3><p>New stories appear
       here automatically.</p></div>`;
+  }
+
+  // "My watchlist" with nothing followed: say so and offer the two ways on.
+  function watchlistEmpty(ignored) {
+    return `<div class="state watchlist-empty"><h3>Your watchlist is empty</h3>
+      <p>Follow companies to see only their news here. Your watchlist is saved in this browser.</p>${ignored
+        ? `<p class="small">${esc(plural(ignored, "company"))} you followed earlier ${ignored === 1 ? "is" : "are"} no
+           longer offered here.</p>` : ""}
+      <p class="state-actions"><button type="button" class="button" data-open-follow>Choose companies to follow</button>
+        <button type="button" class="button secondary" data-view="all">Show all companies</button></p></div>`;
+  }
+
+  // ------------------------------------------------------------------ story page (event.html): timeline
+  // Every label below comes from a stored record (see summary/timeline.py); times say which stored time they are.
+  const TIME_BASIS = { published: "Published", source_updated: "Updated by the source", sec_accepted: "Filed",
+                       detected: "Detected", decided: "Decided", summary_published: "Summary published" };
+  const ENTRY_LABEL = {
+    first_report: "First report", additional_coverage: "Additional coverage", substantive_update: "Substantive update",
+    conflicting_report: "Conflicting report", conflict_detected: "Conflict detected", review_decision: "Review decision",
+    summary_published: "AI summary published", summary_revised: "AI summary revised",
+  };
+  const DECISION = {
+    confirmed_conflict: "The reviewer confirmed that the sources disagree. The review does not establish which source is correct.",
+    not_a_conflict: "The reviewer decided these reports do not conflict.",
+    different_events: "The reviewer decided this report describes a different story, so it was moved out of this one.",
+    insufficient_evidence: "More evidence is needed; the review stays open.",
+  };
+
+  // A date with no time of day ("2026-08-26"), shown as that calendar date whatever the reader's time zone.
+  function dateOnly(iso) {
+    const d = new Date(`${iso}T00:00:00Z`);
+    if (!iso || isNaN(d)) return esc(iso || "unknown date");
+    return `<time datetime="${esc(iso)}">${esc(d.toLocaleDateString(undefined, { year: "numeric", month: "short",
+      day: "numeric", timeZone: "UTC" }))}</time>`;
+  }
+
+  function entryWhen(e) {
+    if (e.time) return `<span class="tl-basis">${esc(TIME_BASIS[e.time_basis] || "Time")}</span> ${when(e.time)}`;
+    if (e.date) return `<span class="tl-basis">Filed</span> ${dateOnly(e.date)} <span class="muted">(date only; the
+      filing gives no time)</span>`;
+    return `<span class="tl-basis">${e.revised_report ? "No update time" : "No publication time"} given by the
+      source</span>`;
+  }
+
+  function reportLink(source) {
+    const title = source.title || "Original source";
+    return safeUrl(source.url) ? extLink(source.url, title) : `${esc(title)} <span class="muted">(no valid link)</span>`;
+  }
+
+  function reportEntry(e) {
+    const s = e.source;
+    const isSec = s.record_type === "sec_filing";
+    const name = isSec ? [s.name || "SEC filing", s.form].filter(Boolean).join(" · ") : publisher(s.name);
+    const aspects = (e.aspects || []).length ? listNames(e.aspects) : "";
+    let label = ENTRY_LABEL[e.kind];
+    let says;
+    if (e.kind === "first_report") {
+      says = "This story was started from this report." + (e.earlier_report_exists
+        ? " A report with an earlier time was collected afterwards and appears above." : "");
+    } else if (e.kind === "additional_coverage") {
+      if (e.revised_report) label = "Revised report";
+      says = e.revised_report ? "The source revised this report; grouping found no new information in it."
+        : e.match === "identical_text" ? "The same text as a report already in this story."
+          : "Repeats information already reported.";
+    } else if (e.kind === "substantive_update") {
+      says = `Adds new information or a later development${aspects ? `: ${aspects}` : ""}.`;
+    } else {
+      says = `Disagrees with this story's earlier sources${aspects ? ` about the ${aspects}` : ""}.`;
+    }
+    const lines = [`<p class="tl-title">${reportLink(s)}</p>`,
+      `<p class="meta">${esc(name)} ${isSec ? `<span class="badge type-sec">SEC filing</span>`
+        : `<span class="muted">via Alpaca</span>`}</p>`, `<p>${esc(says)}</p>`];
+    if ((e.sections || []).length) {
+      lines.push(`<p class="small">Part of the filing about this story: ${e.sections.map(esc).join("; ")}</p>`);
+    }
+    if (e.revised_report) {
+      lines.push(`<p class="small muted">Version ${esc(s.revision_number)} of ${esc(s.revisions_total)} stored for this
+        report${s.published_at ? `; first published ${when(s.published_at)}` : ""}.</p>`);
+    }
+    if (s.current_revision_in_event === false) {
+      lines.push(`<p class="small muted">A later version of this report is not part of this story.</p>`);
+    }
+    if ((e.quotes || []).length) {
+      lines.push(`<p class="small muted">Quoted from this report:</p>${quotes(e.quotes)}`);
+    }
+    if (e.kind === "conflicting_report") {
+      lines.push(`<p class="small">${esc(e.review ? reviewText(e.review) : "No review has been opened.")}</p>`);
+    }
+    if (!e.time && !e.date && s.retrieved_at) {
+      lines.push(`<p class="small muted">Collected by this site ${when(s.retrieved_at)} (not a publication time).</p>`);
+    }
+    return { label, body: lines.join("") };
+  }
+
+  function reviewText(review) {
+    if (review.review_status === "in_review") return "Under review: more evidence is needed.";
+    return DISPUTE_STATUS[review.display_status] || "Under review.";
+  }
+
+  function systemEntry(e) {
+    if (e.kind === "conflict_detected") {
+      const r = e.report || {};
+      const topic = e.review && (e.review.topic || []).length ? ` about the ${listNames(e.review.topic)}` : "";
+      return { label: ENTRY_LABEL[e.kind], body: `<p>Grouping found that ${reportLink(r)}${r.name
+        ? ` (${esc(publisher(r.name))})` : ""} disagrees with this story's earlier sources${esc(topic)}.</p>
+        <p class="small">${esc(e.review ? reviewText(e.review) : "No review has been opened for it.")}</p>` };
+    }
+    if (e.kind === "review_decision") {
+      const moved = e.moved_to_event_id && /^[0-9a-f-]{36}$/i.test(e.moved_to_event_id)
+        ? ` <a href="/events/${encodeURIComponent(e.moved_to_event_id)}">See the separate story</a>.` : "";
+      return { label: e.final ? "Review completed" : ENTRY_LABEL[e.kind],
+               body: `<p>${esc(DECISION[e.decision] || "A review decision was recorded.")}${moved}</p>` };
+    }
+    const reason = REASON[e.generation_reason] || String(e.generation_reason || "").replace(/_/g, " ");
+    return { label: ENTRY_LABEL[e.kind], body: `<p>Version ${esc(e.version)}${e.current ? " (current)" : ""}: “${
+      esc(e.headline)}”</p><p class="small muted">Reason: ${esc(reason)}. Written by AI from ${esc(plural(e.sources,
+      "source"))}.</p>` };
+  }
+
+  function timelineItem(e) {
+    const { label, body } = e.source ? reportEntry(e) : systemEntry(e);
+    const system = e.source ? "" : " tl-system";
+    return `<li class="tl-item tl-${esc(e.kind)}${system}" data-kind="${esc(e.kind)}">
+      <p class="tl-when">${entryWhen(e)}</p>
+      <p class="tl-label"><span class="tl-badge">${esc(label)}</span></p>${body}</li>`;
+  }
+
+  function timeline(t) {
+    const dated = t.entries.filter((e) => e.time || e.date);
+    const undated = t.entries.filter((e) => !e.time && !e.date);
+    let html = dated.length ? `<ol class="timeline">${dated.map(timelineItem).join("")}</ol>`
+      : `<p class="state-note">No dated reports are stored for this story.</p>`;
+    if (undated.length) {
+      html += `<h4 class="tl-undated-head">Without a stated time</h4><p class="muted small">The source gave no
+        publication or update time for these, so their place in the order above is unknown.</p>
+        <ol class="timeline undated">${undated.map(timelineItem).join("")}</ol>`;
+    }
+    const x = t.excluded || {};
+    const notes = [];
+    if (x.pending_relations > 0) {
+      notes.push(`${plural(x.pending_relations, "more report")} might be about this story, but grouping could not
+        confirm it, so ${x.pending_relations === 1 ? "it is" : "they are"} not listed.`);
+    }
+    if (x.detached_reports > 0) {
+      notes.push(`${plural(x.detached_reports, "report")} moved to a separate story after a review ${
+        x.detached_reports === 1 ? "is" : "are"} not listed as part of this story.`);
+    }
+    return html + notes.map((n) => `<p class="muted small">${esc(n)}</p>`).join("");
+  }
+
+  // ------------------------------------------------------------------ story page (event.html): the page
+  function companiesLine(companies, ctx) {
+    if (!(companies || []).length) return "";
+    const items = companies.map((c) => {
+      const followed = ctx.followed && ctx.followed.has(c.cik);
+      const symbol = (c.symbols || [])[0];
+      return `<li class="story-company${followed ? " followed" : ""}">${symbol ? `<span class="ticker${followed
+        ? " followed" : ""}">${followed ? `<span aria-hidden="true">★</span>` : ""}${esc(symbol)}</span>` : ""}${
+        esc(c.name || `CIK ${c.cik}`)}${followed ? `<span class="muted small"> · you follow this company</span>` : ""}</li>`;
+    }).join("");
+    return `<div class="story-companies"><span class="muted">About</span><ul>${items}</ul></div>`;
+  }
+
+  function storyStatus(d) {
+    const c = d.conflict || {};
+    const label = CONFLICT_LABEL[c.status];
+    const parts = [];
+    if (label) parts.push(`<p class="conflict-line">${icon("warn")}<strong>${label}</strong>${c.count > 1
+      ? ` <span>(${esc(c.count)} disputes)</span>` : ""}<button type="button" class="inline-toggle"
+      data-scroll-to="conflict-details">Compare the claims</button></p>`);
+    else if (c.status === "resolved") parts.push(`<p class="muted small">${icon("ok")}Earlier conflict reviews are
+      resolved (see the timeline).</p>`);
+    return parts.join("");
+  }
+
+  function storySummary(d, ctx) {
+    const s = d.summary;
+    if (!s) {
+      const text = NO_SUMMARY[d.summary_state] ||
+        (ctx.summariesEnabled === false ? "AI summaries are turned off." : "No summary yet.");
+      return `<p class="summary-pending">${esc(text)}</p>`;
+    }
+    const points = (s.key_points || []).map((p) => p.text).filter(Boolean);
+    const blocked = d.conflict && ["under_review", "correction_pending"].includes(d.conflict.status);
+    return `<p class="ai-label">AI summary · version ${esc(s.version)}</p>${paragraphs(s.overview)}
+      ${points.length ? `<ul class="summary-points">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
+      <p class="summary-note">Written by AI from the sources listed below, published ${when(s.published_at)}. Each
+        statement's supporting quote is under “Supporting quotes”. Check the originals before relying on it.</p>
+      ${d.update_pending && !blocked ? `<p class="summary-note">An updated summary is being prepared.</p>` : ""}`;
+  }
+
+  // The timeline section's content: `t` is the timeline response, {error} when it failed, or null while loading.
+  function timelineBlock(t) {
+    if (t && t.error) {
+      return `${loadError("the timeline", t.error, false)}<p><button type="button" class="button secondary"
+        data-retry-timeline>Try again</button></p>`;
+    }
+    return t ? timeline(t) : `<p class="muted" role="status">Loading the timeline…</p>`;
+  }
+
+  // The whole story: headline, companies, status, summary, conflict notices, timeline, sources and quotes.
+  function storyPage(d, t, ctx) {
+    const headline = (d.summary && d.summary.headline) || d.title || "Untitled story";
+    const sample = d.is_sample ? `<span class="badge sample">Sample</span>` : "";
+    const merged = d.superseded_by ? `<div class="notice info" role="note"><h4>${icon("info")}This story was merged
+      into another story</h4><p><a href="/events/${encodeURIComponent(d.superseded_by)}${d.is_sample ? "?sample=1"
+      : ""}">Open the story it was merged into</a>. What is shown here is kept for reference.</p></div>` : "";
+    return `${merged}<header class="story-head">${sample ? `<p class="kicker">${sample}</p>` : ""}
+        <h2 class="story-title" id="story-title" tabindex="-1">${esc(headline)}</h2>
+        ${companiesLine(d.companies, ctx)}${storyStatus(d)}</header>
+      <section class="story-section" aria-labelledby="summary-heading"><h3 id="summary-heading">Summary</h3>
+        ${storySummary(d, ctx)}<div id="conflict-details">${conflictDetails(d)}</div></section>
+      <section class="story-section" aria-labelledby="timeline-heading"><h3 id="timeline-heading">Timeline</h3>
+        <p class="muted small">Reports and updates in the order they happened, by each source's own publication or
+        update time. Summary and review times are when this site published or recorded them.</p>
+        <div id="timeline-slot" aria-live="polite">${timelineBlock(t)}</div></section>
+      <section class="story-section" aria-labelledby="sources-heading"><h3 id="sources-heading">Sources and
+        evidence</h3>${sourceList(d)}${evidence(d.summary)}${related(d)}${resolvedReviews(d)}</section>`;
   }
 
   function loadError(what, message, retrying = true) {
@@ -494,9 +731,116 @@
     return `Event grouping ${word(grouping)} · AI summaries ${word(summaries)}${running ? "" : " (as configured)"}`;
   }
 
-  const api = { esc, safeUrl, extLink, when, clock, ago, plural, icon, sentenceEnds, preview, cardHead,
-                conflictLine, summaryView, sourcesPanel, feedEmpty, loadError, articleCard, articlesEmpty,
-                collectorStatus, processingStatus };
+  // ------------------------------------------------------------------ processing activity (/api/activity)
+  // What the ingestion worker and the startup summary catch-up report about each article, filing or story, step
+  // by step. Durations are measured against the server's clock (`now`), not this browser's.
+  const STEP_MARK = { done: "✓", skipped: "–", failed: "✕", interrupted: "■" };
+  const STEP_WORD = { running: "In progress", done: "Done", skipped: "Skipped", failed: "Failed",
+                      interrupted: "Interrupted" };
+  const KIND_WORD = { article: "Article", filing: "SEC filing", event: "Story" };
+  const EVENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function duration(ms) {
+    if (!(ms >= 0)) return "";
+    if (ms < 1000) return "under 1 s";
+    const s = Math.round(ms / 1000);
+    return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+  }
+
+  function activityStep(step, now, stale) {
+    const running = step.state === "running";
+    const end = running ? now : new Date(step.finished_at);
+    const took = duration(end - new Date(step.started_at));
+    const state = running && stale ? "stale" : step.state;
+    const mark = state === "running" ? `<span class="spinner" aria-hidden="true"></span>`
+      : `<span class="step-mark" aria-hidden="true">${state === "stale" ? "?" : STEP_MARK[state] || "•"}</span>`;
+    const ai = step.model ? ` <span class="badge info" title="AI model: ${esc(step.model)}">AI</span>` : "";
+    const result = step.result ? ` <span class="step-result">· ${esc(step.result)}</span>`
+      : state === "running" ? ` <span class="step-result">…</span>` : "";
+    const time = state === "running" ? `${took} so far` : state === "stale" ? "no answer" : step.started_at === step.finished_at ? "" : took;
+    return `<li class="step step-${esc(state)}">${mark}<span class="sr-only">${esc(STEP_WORD[step.state] || step.state)}:
+      </span><span class="step-label">${esc(step.label)}</span>${ai}${result}${time ? ` <span class="step-time">${
+      esc(time)}</span>` : ""}</li>`;
+  }
+
+  function activityHead(item) {
+    const tickers = (item.symbols || []).slice(0, 4).map((s) => `<span class="ticker">${esc(s)}</span>`).join("");
+    const story = item.event_id && EVENT_ID.test(item.event_id)
+      ? ` <a class="small" href="/events/${encodeURIComponent(item.event_id)}">Open the story</a>` : "";
+    return `<span class="badge">${esc(KIND_WORD[item.kind] || "Item")}</span>${tickers ? ` <span class="tickers">${
+      tickers}</span>` : ""} <span class="activity-title">${esc(item.title)}</span>${story}`;
+  }
+
+  // The item being worked on now: its steps so far, the running one with a spinner and its time so far.
+  function activityCurrent(proc, now) {
+    const item = proc && proc.current;
+    if (!item) return "";
+    const stale = proc.state === "stale";
+    const steps = (item.steps || []).map((s) => activityStep(s, now, stale)).join("") ||
+      `<li class="step step-running"><span class="spinner" aria-hidden="true"></span>Starting…</li>`;
+    return `<div class="activity-now${stale ? " stale" : ""}"><p class="kicker">${stale ? "Last reported" : "Working on"}
+      · started ${shortWhen(item.started_at)}</p><p class="activity-item-head">${activityHead(item)}</p>
+      <ol class="steps">${steps}</ol>${stale ? `<p class="small status-warn">${icon("warn")}The process stopped answering
+      during this step. Unfinished work is picked up again later.</p>` : ""}</div>`;
+  }
+
+  // Finished items, newest first; each opens to show its steps. The page keeps which ones the reader opened.
+  function activityRecent(proc, now) {
+    const items = (proc && proc.recent) || [];
+    if (!items.length) return "";
+    const MARK = { done: ["status-ok", "ok", "Done"], skipped: ["status-off", "skip", "Nothing needed doing"],
+                   failed: ["status-error", "error", "Needs another try"], interrupted: ["status-warn", "warn", "Interrupted"] };
+    return `<h4 class="activity-recent-head">Recently finished</h4><ul class="activity-recent">${items.map((item) => {
+      const [cls, mark, word] = MARK[item.state] || MARK.done;
+      return `<li><details class="activity-item" data-key="${esc(item.id)}">
+        <summary><span class="${cls}">${icon(mark)}<span class="sr-only">${esc(word)}: </span></span>${
+        activityHead(item)}${item.result ? ` <span class="step-result">· ${
+        esc(item.result)}</span>` : ""} <span class="step-time">${shortWhen(item.finished_at)}</span></summary>
+        <ol class="steps">${(item.steps || []).map((s) => activityStep(s, now, false)).join("") ||
+        `<li class="step muted">No steps were reported.</li>`}</ol></details></li>`;
+    }).join("")}</ul>`;
+  }
+
+  // One line on the state of the process (and the catch-up's "event 2 of 5").
+  function activityStatus(proc, name, now) {
+    const state = proc ? proc.state : "not_running";
+    const p = proc && proc.state === "running" ? proc.progress : null;
+    const progress = p && p.total ? ` · ${esc(Math.min(p.done + (proc.current ? 1 : 0), p.total))} of ${
+      esc(plural(p.total, "story", "stories"))}` : "";
+    switch (state) {
+      case "running":
+        return { cls: "status-ok", html: proc.current ? `${icon("ok")}${esc(name)} is working${progress}`
+          : `${icon("ok")}${esc(name)} is running and waiting for new articles and filings` };
+      case "stale":
+        return { cls: "status-warn", html: `${icon("warn")}${esc(name)} has not answered since ${when(proc.updated_at)};
+          it may have stopped` };
+      case "finished":
+        return { cls: "status-ok", html: `${icon("ok")}${esc(name)} finished ${when(proc.updated_at)}${
+          proc.note ? `: ${esc(proc.note)}` : ""}` };
+      case "stopped":
+        return { cls: "status-off", html: `${icon("off")}${esc(name)} stopped ${when(proc.updated_at)}${
+          proc.note ? `: ${esc(proc.note)}` : ""}` };
+      default:
+        return { cls: "status-off", html: `${icon("off")}${esc(name)} has not run with this output folder yet` };
+    }
+  }
+
+  // The reader page's one line: the step running right now, or "" when nothing is being processed.
+  function activityLine(activity) {
+    const procs = activity ? [activity.worker, activity.summary] : [];
+    const busy = procs.find((p) => p && p.state === "running" && p.current);
+    if (!busy) return "";
+    const item = busy.current;
+    const step = [...(item.steps || [])].reverse().find((s) => s.state === "running");
+    const what = step ? `${step.label}${step.model ? " (AI)" : ""}` : "Processing";
+    return `<span class="spinner" aria-hidden="true"></span>${esc(what)}: <span class="activity-title">${
+      esc(item.title)}</span> <a href="/tools.html#activity">See activity</a>`;
+  }
+
+  const api = { esc, safeUrl, extLink, when, clock, ago, plural, icon, notice, sentenceEnds, preview, cardHead,
+                tickerChips, conflictLine, summaryView, sourcesPanel, feedEmpty, watchlistEmpty, loadError,
+                articleCard, articlesEmpty, collectorStatus, processingStatus, dateOnly, timeline, timelineBlock,
+                storyPage, activityCurrent, activityRecent, activityStatus, activityLine };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.StockNewsRender = api;
 })(this);

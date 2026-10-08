@@ -25,7 +25,7 @@ from datasources.similarity import store as similarity_store  # noqa: E402
 from datasources.similarity.lock import GraphWriterLock, WriterLockError  # noqa: E402
 from datasources.similarity.pipeline import PipelineContext  # noqa: E402
 from datasources.summary import cli as summary_cli  # noqa: E402
-from datasources.summary import review, store  # noqa: E402
+from datasources.summary import catchup, review, store  # noqa: E402
 from datasources.summary.generation import ScriptedSummaryBackend, SummaryError, extractive_output  # noqa: E402
 from datasources.summary.pipeline import (  # noqa: E402
     SummaryBudget,
@@ -609,6 +609,127 @@ def test_per_run_request_limit_defers_durably(db):
     assert sorted(s["result"] for s in filing.summaries) == ["deferred", "published"]
     deferred = next(s["event_id"] for s in filing.summaries if s["result"] == "deferred")
     assert job(db, deferred)["status"] == "pending" and job(db, deferred)["attempts"] == 0
+
+
+# ----------------------------------------------------------------------------- startup catch-up
+def distinct_article(n: int, at: datetime) -> dict:
+    tag = uuid.uuid4().hex[:8]
+    return article(f"Example Holdings program {n} update {tag}",
+                   f"Example Holdings said on Monday that program {n} reached milestone {tag} after a review by its "
+                   f"board.\n\nThe company expects the next step of program {n} within weeks.", at)
+
+
+def test_startup_catch_up_summarizes_recent_events_without_a_summary_and_nothing_else(db):
+    at = anchor()
+    grt = grouping_runtime(db, scripted(lambda s, e: "different_event"))
+    srt = summarizer(db)
+
+    def stored(n: int, when: datetime) -> str:  # stored and grouped; the summary step never ran
+        return event_of(db, ingest(db, grt, None, distinct_article(n, when)).revision_id)
+
+    old = stored(1, at - timedelta(days=10))  # outside the 3-day window
+    missing = stored(2, at - timedelta(days=1))
+    interrupted = stored(3, at - timedelta(hours=2))  # a process died mid-summary; its lease has expired
+    waiting = stored(4, at - timedelta(hours=3))  # retry backoff not over yet
+    gave_up = stored(5, at - timedelta(hours=4))  # attempts used up
+    covered = event_of(db, ingest(db, grt, srt, distinct_article(6, at - timedelta(hours=5))).revision_id)
+    ingest(db, None, None, distinct_article(7, at - timedelta(hours=6)))  # stored, never grouped
+    with db.transaction() as conn:
+        store.request_job(conn, interrupted, "en", "initial", now=at - timedelta(hours=1), reset_attempts=True)
+        store.claim_job(conn, interrupted, "en", owner="dead-process", lease_minutes=10, now=at - timedelta(hours=1))
+        store.request_job(conn, waiting, "en", "initial", now=at + timedelta(hours=1), reset_attempts=False)
+        store.request_job(conn, gave_up, "en", "initial", now=at, reset_attempts=True)
+        conn.execute("UPDATE event_summary_job SET status = 'failed', attempts = 4 WHERE event_id = %s", (gave_up,))
+    calls = len(srt.backend.calls)
+
+    out = catchup.run_catchup(db, srt, clock=lambda: at, is_sample=True)
+    assert [e["event_id"] for e in out["events"]] == [interrupted, waiting, missing]  # newest first
+    assert out["results"] == {"published": 2, "deferred": 1} and out["model_requests"] == 2
+    assert len(srt.backend.calls) == calls + 2 and out["left_queued"] == 0 and out["ungrouped_articles"] == 1
+    assert job(db, interrupted)["status"] == "completed" and job(db, missing)["status"] == "completed"
+    assert "backoff" in out["events"][1]["reason"] and job(db, waiting)["status"] == "pending"
+    assert job(db, old) is None and versions(db, old) == []
+    assert job(db, gave_up)["status"] == "failed" and versions(db, gave_up) == []
+    assert [v["version"] for v in versions(db, covered)] == [1]
+
+    again = catchup.run_catchup(db, srt, clock=lambda: at, is_sample=True)  # the next start
+    assert again["results"] == {"deferred": 1} and len(srt.backend.calls) == calls + 2
+
+
+def test_startup_catch_up_stops_at_its_request_cap_or_a_stop_request_and_keeps_the_rest_queued(db):
+    at = anchor()
+    grt = grouping_runtime(db, scripted(lambda s, e: "different_event"))
+    srt = summarizer(db, startup_catchup_max_requests=1)
+    events = [event_of(db, ingest(db, grt, None, distinct_article(n, at - timedelta(hours=n))).revision_id)
+              for n in (1, 2, 3)]
+
+    stopped = catchup.run_catchup(db, srt, clock=lambda: at, stop=lambda: True, is_sample=True)
+    assert stopped["events"] == [] and stopped["left_queued"] == 3 and srt.backend.calls == []
+    assert [job(db, e)["status"] for e in events] == ["pending"] * 3  # queued durably for the next start
+
+    capped = catchup.run_catchup(db, srt, clock=lambda: at, is_sample=True)
+    assert capped["results"] == {"published": 1} and capped["left_queued"] == 2 and len(srt.backend.calls) == 1
+    assert versions(db, events[0]) and not versions(db, events[1]) and not versions(db, events[2])
+
+
+# ----------------------------------------------------------------------------- live activity for the page
+def steps_of(item: dict) -> list[tuple[str, str, str | None]]:
+    return [(s["key"], s["state"], s["result"]) for s in item["steps"]]
+
+
+def test_each_record_reports_its_steps_from_search_to_summary(db, tmp_path):
+    from datasources.activity import ActivityTracker, load_activity
+
+    at = anchor()
+    track = ActivityTracker(tmp_path, "worker", heartbeat=0)
+    grt, srt = grouping_runtime(db, scripted(lambda s, e: "same_event_update")), summarizer(db)
+
+    def run(raw) -> None:  # what the worker's run_graph does around each record
+        result = run_pipeline([envelope(raw)], PipelineContext(database=db, analyzer=grt, summarizer=srt,
+                                                               activity=track))
+        assert not result.errors and result.outcomes[0].error is None
+        track.finish_item()
+
+    run(article(*ACQ, at))
+    run(article(*UPDATE, at + timedelta(days=1)))
+    newest, oldest = load_activity(tmp_path, "worker")["recent"]
+    assert oldest["kind"] == "article" and oldest["title"] == ACQ[0] and oldest["revision_id"]
+    assert steps_of(oldest) == [("similar", "done", "no related story found"),
+                                ("save", "done", "saved; started a new story"),
+                                ("summary", "done", "published as version 1")]
+    assert steps_of(newest) == [("similar", "done", "1 possibly related story"),
+                                ("compare", "done", "same story, new details"),
+                                ("save", "done", "saved; added to an existing story"),
+                                ("summary", "done", "published as version 2")]
+    compare = newest["steps"][1]
+    assert compare["label"] == "Comparing with 1 story" and compare["model"]
+    assert newest["steps"][3]["model"] == srt.model and oldest["steps"][1]["model"] is None
+    track.close("stopped")
+
+
+def test_the_catch_up_reports_each_event_and_a_rejected_summary(db, tmp_path):
+    from datasources.activity import ActivityTracker, load_activity
+
+    at = anchor()
+    grt = grouping_runtime(db, scripted(lambda s, e: "different_event"))
+    event_id = event_of(db, ingest(db, grt, None, distinct_article(1, at - timedelta(hours=1))).revision_id)
+
+    def fabricated(request):
+        output = extractive_output(request)
+        output["headline"]["citations"][0]["quote"] = "Example Holdings announced record profits of $99 billion"
+        return output
+
+    srt = summarizer(db, fabricated)
+    track = ActivityTracker(tmp_path, "summary", heartbeat=0)
+    catchup.run_catchup(db, srt, clock=lambda: at, is_sample=True, activity=track)
+    track.close("finished", note="invalid 1")
+    view = load_activity(tmp_path, "summary")
+    (item,) = view["recent"]
+    assert view["state"] == "finished" and view["note"] == "invalid 1"
+    assert view["progress"]["done"] == 1 and view["progress"]["total"] == 1
+    assert item["kind"] == "event" and item["event_id"] == event_id and item["state"] == "failed"
+    ((key, state, result),) = steps_of(item)
+    assert key == "summary" and state == "failed" and result.startswith("rejected by the citation checks (H1: quote")
 
 
 # ----------------------------------------------------------------------------- isolation and read API

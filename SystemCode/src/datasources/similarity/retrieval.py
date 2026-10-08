@@ -324,16 +324,19 @@ def retrieve(conn: Connection, work: RecordWork, *, profile_id: str, pipeline_ve
 
 
 def _plausible(candidate: CandidatePassage, settings: SimilaritySettings) -> bool:
-    """Either channel can make a candidate plausible on its own; neither gates the other.
+    """Whether a candidate may reach the LLM.
 
     Semantic: cosine similarity at or above SIMILARITY_MIN_SEMANTIC_SIMILARITY.
-    Lexical: among the top SIMILARITY_LEXICAL_PLAUSIBLE_RANK full-text hits for the
-    incoming unit (OR-query ``ts_rank_cd`` scores are high for most same-company news,
-    so a lexical *rank*, not a score, is the informative signal).
+    Lexical (off by default): among the top SIMILARITY_LEXICAL_PLAUSIBLE_RANK
+    full-text hits for the incoming unit. The rank is relative, so the OR-query
+    puts some same-company article in the top N almost every time; with the
+    default 0 the full-text channel only orders candidates (fusion) and never
+    sends one to the model on its own.
     """
     semantic_ok = (candidate.semantic_similarity is not None
                    and candidate.semantic_similarity >= settings.min_semantic_similarity)
-    lexical_ok = (candidate.lexical_rank is not None and candidate.lexical_rank <= settings.lexical_plausible_rank
+    lexical_ok = (settings.lexical_plausible_rank > 0 and candidate.lexical_rank is not None
+                  and candidate.lexical_rank <= settings.lexical_plausible_rank
                   and (candidate.lexical_score or 0.0) >= settings.min_lexical_score)
     return semantic_ok or lexical_ok
 

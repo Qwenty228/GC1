@@ -345,6 +345,21 @@ def test_verified_evidence_keeps_the_label_and_maps_refs_to_ids():
     assert result.event_id == "example:t" and result.candidate_unit_ids == ["example-unit"]
 
 
+def test_brief_non_match_without_evidence_keeps_its_label():
+    """compare-2 asks for empty facts and evidence on different_event / uncertain; that must not downgrade them."""
+    request = _request()
+    for label in ("different_event", "uncertain"):
+        output = build_output(request, lambda s, e: {
+            "label": label, "incoming_evidence": [], "candidate_evidence": [],
+            "explanation": "Different acquisition target."})
+        (result,) = validate_output(request, output, model="m", usage={}).judgments
+        assert result.label == label and result.validation_notes == []
+        assert result.evidence == {"incoming": [], "candidate": []}
+    assert "different_event and uncertain: leave matching_facts, differences and both evidence lists empty" \
+        in comparison.SYSTEM_PROMPT
+    assert SimilaritySettings().max_candidate_events == 3
+
+
 def test_missing_pairs_are_reported_not_assumed():
     request = _request()
     output = ComparisonOutput.model_validate({"segments": []})
@@ -456,6 +471,17 @@ def test_plausibility_is_semantic_or_top_lexical_rank_never_a_fixed_same_event_s
                                 settings)
     assert not retrieval._plausible(passage.__class__(**{**passage.__dict__, "lexical_rank": 7,
                                                         "lexical_score": 0.9}), settings)
+
+
+def test_full_text_rank_alone_never_reaches_the_llm_by_default():
+    settings = SimilaritySettings(min_semantic_similarity=0.78)
+    assert settings.lexical_plausible_rank == 0
+    passage = CandidatePassage("u", "r", "d", "t", "t", "news_article", None, None, None, [])
+    top_lexical = passage.__class__(**{**passage.__dict__, "lexical_rank": 1, "lexical_score": 0.9})
+    assert not retrieval._plausible(top_lexical, settings)
+    assert retrieval._plausible(passage.__class__(**{**top_lexical.__dict__, "semantic_similarity": 0.8}), settings)
+    with pytest.raises(ConfigurationError, match="SIMILARITY_LEXICAL_PLAUSIBLE_RANK"):
+        SimilaritySettings(lexical_plausible_rank=-1).validate()
 
 
 def test_anchor_prefers_source_time_and_falls_back_deterministically():

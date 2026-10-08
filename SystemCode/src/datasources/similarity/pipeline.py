@@ -135,6 +135,8 @@ class PipelineContext:
     # Run-wide cap on actual model HTTP attempts across comparison and summary calls
     # (`llm_budget.AttemptLedger`, checked before each model call); None = no run-wide cap.
     model_budget: Any = None
+    # Live progress for the page (`activity.ActivityTracker`, the worker's only); None = not reported.
+    activity: Any = None
 
     def clock(self) -> datetime:
         return self.now() if self.now else datetime.now(timezone.utc)

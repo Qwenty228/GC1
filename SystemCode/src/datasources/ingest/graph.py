@@ -152,7 +152,12 @@ def create_text_units(state: PipelineState, runtime: Runtime[PipelineContext]) -
     ctx = _ctx(runtime)
     cursor = state["cursor"]
     work = pipeline.start(state["items"][cursor], cursor)
+    track = ctx.activity
+    if track is not None:
+        _start_item(track, work)
     pipeline.create_text_units(work, ctx)
+    if track is not None and work.analysis_enabled and not work.replay and work.status is None and not work.errors:
+        track.step("similar", "Looking for related stories")
     return {"current": work}
 
 
@@ -170,7 +175,12 @@ def retrieve_candidates(state: PipelineState, runtime: Runtime[PipelineContext])
 
 def route_candidates(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     work = state["current"]
-    pipeline.route(work, _ctx(runtime))
+    ctx = _ctx(runtime)
+    pipeline.route(work, ctx)
+    if ctx.activity is not None:
+        compared = len({e for ids in work.pairs.values() for e in ids})
+        ctx.activity.end_step("failed" if work.errors and not compared else "done", _related_result(work, compared),
+                              key="similar")
     return {"current": work}
 
 
@@ -182,19 +192,34 @@ def propose_new_event(state: PipelineState, runtime: Runtime[PipelineContext]) -
 
 def compare_with_llm(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     work = state["current"]
-    pipeline.compare_with_llm(work, _ctx(runtime))
+    ctx = _ctx(runtime)
+    track = ctx.activity
+    if track is not None:
+        compared = len({e for ids in work.pairs.values() for e in ids})
+        track.step("compare", f"Comparing with {compared} {'story' if compared == 1 else 'stories'}",
+                   model=getattr(ctx.analyzer, "comparison_model", None))
+    pipeline.compare_with_llm(work, ctx)
+    if track is not None:
+        track.end_step(*_comparison_result(work), key="compare")
     return {"current": work}
 
 
 def resolve_event_memberships(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     work = state["current"]
-    pipeline.resolve(work, _ctx(runtime))
+    ctx = _ctx(runtime)
+    if ctx.activity is not None:
+        ctx.activity.step("save", "Saving and grouping" if work.analysis_enabled else "Saving")
+    pipeline.resolve(work, ctx)
     return {"current": work}
 
 
 def persist_result(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     work = state["current"]
-    outcome = pipeline.persist(work, _ctx(runtime))
+    ctx = _ctx(runtime)
+    outcome = pipeline.persist(work, ctx)
+    if ctx.activity is not None:
+        ctx.activity.update(revision_id=outcome.revision_id)
+        ctx.activity.end_step(*_saved_result(outcome), key="save")
     return {"outcomes": [*state.get("outcomes", []), outcome], "cursor": state["cursor"] + 1, "current": None,
             "summary_tasks": None, "summary_task": None}
 
@@ -239,23 +264,87 @@ def validate_event_summary(state: PipelineState, runtime: Runtime[PipelineContex
 
 def persist_event_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     task = state["summary_task"]
-    summaries.persist(task, _summary_ctx(runtime))
+    sctx = _summary_ctx(runtime)
+    summaries.persist(task, sctx)
+    summaries.report_activity(task, sctx)
     _report(state, task)
     return {"summary_task": None}
 
 
 def flag_conflict_review(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     task = state["summary_task"]
-    summaries.flag_conflict_review(task, _summary_ctx(runtime))
+    sctx = _summary_ctx(runtime)
+    summaries.flag_conflict_review(task, sctx)
+    summaries.report_activity(task, sctx)
     _report(state, task)
     return {"summary_task": None}
 
 
 def skip_summary(state: PipelineState, runtime: Runtime[PipelineContext]) -> dict:
     task = state["summary_task"]
-    summaries.skip_summary(task)
+    sctx = _summary_ctx(runtime)
+    summaries.skip_summary(task, sctx)
+    summaries.report_activity(task, sctx)
     _report(state, task)
     return {"summary_task": None}
+
+
+# ----------------------------------------------------------------------------- live activity (page)
+COMPARISON_WORDS = {"same_event_repeated": "same story, nothing new", "same_event_update": "same story, new details",
+                    "same_event_conflict": "same story, conflicting details", "different_event": "a different story",
+                    "uncertain": "unclear relation"}
+SEGMENT_WORDS = {"linked": "added to an existing story", "new_event": "started a new story",
+                 "pending_relation": "kept apart until the relation is clear", "kept_existing": "grouping unchanged",
+                 "unresolved": "grouping unfinished; retried later"}
+
+
+def _start_item(track, work: RecordWork) -> None:
+    subject = work.subject
+    filing = subject.record_type == "sec_filing"
+    title = subject.title or " ".join(p for p in (subject.issuer_name, subject.form or "filing") if p)
+    track.start_item("filing" if filing else "article", title, symbols=subject.symbols,
+                     revision_id=subject.revision_id)
+
+
+def _counted(words: list[str]) -> str:
+    counts: dict[str, int] = {}
+    for word in words:
+        counts[word] = counts.get(word, 0) + 1
+    return ", ".join(word if n == 1 else f"{word} ({n})" for word, n in counts.items())
+
+
+def _related_result(work: RecordWork, compared: int) -> str:
+    if compared:
+        return f"{compared} possibly related {'story' if compared == 1 else 'stories'}"
+    if any(j.method == "exact_content" for j in work.judgments):
+        return "identical text is already part of a story"
+    if work.route == "propose":
+        return "no related story found"
+    if work.errors:
+        return "the search failed; grouping is retried later"
+    return "nothing new to compare"
+
+
+def _comparison_result(work: RecordWork) -> tuple[str, str]:
+    labels = [COMPARISON_WORDS.get(j.label, j.label) for j in work.judgments if j.method == "llm"]
+    if not labels and work.comparison_errors:
+        return "failed", f"the AI comparison failed ({work.comparison_errors[0].get('kind')}); retried later"
+    result = _counted(labels) or "no answer"
+    if work.unevaluated:
+        result += f"; {len(work.unevaluated)} not compared, retried later"
+    return "done", result
+
+
+def _saved_result(outcome: RecordOutcome) -> tuple[str, str]:
+    if outcome.error:
+        return "failed", "could not be saved; it is retried later"
+    if outcome.persist_outcome == "skipped":
+        return "done", "already stored; nothing changed"
+    words = [SEGMENT_WORDS.get(s.get("status"), s.get("status")) for s in outcome.analysis.get("segments") or []]
+    saved = "saved a new version" if outcome.persist_outcome == "updated" else "saved"
+    if outcome.analysis_status == "disabled":
+        return "done", f"{saved} (grouping is off)"
+    return "done", f"{saved}; {_counted(words)}" if words else saved
 
 
 # ----------------------------------------------------------------------------- edges

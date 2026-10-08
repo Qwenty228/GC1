@@ -18,8 +18,10 @@ from conftest import (
     synthetic_submissions,
 )
 from datasources import sec
+from datasources.ingest.cli import live_collectors
 from datasources.ingest.htmltext import html_to_text, sec_archive_links
 from datasources.ingest.sec_client import RateLimiter, SecFetchError
+from datasources.ingest.settings import IngestSettings, load_settings
 
 BASE = "https://www.sec.gov/Archives/edgar/data/9999999/000999999926000001/synthetic-8k.htm"
 
@@ -129,6 +131,20 @@ def test_retry_after_is_honoured_then_succeeds():
     assert 7 in sleeps
     assert result.url == "https://data.sec.gov/submissions/CIK0001045810.json"
     assert session.calls[0]["headers"]["User-Agent"] == "TestSuite tests@example.test"
+
+
+def test_sec_http_timeout_is_configurable_and_used_by_live_client(monkeypatch):
+    monkeypatch.setenv("SEC_HTTP_TIMEOUT_SECONDS", "75")
+    settings = load_settings()
+    assert settings.sec_http_timeout_seconds == 75
+
+    client, _ = live_collectors(
+        IngestSettings(sec_user_agent="TestSuite tests@example.test", sec_http_timeout_seconds=75),
+        enable_sec=True,
+        enable_alpaca=False,
+    )
+    assert client is not None
+    assert client.timeout == 75
 
 
 def test_server_errors_use_bounded_retries():

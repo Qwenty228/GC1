@@ -2,7 +2,7 @@
 
     uv run datasources-dev                  # web app, API and the ingestion worker
     uv run datasources-dev --check          # configuration, database and port checks only; starts nothing
-    uv run datasources-dev --no-collectors  # web app and API only (a read-only view of stored data)
+    uv run datasources-dev --no-collectors  # web app and API only (no collectors)
     uv run datasources-dev --port 8001      # another port for the web app
 
 Services, each in its own child process, with every log line prefixed by the service name:
@@ -10,6 +10,9 @@ Services, each in its own child process, with every log line prefixed by the ser
     web     `datasources.server` (FastAPI + the static frontend) on 127.0.0.1, without reload.
             It only reads stored data and starts no collectors, so browser tabs and page
             refreshes never start ingestion, grouping or summaries.
+    summary one-shot startup catch-up (`summary.catchup`), with or without collectors, when
+            SUMMARY_ENABLED=true and SUMMARY_STARTUP_CATCHUP_DAYS > 0: recent events without a
+            current summary are summarized (bounded paid requests), then it exits.
     ingest  the existing worker (`datasources-ingest run`): Alpaca WebSocket with REST
             recovery at startup and after every reconnect, SEC EDGAR polling, and the
             inline grouping / summary steps that SIMILARITY_ENABLED / SUMMARY_ENABLED enable.
@@ -55,7 +58,8 @@ WEB_READY_SECONDS = 45.0
 # Preparation only (database, local embedding model, ledger): collection and backlog recovery start after it.
 # Normally well under a minute; past this the worker is stopped and its last reported stage is shown.
 INGEST_READY_SECONDS = 180.0
-STOP_SECONDS = {"web": 15.0, "ingest": 90.0}  # the worker may be finishing a record (and its model call)
+# The worker may be finishing a record (and its model calls); the catch-up a summary request.
+STOP_SECONDS = {"web": 15.0, "ingest": 90.0, "summary": 90.0}
 SECRET_VARIABLES = ("ALPACA_API_KEY", "ALPACA_SECRET_KEY", "ALPACA_BROKER_CLIENT_ID", "ALPACA_BROKER_CLIENT_SECRET",
                     "ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "PGPASSWORD")
 
@@ -114,6 +118,10 @@ def run_child(service: str, *, port: int, ingest_args: list[str]) -> int:
 
             serve(host=HOST, port=port)
             return 0
+        if service == "summary":
+            from .summary.catchup import main as catchup
+
+            return catchup()
         from .ingest.cli import main as ingest
 
         return ingest(["run", *ingest_args])
@@ -129,6 +137,8 @@ class Preflight:
     lines: list[tuple[str, str]] = field(default_factory=list)  # (label, text) for the startup summary
     paid_calls: bool = False
     output_root: Path | None = None
+    database_ok: bool = False  # reachable, with the grouping and summary tables
+    catchup: bool = False  # start the one-shot summary catch-up
 
 
 def port_in_use(host: str, port: int) -> bool:
@@ -188,7 +198,8 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
             from .alpaca import AlpacaConfigError, auth_from_env
 
             try:
-                parts.append(f"Alpaca news WebSocket + REST recovery ({auth_from_env().mode} credentials present)")
+                recovery = "" if settings.live_only else " + REST recovery"
+                parts.append(f"Alpaca news WebSocket{recovery} ({auth_from_env().mode} credentials present)")
             except AlpacaConfigError as error:
                 report.problems.append(str(error))
         if sec:
@@ -201,9 +212,7 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
             except (ConfigurationError, KeyError) as error:
                 report.problems.append(error.args[0] if isinstance(error, KeyError) else str(error))
         add(("Collectors", f"{'; '.join(parts) or 'none'} — symbols {', '.join(settings.symbols)}"))
-        add(("Recovery", f"at startup: Alpaca news since the last sync (at most {settings.alpaca_recovery_max_hours} h, "
-                         f"{settings.alpaca_backfill_max_pages} pages) and SEC filings from the last "
-                         f"{settings.sec_initial_lookback_days} days not yet stored"))
+        add(("Recovery", recovery_summary(settings)))
         try:
             with ProcessLock(settings.root):
                 pass
@@ -220,15 +229,51 @@ def preflight(*, port: int, collectors: bool, sec: bool = True, alpaca: bool = T
             report.problems.append(f"configuration: {error}")
     else:
         add(("Collectors", "not started (--no-collectors): the page shows stored data only"))
+        try:
+            from .summary.settings import load_summary_settings
 
-    _check_database(report, collectors=collectors, similarity=similarity, summary=summary)
+            summary = load_summary_settings()
+        except ConfigurationError as error:  # only the catch-up needs these; the page still works
+            report.warnings.append(f"summary catch-up off: configuration: {error}")
+
+    _check_database(report, collectors=collectors, similarity=similarity, summary=summary,
+                    symbols=settings.symbols if collectors else ())
     if collectors and similarity is not None and summary is not None:
-        _describe_processing(report, similarity, summary)
+        _describe_processing(report, similarity, summary, live_only=settings.live_only)
+    if summary is not None:
+        _describe_catchup(report, summary)
     return report
 
 
-def _check_database(report: Preflight, *, collectors: bool, similarity, summary) -> None:
+def recovery_summary(settings) -> str:
+    """The startup summary's Recovery line. Live-only mode also lists the saved recovery state it leaves untouched,
+    read from the ledger file (read-only; nothing is created)."""
+    if not settings.live_only:
+        return (f"at startup: Alpaca news since the last sync (at most {settings.alpaca_recovery_max_hours} h, "
+                f"{settings.alpaca_backfill_max_pages} pages) and SEC filings from the last "
+                f"{settings.sec_initial_lookback_days} days not yet stored")
+    saved: dict = {}
+    path = settings.root / "state" / "ledger.json"
+    try:
+        saved = json.loads(path.read_text(encoding="utf-8")).get("cursors") or {}
+    except FileNotFoundError:
+        pass
+    except (OSError, ValueError):
+        saved = {"unreadable": True}
+    floors = sorted(k.split(":", 1)[1] for k in saved if k.startswith("sec_scope_floor:"))
+    cursor = saved.get("alpaca_synced_through")
+    kept = ("unreadable ledger, left as it is" if saved.get("unreadable") else
+            f"Alpaca cursor {cursor or 'none'}, SEC scope floor(s) for {len(floors)} compan"
+            f"{'y' if len(floors) == 1 else 'ies'}")
+    return ("OFF (INGEST_LIVE_ONLY=true): each startup takes a fresh UTC cutoff and only news and SEC filings "
+            "published after it are collected; no SEC catch-up, no Alpaca REST backfill at startup or after a "
+            "reconnect, and after a reconnect only news published from then on. Saved recovery state is kept "
+            f"untouched for later ({kept})")
+
+
+def _check_database(report: Preflight, *, collectors: bool, similarity, summary, symbols=()) -> None:
     from .db import Database, DatabaseError, db_enabled, load_db_settings
+    from .db.companies import unregistered_symbols
     from .db.migrate import BASELINE, applied_migrations, migration_files
     from .ingest.settings import ConfigurationError
 
@@ -257,12 +302,22 @@ def _check_database(report: Preflight, *, collectors: bool, similarity, summary)
             from .summary.store import missing_schema as summary_missing
 
             missing = []
+            unlinked: list[str] = []
             if not conn.execute("SELECT to_regclass('public.document') IS NOT NULL AS ok").fetchone()["ok"]:
                 missing.append("the base stock_news tables (document, document_revision, ...)")
-            elif similarity is None or similarity.enabled or summary is None or summary.enabled:
-                missing += grouping_missing(conn)
-                if summary is None or summary.enabled:
-                    missing += summary_missing(conn)
+            else:
+                unlinked = unregistered_symbols(conn, symbols)
+                if similarity is None or similarity.enabled or summary is None or summary.enabled:
+                    missing += grouping_missing(conn)
+                    if summary is None or summary.enabled:
+                        missing += summary_missing(conn)
+        if unlinked:
+            report.warnings.append(
+                f"INGEST_SYMBOLS includes {', '.join(unlinked)}, which {'has' if len(unlinked) == 1 else 'have'} no "
+                "company_symbol row in this database: those articles would be stored without a company link (not "
+                "shown under that company or in watchlists). `uv run datasources-db register-companies --dry-run` "
+                "shows what registration would add")
+        report.database_ok = not missing
         if missing:
             # Without collectors only the page is affected (its Events tab needs the event tables).
             (report.problems if collectors else report.warnings).append(
@@ -287,7 +342,7 @@ def _check_database(report: Preflight, *, collectors: bool, similarity, summary)
         database.close()
 
 
-def _describe_processing(report: Preflight, similarity, summary) -> None:
+def _describe_processing(report: Preflight, similarity, summary, live_only: bool = False) -> None:
     from .similarity.comparison import anthropic_credentials_available
 
     add = report.lines.append
@@ -317,14 +372,47 @@ def _describe_processing(report: Preflight, similarity, summary) -> None:
         add(("Event summaries", "OFF (SUMMARY_ENABLED=false): no summaries are generated; stored ones stay visible"))
     report.paid_calls = bool(paid)
     if paid:
-        add(("Paid model calls", "POSSIBLE. Each newly ingested article or filing (including ones recovered at "
-                                 f"startup) can send {' and '.join(paid)} to the Anthropic API. Page views and API "
-                                 "polling never call a model"))
+        which = ("published after the startup cutoff (live-only: nothing is recovered)" if live_only
+                 else "(including ones recovered at startup)")
+        add(("Paid model calls", f"POSSIBLE. Each newly ingested article or filing {which} can send "
+                                 f"{' and '.join(paid)} to the Anthropic API. Page views and API polling never call "
+                                 "a model"))
     else:
         add(("Paid model calls", "none with these settings (no enabled step uses a paid backend)"))
-    add(("Not scheduled", "deferred work is not retried automatically: pending groupings need "
-                          "`uv run datasources-similarity retry` (with the worker stopped) and queued/failed "
-                          "summaries need `uv run datasources-summary retry --confirm-paid-calls`"))
+    summaries = ("failed summaries, and queued ones older than the startup catch-up window, need "
+                 if summary.enabled and summary.startup_catchup_days > 0 else "queued/failed summaries need ")
+    add(("Not scheduled", "deferred work is not retried automatically while running: pending groupings need "
+                          f"`uv run datasources-similarity retry` (with the worker stopped) and {summaries}"
+                          "`uv run datasources-summary retry --confirm-paid-calls`"))
+
+
+def _describe_catchup(report: Preflight, summary) -> None:
+    """The one-shot startup catch-up, with or without collectors. Without its prerequisites it stays off and the
+    rest of the launch goes on (with collectors, those prerequisites are already problems above)."""
+    from .similarity.comparison import anthropic_credentials_available
+
+    label = "Summary catch-up"
+    if not summary.enabled:
+        report.lines.append((label, "OFF (SUMMARY_ENABLED=false)"))
+        return
+    if summary.startup_catchup_days <= 0:
+        report.lines.append((label, "OFF (SUMMARY_STARTUP_CATCHUP_DAYS=0)"))
+        return
+    if not report.database_ok:
+        report.lines.append((label, "OFF: it needs PostgreSQL with the summary tables (see above)"))
+        return
+    if summary.backend == "anthropic" and not anthropic_credentials_available():
+        report.lines.append((label, "OFF: SUMMARY_BACKEND=anthropic needs ANTHROPIC_API_KEY"))
+        report.warnings.append("summary catch-up off: ANTHROPIC_API_KEY is not set")
+        return
+    report.catchup = True
+    paid = summary.backend == "anthropic"
+    report.paid_calls = report.paid_calls or paid
+    report.lines.append((label, (
+        f"ON, once per start: events with an article from the last {summary.startup_catchup_days:g} day(s) and no "
+        "current summary (or queued / interrupted summary work) are summarized, newest first, with at most "
+        f"{summary.startup_catchup_max_requests} {'PAID ' if paid else ''}request(s) to {summary.model} (each "
+        f"retried up to {summary.llm_max_retries} time(s)); then it exits. Log: logs/summary_catchup.log")))
 
 
 # ============================================================================ supervision
@@ -338,6 +426,7 @@ class ServiceSpec:
     waiting_hint: str = ""
     ready_message: str = ""  # said once the service is ready (e.g. the web address while the worker still starts)
     progress: Callable[["Service"], str | None] | None = None  # what a starting service reports it is doing
+    oneshot: bool = False  # a task that exits by itself when done: not waited for, and its exit stops nothing
 
 
 class Service:
@@ -349,6 +438,7 @@ class Service:
         self.failure = ""  # why startup failed, when it did
         self.recent: collections.deque[str] = collections.deque(maxlen=15)
         self.pump: threading.Thread | None = None
+        self.finished = False  # a one-shot task's exit was reported
 
     @property
     def name(self) -> str:
@@ -402,7 +492,19 @@ class Launcher:
                                         stderr=subprocess.STDOUT, env=env, cwd=self.cwd, **kwargs)
         service.pump = threading.Thread(target=self._pump, args=(service,), name=f"log:{service.name}", daemon=True)
         service.pump.start()
+        service.ready = service.spec.oneshot  # nothing to wait for: it reports its own progress
         self.say(f"started {service.name}")
+
+    def report_finished(self, service: Service) -> None:
+        """Say once that a one-shot task exited (after relaying its last lines). Its exit code stops nothing."""
+        if service.finished or service.running():
+            return
+        service.finished = True
+        if service.pump is not None:
+            service.pump.join(timeout=2)
+        code = service.proc.returncode if service.proc else None
+        self.say(f"{service.name} finished" + ("" if code == 0 else f" with exit code {code}; see its lines above. "
+                                                "The other services keep running"))
 
     def check_ready(self, service: Service) -> bool:
         if not service.ready:
@@ -454,16 +556,26 @@ class Launcher:
             pass
 
     def stop_all(self) -> None:
-        """Stop in reverse start order (collectors before the web server), each within its timeout."""
+        """Stop in reverse start order (collectors before the web server), each within its timeout. One-shot
+        tasks are asked first, so they finish their current step while the others stop."""
         self.stopping = True
+        deadlines: dict[str, float] = {}
+        for service in self.services:
+            if service.spec.oneshot and service.running():
+                self.say(f"stopping {service.name} (letting its current step finish)")
+                self.request_stop(service)
+                deadlines[service.name] = time.monotonic() + service.spec.stop_timeout
         for service in reversed(self.services):
             if not service.running():
                 continue
-            self.say(f"stopping {service.name}" + (" (finishing the record being written)"
-                                                   if service.name == "ingest" else ""))
-            self.request_stop(service)
+            if service.name not in deadlines:
+                self.say(f"stopping {service.name}" + (" (finishing the record being written)"
+                                                       if service.name == "ingest" else ""))
+                self.request_stop(service)
+            timeout = (max(deadlines[service.name] - time.monotonic(), 0.1) if service.name in deadlines
+                       else service.spec.stop_timeout)
             try:
-                service.proc.wait(timeout=service.spec.stop_timeout)
+                service.proc.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 self.say(f"{service.name} did not stop within {service.spec.stop_timeout:.0f} s; terminating it "
                          "(queued work stays unmarked and is retried on the next start)")
@@ -477,6 +589,8 @@ class Launcher:
                         other.proc.wait()
                 break
         for service in self.services:
+            if service.finished:  # a one-shot task that ended earlier was reported then
+                continue
             if service.pump is not None:
                 service.pump.join(timeout=2)
             if service.proc is not None and service.proc.returncode is not None:
@@ -501,6 +615,8 @@ class Launcher:
         try:
             for service in self.services:
                 self.start(service)
+                if service.spec.oneshot:
+                    continue
                 if not self.wait_ready(service):
                     return self._failed(service, "during startup")
                 if service.spec.ready_message:
@@ -509,6 +625,9 @@ class Launcher:
                 self.say(self.ready_banner)
             while True:
                 for service in self.services:
+                    if service.spec.oneshot:
+                        self.report_finished(service)
+                        continue
                     if not service.running():
                         return self._failed(service, "unexpectedly")
                     self.check_ready(service)  # announces a service that was slow to start
@@ -590,13 +709,17 @@ class _HeartbeatWatch:
             self.warned = False
 
 
-def build_services(*, port: int, collectors: bool, root: Path, ingest_args: list[str]) -> list[ServiceSpec]:
+def build_services(*, port: int, collectors: bool, root: Path, ingest_args: list[str],
+                   catchup: bool = False) -> list[ServiceSpec]:
     child = [sys.executable, "-m", "datasources.launcher"]
     url = f"http://{HOST}:{port}"
     specs = [ServiceSpec("web", [*child, "--service", "web", "--port", str(port)], _web_ready(port),
                          WEB_READY_SECONDS, STOP_SECONDS["web"], "starting the web server",
                          ready_message=f"Web app ready: {url} shows the stored data now; the ingestion worker is "
                                        "still starting (the page shows its progress)" if collectors else "")]
+    if catchup:  # right after the page is up; the worker (if any) starts meanwhile, leases keep them apart
+        specs.append(ServiceSpec("summary", [*child, "--service", "summary"], lambda _service: True, 0,
+                                 STOP_SECONDS["summary"], oneshot=True))
     if collectors:
         specs.append(ServiceSpec("ingest", [*child, "--service", "ingest", *ingest_args], _ingest_ready(root),
                                  INGEST_READY_SECONDS, STOP_SECONDS["ingest"],
@@ -625,7 +748,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-sec", action="store_true", help="collect Alpaca news only")
     parser.add_argument("--no-alpaca", action="store_true", help="poll SEC EDGAR only")
     parser.add_argument("--check", action="store_true", help="run the startup checks, print the summary, start nothing")
-    parser.add_argument("--service", choices=["web", "ingest"], help=argparse.SUPPRESS)  # child process mode
+    parser.add_argument("--service", choices=["web", "ingest", "summary"], help=argparse.SUPPRESS)  # child mode
     args = parser.parse_args(argv)
     ingest_args = [flag for flag, on in (("--no-sec", args.no_sec), ("--no-alpaca", args.no_alpaca)) if on]
     if args.service:
@@ -668,7 +791,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         info_path.write_text(json.dumps({"pid": os.getpid(), "url": f"http://{HOST}:{args.port}",
                                          "started_at": _now().isoformat()}), encoding="utf-8")
-        specs = build_services(port=args.port, collectors=collectors, root=root, ingest_args=ingest_args)
+        specs = build_services(port=args.port, collectors=collectors, root=root, ingest_args=ingest_args,
+                               catchup=report.catchup)
         launcher = Launcher(specs, cwd=config.ROOT,
                             ready_banner=f"Ready: open http://{HOST}:{args.port} in a browser. Ctrl+C stops everything.")
         return launcher.run(monitor=_HeartbeatWatch(root) if collectors else None)

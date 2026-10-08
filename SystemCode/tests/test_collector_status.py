@@ -256,17 +256,19 @@ def test_the_page_references_its_assets_by_content_version(client_without_databa
     from datasources import config
 
     client, _ = client_without_database
-    pages = {"/": {"styles.css", "render.js", "app.js"}, "/index.html": {"styles.css", "render.js", "app.js"},
-             "/tools.html": {"styles.css", "render.js", "tools.js", "explorer.js"}}
+    feed = {"styles.css", "render.js", "watchlist.js", "app.js"}
+    pages = {"/": feed, "/index.html": feed, "/tools.html": {"styles.css", "render.js", "tools.js", "explorer.js"},
+             # The story page lives at /events/<id>, so its assets are absolute paths.
+             "/events/00000000-0000-4000-8000-000000000000": {"/styles.css", "/render.js", "/watchlist.js", "/event.js"}}
     for path, assets in pages.items():
         response = client.get(path)
         assert response.status_code == 200 and response.headers["cache-control"] == "no-cache"
-        refs = dict(re.findall(r'(?:src|href)="([\w.-]+\.(?:js|css))\?v=([0-9a-f]{12})"', response.text))
+        refs = dict(re.findall(r'(?:src|href)="(/?[\w.-]+\.(?:js|css))\?v=([0-9a-f]{12})"', response.text))
         assert set(refs) == assets
         for name, version in refs.items():
-            assert hashlib.sha256((config.WEB_DIR / name).read_bytes()).hexdigest()[:12] == version
-        assert 'src="render.js"' not in response.text
-    asset = client.get(f"/render.js?v={refs['render.js']}")
+            assert hashlib.sha256((config.WEB_DIR / name.lstrip("/")).read_bytes()).hexdigest()[:12] == version
+        assert 'src="render.js"' not in response.text and 'src="/render.js"' not in response.text
+    asset = client.get(f"/render.js?v={refs['/render.js']}")
     assert asset.status_code == 200 and asset.headers["cache-control"] == "no-cache"
 
 

@@ -15,7 +15,7 @@ from dataclasses import dataclass, replace
 from ..ingest.settings import ConfigurationError, _env, _env_bool, _env_float, _env_int
 from ..similarity.settings import EFFORT_LEVELS
 
-PROMPT_VERSION = "summary-1"
+PROMPT_VERSION = "summary-2"  # summary-2: shortest quotes (a sentence or less, 300 characters), no calculated figures
 DEFAULT_SUMMARY_MODEL = "claude-opus-5"
 SUMMARY_BACKENDS = ("anthropic",)
 LANGUAGES = ("en",)  # storage is per language; only English is generated for now
@@ -50,6 +50,12 @@ class SummarySettings:
     retry_base_minutes: float = 10.0
     lease_minutes: float = 10.0
 
+    # `datasources-dev` startup catch-up (with or without collectors): events with an article from the last
+    # this-many days that have no current summary are summarized once, at most max_requests requests per start.
+    # 0 days turns it off.
+    startup_catchup_days: float = 3.0
+    startup_catchup_max_requests: int = 10
+
     def with_overrides(self, **changes) -> "SummarySettings":
         return replace(self, **changes)
 
@@ -74,10 +80,13 @@ class SummarySettings:
             "SUMMARY_MAX_ATTEMPTS": self.max_attempts,
             "SUMMARY_RETRY_BASE_MINUTES": self.retry_base_minutes,
             "SUMMARY_LEASE_MINUTES": self.lease_minutes,
+            "SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS": self.startup_catchup_max_requests,
         }
         problems += [f"{name} must be greater than 0" for name, value in positive.items() if value <= 0]
         if self.llm_max_retries < 0:
             problems.append("SUMMARY_LLM_MAX_RETRIES must be >= 0")
+        if self.startup_catchup_days < 0:
+            problems.append("SUMMARY_STARTUP_CATCHUP_DAYS must be >= 0 (0 turns the startup catch-up off)")
         if self.max_input_chars < 2000:
             problems.append("SUMMARY_MAX_INPUT_CHARS must be at least 2000")
         if problems:
@@ -109,4 +118,6 @@ def load_summary_settings() -> SummarySettings:
         max_attempts=_env_int("SUMMARY_MAX_ATTEMPTS", 4),
         retry_base_minutes=_env_float("SUMMARY_RETRY_BASE_MINUTES", 10.0),
         lease_minutes=_env_float("SUMMARY_LEASE_MINUTES", 10.0),
+        startup_catchup_days=_env_float("SUMMARY_STARTUP_CATCHUP_DAYS", 3.0),
+        startup_catchup_max_requests=_env_int("SUMMARY_STARTUP_CATCHUP_MAX_REQUESTS", 10),
     ).validate()
