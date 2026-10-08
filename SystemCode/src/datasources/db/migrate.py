@@ -1,4 +1,4 @@
-"""Apply the SQL migrations in `migrations/`, once each, in filename order.
+"""Apply the SQL migrations in `SystemCode/migrate/`, once each, in filename order.
 
 ``000_base_schema.sql`` is the baseline: the base tables every later migration
 builds on. How it is handled depends on the database:
@@ -37,7 +37,8 @@ from . import schema
 from .connection import Database
 
 LOGGER = logging.getLogger(__name__)
-MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+# SystemCode/migrate/, next to compose.yaml: src/datasources/db/migrate.py -> parents[3] is SystemCode/.
+MIGRATIONS_DIR = Path(__file__).resolve().parents[3] / "migrate"
 BASELINE = "000_base_schema.sql"
 # pg_advisory_xact_lock key: one migrate at a time per database ("DSGR" namespace, as the graph-writer lock).
 MIGRATION_LOCK = (0x44534752, 100)

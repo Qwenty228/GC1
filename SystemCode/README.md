@@ -36,7 +36,25 @@ The original pieces still work as before:
 | pgvector | tested with 0.8.6 | The `vector` extension must be installed on the PostgreSQL **server** (`SELECT * FROM pg_available_extensions WHERE name = 'vector'` returns a row). On a new database, `datasources-db migrate` runs `CREATE EXTENSION vector`; that needs a role allowed to create it (a superuser, or the database owner where pgvector is marked trusted). Otherwise a DBA runs `CREATE EXTENSION vector;` in the database first. |
 | Database role | creates tables, functions and triggers in `public` | `postgres` in the local setup |
 
-### Fresh installation
+### Shared database with Docker (recommended)
+
+`compose.yaml` runs PostgreSQL 18 with pgvector (`pgvector/pgvector:pg18`), so everyone uses the same server.
+It reads `PGDATABASE`, `PGUSER`, `PGPASSWORD` and `PGPORT` from `.env`, the same values the application uses.
+The container only creates the empty database; the schema always comes from [`migrate/`](migrate/) via
+`datasources-db migrate`.
+
+```bash
+cp .env.example .env          # set PGPASSWORD (any value; it becomes the container's password)
+make db-up                    # docker compose up -d --wait postgres
+make db-migrate               # builds the schema from migrate/*.sql
+make db-verify                # expect "Result: OK"
+make db-psql                  # psql inside the container; make db-down stops it (data kept)
+```
+
+Port 5432 already taken by a local PostgreSQL? Set `PGPORT=5433` in `.env`; the container and the application
+both follow it. `docker compose down -v` deletes the data volume.
+
+### Fresh installation (own PostgreSQL server)
 
 ```powershell
 uv sync --locked --extra local-embeddings     # Python + locked dependencies (+ the local embedding backend)
@@ -672,7 +690,7 @@ inspected, not only the latest 10 the UI shows.
 ## PostgreSQL storage
 
 Ingested records are also stored in the local **`stock_news`** database. The
-base schema is the project ERD, now in `migrations/000_base_schema.sql`;
+base schema is the project ERD, now in `migrate/000_base_schema.sql`;
 ingestion was mapped onto it rather than the other way round.
 
 ```powershell
