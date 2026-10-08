@@ -8,6 +8,8 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
+#   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
+#   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
@@ -24,7 +26,7 @@ LIMIT ?= 10
 
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db-check db-plan db-migrate db-verify db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -75,6 +77,18 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
+
+db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
+	docker compose up -d --wait postgres
+
+db-down: ## Stop the Docker database (data volume kept; `docker compose down -v` wipes it)
+	docker compose down
+
+db-psql: ## psql shell inside the Docker database
+	docker compose exec postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
+
+db-logs: ## Follow the Docker database logs
+	docker compose logs -f postgres
 
 db-check: sync ## Report the database and whether pgvector is enabled
 	$(UV) run datasources-db check

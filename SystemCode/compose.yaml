@@ -1,0 +1,37 @@
+# Shared local PostgreSQL + pgvector, so everyone runs the same server version.
+#
+#   make db-up        start it (waits until healthy), then: make db-migrate
+#   make db-down      stop it; the data volume is kept
+#   make db-psql      psql shell inside the container
+#
+# Settings come from SystemCode/.env (the same PG* variables the app reads), so the
+# container and `datasources-db` always agree on database, user, password and port.
+# The schema is NOT created here: `make db-migrate` builds it from migrate/*.sql and
+# records each file in schema_migration.
+#
+# Already running PostgreSQL on 5432 (e.g. Postgres.app)? Set PGPORT=5433 in .env.
+
+name: stock-news
+
+services:
+  postgres:
+    # PostgreSQL 18 matches the server schema_expected.json was generated on.
+    image: pgvector/pgvector:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-stock_news}
+      POSTGRES_USER: ${PGUSER:-postgres}
+      POSTGRES_PASSWORD: ${PGPASSWORD:?set PGPASSWORD in SystemCode/.env}
+    ports:
+      - "127.0.0.1:${PGPORT:-5432}:5432"
+    volumes:
+      # PostgreSQL 18 images keep their data under /var/lib/postgresql/18/docker.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  pgdata:
