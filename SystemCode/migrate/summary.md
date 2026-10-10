@@ -31,6 +31,8 @@ keep `make db` working for everyone.
 * `make db FORCE=1` (calls `make db-reset`): destructive drop and recreate, then migrate + populate. Asks you
   to type the database name; `CONFIRM=<db>` answers for scripts.
 * `make db-populate`: runs only the `populate/` step.
+* `make db-rerun FILE=<migrate file>`: recreates objects dropped by hand. Re-runs one applied `migrate/` file
+  in a single transaction (a re-runnable file only recreates what is missing), then `populate --force`.
 * Every db target uses the app's database: `DBNAME` in the Makefile = `PGDATABASE` from the shell, else `.env`,
   else `stock_news`.
 * Also new in the Makefile: `make eval EXP=<file>` and `make eval-compare`. `README.md` and `migrate/README.md` were updated to match.
@@ -140,7 +142,7 @@ Keep these in mind, or update `src/datasources/evaluation/consolidation.py` and 
 SystemCode/
   compose.yaml                    Postgres 18 + pgvector in Docker (reads PG* from .env)
   .env                            PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD (not committed)
-  Makefile                        make db, db-log, db-reset, db-populate, db-verify, db-psql, ...
+  Makefile                        make db, db-log, db-reset, db-rerun, db-populate, db-verify, db-psql, ...
   migrate/                        schema, run once per file, logged in schema_migration
     000_base_schema.sql           baseline: the original ERD + pgvector + reference rows
     001, 002, 004, 005            pipeline additions (there is no 003: a reverted branch)
@@ -175,6 +177,7 @@ make db-log                              # schema_migration + populate_log
 | Edited file | **refused**: migrate stops on a changed checksum | **runs again** |
 | Dry run | `uv run datasources-db migrate --dry-run` | `uv run datasources-db populate --dry-run` |
 | Force | `make db FORCE=1` (full rebuild) | `uv run datasources-db populate --force` (rerun all) |
+| Recreate a dropped table | `make db-rerun FILE=<file>` | (included: it ends with `populate --force`) |
 
 `make db FORCE=1` = drop database, create it empty, then `migrate` + `populate`
 from scratch. `CONFIRM=<dbname>` answers the confirmation for scripts. All `db`
@@ -309,3 +312,8 @@ breaks evaluation; run one batch after changing `migrate/`.
 | `1269d08` | Make every experiment file runnable on its own |
 | `e880f94` | Rewrite the evaluation README for first-time users and complete this handoff |
 | `b90c184` | Let `process-file` ingest a single article; feed evaluation through it |
+| `0a47f44` | Handoff: list the latest commits |
+| `2f733cb` | Explain the evaluation's purpose and scores; record retrieval settings per run; reference baseline rerun with `.env.example` settings |
+| `fd64869` | README: conflict detection is how fake AI-generated news is caught |
+| `57e9782` | Edit evaluation README (SEC filings as a future ground-truth test) |
+| `5a57a25` | Add `make db-rerun` to recreate tables dropped by hand |
