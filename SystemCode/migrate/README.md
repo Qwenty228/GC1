@@ -28,7 +28,6 @@ Quick start with the shared Docker database (from `SystemCode/`):
 
 ```bash
 cp .env.example .env      # set PGPASSWORD
-make db-up                # PostgreSQL 18 + pgvector in Docker
-make db-migrate           # builds the schema from this folder
+make db                   # Docker PostgreSQL 18 + pgvector, applies pending files, prints the log
 make db-verify            # expect "Result: OK"
 ```

@@ -45,11 +45,14 @@ The container only creates the empty database; the schema always comes from [`mi
 
 ```bash
 cp .env.example .env          # set PGPASSWORD (any value; it becomes the container's password)
-make db-up                    # docker compose up -d --wait postgres
-make db-migrate               # builds the schema from migrate/*.sql
+make db                       # start the container if needed, apply pending migrations, print the migration log
 make db-verify                # expect "Result: OK"
 make db-psql                  # psql inside the container; make db-down stops it (data kept)
 ```
+
+`make db` is safe to run any time: it starts the container only when it is not running (pulling the image on
+first use), applies only migration files not yet recorded in `schema_migration`, and prints that table
+(`make db-log` prints just the log). The individual steps remain as `make db-up` and `make db-migrate`.
 
 Port 5432 already taken by a local PostgreSQL? Set `PGPORT=5433` in `.env`; the container and the application
 both follow it. `docker compose down -v` deletes the data volume.

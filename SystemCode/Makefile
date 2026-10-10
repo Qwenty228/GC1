@@ -8,6 +8,7 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
+#   make db                one-shot: start Docker Postgres if needed, apply pending migrations, show the log
 #   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
@@ -28,7 +29,7 @@ LIMIT ?= 10
 
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -79,6 +80,15 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
+
+db: ## One-shot Postgres: start the container if needed (pulls the image on first use), migrate, show the log
+	@docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and retry."; exit 1; }
+	docker compose up -d --wait postgres
+	$(UV) run datasources-db migrate
+	@$(MAKE) -s db-log
+
+db-log: ## Migration log: which files were applied, when and how (schema_migration table)
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
 
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres
