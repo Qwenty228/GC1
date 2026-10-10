@@ -41,6 +41,7 @@ PINNED = {
     "002_semantic_event_grouping.sql": "0b2c052442d6",
     "004_event_summary.sql": "e61b09734927",
     "005_event_summary_citation_quote_index.sql": "37e2b04327df",
+    "006_evaluation_fixture.sql": "e00645abd1b0",
 }
 DATA_TABLES = ("provider", "company", "company_symbol", "publisher", "document", "document_revision",
                "document_revision_source", "revision_company", "embedding_profile", "text_unit", "embedding",
@@ -232,7 +233,7 @@ def test_a_new_database_is_built_from_the_repository_files_alone(temp_db):
     db = temp_db()
     plan = migrations.plan_migrations(db)
     assert plan.baseline_state == "fresh" and not plan.problems
-    assert [a for _, a in plan.actions] == ["execute"] * 5 and plan.actions[0][0] == migrations.BASELINE
+    assert [a for _, a in plan.actions] == ["execute"] * 6 and plan.actions[0][0] == migrations.BASELINE
     assert execute(db, "SELECT to_regclass('public.document') IS NULL AS absent")[0]["absent"]  # dry run wrote nothing
 
     results = migrations.apply_migrations(db)
@@ -293,7 +294,8 @@ def test_an_existing_base_schema_is_adopted_only_on_request_and_keeps_every_reco
     assert plan.baseline_state == "adoptable" and plan.baseline.ok
     assert {f.key for f in plan.baseline.of("legacy")} == {"table:event_routing_decision",
                                                            "function:validate_routing_decision()"}
-    assert plan.actions == [(migrations.BASELINE, "adopt"), ("005_event_summary_citation_quote_index.sql", "execute")]
+    assert plan.actions == [(migrations.BASELINE, "adopt"), ("005_event_summary_citation_quote_index.sql", "execute"),
+                            ("006_evaluation_fixture.sql", "execute")]
     assert plan.unfiled == ["003_event_match_routing.sql"]
     assert any("--adopt-baseline" in p for p in plan.problems)
     with pytest.raises(migrations.MigrationRefused):
@@ -302,7 +304,8 @@ def test_an_existing_base_schema_is_adopted_only_on_request_and_keeps_every_reco
 
     results = migrations.apply_migrations(db, adopt_baseline=True)
     assert [(r.filename, r.method) for r in results if r.applied] == [
-        (migrations.BASELINE, "adopted"), ("005_event_summary_citation_quote_index.sql", "executed")]
+        (migrations.BASELINE, "adopted"), ("005_event_summary_citation_quote_index.sql", "executed"),
+        ("006_evaluation_fixture.sql", "executed")]
     assert row_digests(db) == before[2]  # every record kept, byte for byte
     rows = {r["filename"]: r for r in bookkeeping(db)}
     assert rows["003_event_match_routing.sql"]["method"] is None  # reported, never rewritten

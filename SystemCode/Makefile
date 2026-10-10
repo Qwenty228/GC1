@@ -12,6 +12,7 @@
 #   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
+#   make db-eval-load      load populate/event_grouping/*.json into evaluation.fixture_article
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
 #   make db-companies-plan which coverage companies registration would add (read-only)
@@ -29,7 +30,7 @@ LIMIT ?= 10
 
 .DEFAULT_GOAL := help
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db db-log db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-eval-load db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -89,6 +90,9 @@ db: ## One-shot Postgres: start the container if needed (pulls the image on firs
 
 db-log: ## Migration log: which files were applied, when and how (schema_migration table)
 	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
+
+db-eval-load: ## Load the labelled test articles (populate/event_grouping/) into evaluation.fixture_article
+	$(UV) run datasources-db load-evaluation
 
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres

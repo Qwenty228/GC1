@@ -10,6 +10,8 @@
     uv run datasources-db relink-companies --dry-run     # links stored articles lack for companies registered later
     uv run datasources-db relink-companies          # add those links (insert-only, repeatable)
     uv run datasources-db inspect                   # row counts per table
+    uv run datasources-db load-evaluation --dry-run # which test articles would be loaded (read-only)
+    uv run datasources-db load-evaluation           # populate/event_grouping/*.json -> evaluation.fixture_article
     uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
@@ -179,6 +181,39 @@ def cmd_migrate(db: Database, args) -> int:
     print(f"\nSchema check after migrating: {'OK' if comparison.ok else 'PROBLEMS FOUND'}")
     _print_comparison(comparison)
     return 0 if comparison.ok else 1
+
+
+def cmd_load_evaluation(db: Database, args) -> int:
+    """Load the labelled test articles into `evaluation.fixture_article` (repeatable; never deletes)."""
+    from .evaluation import FIXTURE_DIR, FixtureError, load_fixtures, read_fixtures
+
+    directory = Path(args.dir) if args.dir else FIXTURE_DIR
+    try:
+        fixtures = read_fixtures(directory)
+    except FixtureError as error:
+        print(f"Cannot load {directory}: {error}", file=sys.stderr)
+        return 1
+    with db.connection() as conn, conn.transaction():
+        if args.dry_run:
+            conn.execute("SET TRANSACTION READ ONLY")
+        database = conn.execute("SELECT current_database() AS db").fetchone()["db"]
+        if conn.execute("SELECT to_regclass('evaluation.fixture_article') AS t").fetchone()["t"] is None:
+            print(f"{database} has no evaluation.fixture_article; run `uv run datasources-db migrate` first.",
+                  file=sys.stderr)
+            return 1
+        report = load_fixtures(conn, fixtures, dry_run=args.dry_run)
+    if args.json:
+        print(json.dumps({"database": database, "directory": str(directory), **report.as_dict()}, indent=2))
+        return 0
+    print(f"Evaluation fixtures for {database} ({directory}, {len(fixtures)} file(s))")
+    if args.dry_run:
+        print("READ ONLY: nothing was changed.")
+    verb = "to " if args.dry_run else ""
+    print(f"Result: {report.count('insert')} {verb}insert, {report.count('update')} {verb}update, "
+          f"{report.count('unchanged')} unchanged.")
+    for name in report.missing_files:
+        print(f"  in the table but no longer a file (kept): {name}")
+    return 0
 
 
 def cmd_verify(db: Database, args) -> int:
@@ -762,6 +797,13 @@ def main(argv: list[str] | None = None) -> int:
     p_relink.add_argument("--sample", action="store_true", help="The sample partition instead of live articles")
     p_relink.add_argument("--json", action="store_true")
     sub.add_parser("inspect", help="Row counts per table")
+    p_eval = sub.add_parser("load-evaluation",
+                            help="Load populate/event_grouping/*.json into evaluation.fixture_article "
+                                 "(repeatable; never deletes)")
+    p_eval.add_argument("--dry-run", action="store_true",
+                        help="Show what would be inserted or updated, in a read-only transaction")
+    p_eval.add_argument("--dir", help="Another folder of test_{number}_{type}_group_{group}.json files")
+    p_eval.add_argument("--json", action="store_true")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
     p_backfill.add_argument("--demo", action="store_true", help="Read output/demo instead")
@@ -794,6 +836,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_relink_companies(database, args)
         if command == "inspect":
             return cmd_inspect(database)
+        if command == "load-evaluation":
+            return cmd_load_evaluation(database, args)
         if command == "backfill":
             return cmd_backfill(database, args)
         if command == "smoke":
