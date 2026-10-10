@@ -64,6 +64,11 @@ make db-log                              # schema_migration + populate_log
 from scratch. `CONFIRM=<dbname>` answers the confirmation for scripts. All `db`
 targets use the database the app uses: `PGDATABASE` from your shell, else `.env`.
 
+**One-way:** both runners check the logs ("has this file run?"), never whether the
+tables still exist. Don't drop tables by hand: the log still says done, so `make db`
+won't recreate them. Recover with psql on that migrate file (all `IF NOT EXISTS`) +
+`uv run datasources-db populate --force`, or rebuild with `make db FORCE=1`.
+
 ## Changing the schema (`migrate/`)
 
 1. **Add** `migrate/007_your_change.sql` (next free number). Never edit or delete a

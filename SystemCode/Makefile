@@ -86,6 +86,10 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
 
+# make db is one-way: it asks the logs "has this file run?" (schema_migration, populate_log), never "does the
+# table still exist?". A table dropped by hand stays missing, because the log still says done. To recover:
+# re-run that migrate/ file with psql (all IF NOT EXISTS) + `uv run datasources-db populate --force`, or rebuild
+# everything with `make db FORCE=1` (deletes all data in the database).
 db: ## One-shot, idempotent: start Postgres if needed, apply pending migrations, run new/changed populate scripts, show logs (FORCE=1 rebuilds)
 	@docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and retry."; exit 1; }
 	docker compose up -d --wait postgres
