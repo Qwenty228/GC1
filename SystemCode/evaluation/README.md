@@ -10,7 +10,8 @@ Run everything inside `SystemCode/`. You need Docker Desktop (running) and `uv`.
 
 1. `cp .env.example .env`, then open `.env` and set `PGPASSWORD` (any value). If your model
    needs a key, add it too, for example `GROQ_API_KEY=...`, `GEMINI_API_KEY=...` or
-   `ANTHROPIC_API_KEY=...`. The rule-based baseline needs no key.
+   `ANTHROPIC_API_KEY=...`. The rule-based baseline needs no key. Leave the `SIMILARITY_*`
+   values as they are in `.env.example`: they change the scores, so everyone must use the same.
 2. `make sync-local-embeddings` installs the local embedding model's packages.
 3. `uv run datasources-similarity download-model` downloads the pinned embedding model.
 4. `make db` starts Postgres in Docker, builds the tables and loads the answer key.
@@ -68,14 +69,15 @@ The run prints two scores and a per-article table (expected vs predicted).
 * **Label macro F1:** did the model pick the right label (repeat, update, conflict,
   different)? `uncertain` counts as wrong. Higher is better.
 
-Reference: the free "always same event" baseline over all 25 batches scores grouping F1
-0.735 and label macro F1 0.102. A real model should beat both.
+Reference: the free "always same event" baseline over all 25 batches, with the
+`.env.example` settings, scores grouping F1 0.954 and label macro F1 0.355. A real model
+should beat both, especially the label score (see "How to read the scores" below).
 
 ## Where the result is
 
 * `evaluation/consolidation/results/<date>_<time>_<NAME>.json`. Commit it.
 * `uv run datasources-eval compare` prints the leaderboard of all saved runs. Only compare
-  runs over the same batches.
+  runs over the same batches and the same settings (the `cands` and `lex` columns).
 
 ## If it fails
 
@@ -83,3 +85,56 @@ Reference: the free "always same event" baseline over all 25 batches scores grou
 * Embedding model "not available locally": run the two once-only commands in steps 2 and 3.
 * "`<NAME>` is not set": the error names the variable. Add it to `.env`.
 * HTTP 429: you hit the provider's rate limit. Run fewer batches or wait a minute.
+
+## Why we evaluate, and how to read the scores
+
+**Purpose.** "Consolidation" is the first half of the pipeline: when a news article arrives,
+decide whether it belongs to an event we already track, and how (`repeat`: same facts,
+`update`: new facts or a later development, `conflict`: a contradictory claim) or whether
+it is a `different` event. We test that decision on articles whose answer we know, so we can
+compare models fairly and see which kind of decision each one gets wrong.
+
+**The test set.** 25 batches of 5 articles: an original, a repeat, an update and a conflict
+of one event, plus one article about a different event. Originals are real Alpaca/Benzinga
+news; the others are real articles from other outlets or edited copies (a conflict usually
+changes one number). So it tests the grouping and labelling logic, not the full live news mix.
+
+**Why batches run on their own.** Each answer key only describes the five articles inside
+its batch. Two people may have picked overlapping stories from the same week, so putting all
+125 into one database would need every cross-batch pair checked by hand first. A real feed
+keeps all events in one database, so this setup is easier than production.
+
+**The two scores** (agreed by the team, reported separately):
+
+* **Grouping, pairwise F1.** Every pair of articles in a batch should be "same event" or
+  not; we count how many pairs the pipeline got right. It checks *membership*, never event ids.
+* **Labels, macro F1.** For each article except the first of its batch: was the label
+  right (repeat / update / conflict / different)? Macro means each of the four labels counts
+  equally, so being good at the easy ones cannot hide a weak `conflict`. `uncertain` is never correct.
+
+**Not every article reaches the model**, and that shapes the scores:
+
+* The first article of a batch has nothing to compare with: it always opens a new event.
+* An article that is not similar enough (cosine below `SIMILARITY_MIN_SEMANTIC_SIMILARITY`,
+  0.78) never reaches the model either: it opens a new event. With the default settings
+  most "different" articles end here, so they are right without any model. That is why
+  the always-"same event" baseline still gets grouping F1 0.954: **grouping F1 mostly
+  measures retrieval; the label score is where models differ.**
+* Two nearly identical articles (400+ identical characters) are linked as a repeat without
+  asking the model.
+* The "Model calls" line in the output tells you how many decisions actually reached the model.
+
+**How sure can we be.** About 25 articles per label is small: differences of less than
+roughly 15 points between two runs are probably noise. Compare runs over the same batches
+and the same settings only. If you tune a prompt, do not report the score on the same
+batches you tuned on (split by batch, never by article).
+
+**Edge cases included on purpose.** A few batches feed an older article after a newer one
+(it happens for real when a backfill stores SEC filings before the news, and with several sources). The label is judged on content against what already
+arrived: an older article that adds facts is still an `update`, one that contradicts is a
+`conflict`.
+
+**Not covered yet** (ideas, not built): all batches in one database with cross-batch
+distractors, retrieval recall (was the right event even shortlisted?), repeated runs to
+measure how stable a model's answers are, deliberately ambiguous items where `uncertain` is
+correct, and SEC filings. Summarization (stage 2) is evaluated separately later.

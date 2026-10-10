@@ -38,6 +38,9 @@ from ..db.repository import ALPACA_NAMESPACE
 from . import metrics
 
 BATCH_SIZE = 5
+# Retrieval settings (SIMILARITY_* in .env) that change which articles reach the model; saved with every run.
+RECORDED_SETTINGS = ("window_days", "min_semantic_similarity", "lexical_plausible_rank", "semantic_top_k",
+                     "lexical_top_k", "max_candidate_events", "exact_match_min_chars", "no_company_window_hours")
 EXPECTED_LABEL = {
     FixtureType.REPEAT: "same_event_repeated",
     FixtureType.UPDATE: "same_event_update",
@@ -185,9 +188,7 @@ def run(name: str, comparator, sim_settings, *, embedder=None, description: str 
         "model": {"comparator": getattr(comparator, "name", type(comparator).__name__),
                   "comparison_model": getattr(comparator, "model", None), "prompt_version": PROMPT_VERSION,
                   "embedder": to_jsonable(embedder.identity()) if hasattr(embedder, "identity") else str(embedder)},
-        "settings": {"window_days": sim_settings.window_days, "semantic_top_k": sim_settings.semantic_top_k,
-                     "lexical_top_k": sim_settings.lexical_top_k,
-                     "max_candidate_events": sim_settings.max_candidate_events},
+        "settings": {k: getattr(sim_settings, k) for k in RECORDED_SETTINGS},  # from .env: scores depend on them
         "started_at": started.isoformat(timespec="seconds"),
         "batches_run": chosen,
         "metrics": {"grouping_pairwise": metrics.pairwise(predictions), "labels": metrics.labels(predictions)},

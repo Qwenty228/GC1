@@ -278,6 +278,11 @@ breaks evaluation; run one batch after changing `migrate/`.
 * `tests/test_launcher.py` can hang or fail at interpreter shutdown (a stdin lock). It does so without this
   branch too. Run `uv run pytest --ignore=tests/test_launcher.py` for a clean run.
 * The OpenAI-compatible backend is not wired into `.env` for production (see above).
+* Evaluation scores depend on the `SIMILARITY_*` retrieval settings in each person's `.env`
+  (e.g. `SIMILARITY_MAX_CANDIDATE_EVENTS`, `SIMILARITY_LEXICAL_PLAUSIBLE_RANK`). Every result file records
+  them and `datasources-eval compare` shows the two that matter most; the team should use the
+  `.env.example` values. With them, even the always-"same event" baseline gets grouping F1 0.954 (most
+  "different" articles never pass the 0.78 similarity gate), so the label macro F1 is the model comparison.
 * Summarization evaluation is not built: it needs labelled data and agreed metrics
   (see `evaluation/summarization/README.md`).
 * In the baseline run (always "same event"), 2 of the 100 scored articles (every article except the first of

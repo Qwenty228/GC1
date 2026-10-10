@@ -2,7 +2,7 @@
   "stage": "consolidation",
   "experiment": {
     "name": "baseline-rule",
-    "description": "Rule baseline: every candidate pair is labelled the same, constant answer",
+    "description": "Rule baseline: every candidate pair gets the same constant label",
     "file": "baseline_rule.py"
   },
   "model": {
@@ -25,11 +25,15 @@
   },
   "settings": {
     "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 0,
     "semantic_top_k": 20,
     "lexical_top_k": 20,
-    "max_candidate_events": 6
+    "max_candidate_events": 3,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
   },
-  "started_at": "2026-10-10T06:24:06+00:00",
+  "started_at": "2026-10-10T06:58:00+00:00",
   "batches_run": [
     1,
     2,
@@ -59,25 +63,25 @@
   ],
   "metrics": {
     "grouping_pairwise": {
-      "precision": 0.595,
+      "precision": 0.9474,
       "recall": 0.96,
-      "f1": 0.7347,
+      "f1": 0.9536,
       "tp": 144,
-      "fp": 98,
+      "fp": 8,
       "fn": 6
     },
     "labels": {
-      "macro_f1": 0.1016,
-      "accuracy": 0.25,
+      "macro_f1": 0.355,
+      "accuracy": 0.48,
       "scored": 100,
       "uncertain": 0,
       "per_label": {
         "same_event_repeated": {
-          "precision": 0.2551,
+          "precision": 0.3333,
           "recall": 1.0,
-          "f1": 0.4065,
+          "f1": 0.5,
           "tp": 25,
-          "fp": 73,
+          "fp": 50,
           "fn": 0
         },
         "same_event_update": {
@@ -97,25 +101,25 @@
           "fn": 25
         },
         "different_event": {
-          "precision": 0.0,
-          "recall": 0.0,
-          "f1": 0.0,
-          "tp": 0,
+          "precision": 0.92,
+          "recall": 0.92,
+          "f1": 0.92,
+          "tp": 23,
           "fp": 2,
-          "fn": 25
+          "fn": 2
         }
       }
     }
   },
   "usage": {
-    "comparison_calls": 98,
+    "comparison_calls": 75,
     "input_tokens": 0,
     "output_tokens": 0
   },
   "batches": [
     {
       "batch": 1,
-      "seconds": 5.9,
+      "seconds": 10.8,
       "articles": [
         {
           "file": "test_001_original_group_001.json",
@@ -166,14 +170,14 @@
           "type": "different",
           "expected_group": 2,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -182,7 +186,7 @@
     },
     {
       "batch": 2,
-      "seconds": 0.7,
+      "seconds": 1.1,
       "articles": [
         {
           "file": "test_006_original_group_003.json",
@@ -233,14 +237,14 @@
           "type": "different",
           "expected_group": 4,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -249,7 +253,7 @@
     },
     {
       "batch": 3,
-      "seconds": 0.7,
+      "seconds": 1.4,
       "articles": [
         {
           "file": "test_011_original_group_005.json",
@@ -300,14 +304,14 @@
           "type": "different",
           "expected_group": 6,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -316,7 +320,7 @@
     },
     {
       "batch": 4,
-      "seconds": 0.6,
+      "seconds": 1.4,
       "articles": [
         {
           "file": "test_016_original_group_007.json",
@@ -367,14 +371,14 @@
           "type": "different",
           "expected_group": 8,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -383,7 +387,7 @@
     },
     {
       "batch": 5,
-      "seconds": 0.7,
+      "seconds": 1.5,
       "articles": [
         {
           "file": "test_021_original_group_009.json",
@@ -434,14 +438,14 @@
           "type": "different",
           "expected_group": 10,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -450,7 +454,7 @@
     },
     {
       "batch": 6,
-      "seconds": 0.9,
+      "seconds": 2.4,
       "articles": [
         {
           "file": "test_026_original_group_011.json",
@@ -501,14 +505,14 @@
           "type": "different",
           "expected_group": 12,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -517,7 +521,7 @@
     },
     {
       "batch": 7,
-      "seconds": 0.6,
+      "seconds": 1.1,
       "articles": [
         {
           "file": "test_031_original_group_013.json",
@@ -568,14 +572,14 @@
           "type": "different",
           "expected_group": 14,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -584,7 +588,7 @@
     },
     {
       "batch": 8,
-      "seconds": 0.7,
+      "seconds": 1.4,
       "articles": [
         {
           "file": "test_036_original_group_015.json",
@@ -635,14 +639,14 @@
           "type": "different",
           "expected_group": 16,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -651,7 +655,7 @@
     },
     {
       "batch": 9,
-      "seconds": 0.6,
+      "seconds": 0.7,
       "articles": [
         {
           "file": "test_041_original_group_017.json",
@@ -702,14 +706,14 @@
           "type": "different",
           "expected_group": 18,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -718,7 +722,7 @@
     },
     {
       "batch": 10,
-      "seconds": 0.6,
+      "seconds": 0.7,
       "articles": [
         {
           "file": "test_046_original_group_019.json",
@@ -769,14 +773,14 @@
           "type": "different",
           "expected_group": 20,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -785,7 +789,7 @@
     },
     {
       "batch": 11,
-      "seconds": 0.8,
+      "seconds": 1.0,
       "articles": [
         {
           "file": "test_051_original_group_021.json",
@@ -836,14 +840,14 @@
           "type": "different",
           "expected_group": 22,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -852,7 +856,7 @@
     },
     {
       "batch": 12,
-      "seconds": 0.8,
+      "seconds": 1.2,
       "articles": [
         {
           "file": "test_056_original_group_023.json",
@@ -903,14 +907,14 @@
           "type": "different",
           "expected_group": 24,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -919,7 +923,7 @@
     },
     {
       "batch": 13,
-      "seconds": 0.8,
+      "seconds": 1.0,
       "articles": [
         {
           "file": "test_061_original_group_025.json",
@@ -970,14 +974,14 @@
           "type": "different",
           "expected_group": 26,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -986,7 +990,7 @@
     },
     {
       "batch": 14,
-      "seconds": 0.8,
+      "seconds": 1.2,
       "articles": [
         {
           "file": "test_066_original_group_027.json",
@@ -1053,7 +1057,7 @@
     },
     {
       "batch": 15,
-      "seconds": 1.0,
+      "seconds": 1.8,
       "articles": [
         {
           "file": "test_071_original_group_029.json",
@@ -1104,14 +1108,14 @@
           "type": "different",
           "expected_group": 30,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1120,7 +1124,7 @@
     },
     {
       "batch": 16,
-      "seconds": 0.9,
+      "seconds": 1.0,
       "articles": [
         {
           "file": "test_076_original_group_031.json",
@@ -1171,14 +1175,14 @@
           "type": "different",
           "expected_group": 32,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E3"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 3,
+      "comparison_calls": 2,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1187,7 +1191,7 @@
     },
     {
       "batch": 17,
-      "seconds": 0.8,
+      "seconds": 0.9,
       "articles": [
         {
           "file": "test_081_original_group_033.json",
@@ -1238,14 +1242,14 @@
           "type": "different",
           "expected_group": 34,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E3"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 3,
+      "comparison_calls": 2,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1254,7 +1258,7 @@
     },
     {
       "batch": 18,
-      "seconds": 1.6,
+      "seconds": 1.8,
       "articles": [
         {
           "file": "test_086_original_group_035.json",
@@ -1305,14 +1309,14 @@
           "type": "different",
           "expected_group": 36,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1321,7 +1325,7 @@
     },
     {
       "batch": 19,
-      "seconds": 1.1,
+      "seconds": 1.2,
       "articles": [
         {
           "file": "test_091_original_group_037.json",
@@ -1372,14 +1376,14 @@
           "type": "different",
           "expected_group": 38,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1388,7 +1392,7 @@
     },
     {
       "batch": 20,
-      "seconds": 1.1,
+      "seconds": 1.0,
       "articles": [
         {
           "file": "test_096_original_group_039.json",
@@ -1439,14 +1443,14 @@
           "type": "different",
           "expected_group": 40,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1455,7 +1459,7 @@
     },
     {
       "batch": 21,
-      "seconds": 1.2,
+      "seconds": 1.1,
       "articles": [
         {
           "file": "test_101_original_group_041.json",
@@ -1506,14 +1510,14 @@
           "type": "different",
           "expected_group": 42,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1522,7 +1526,7 @@
     },
     {
       "batch": 22,
-      "seconds": 1.4,
+      "seconds": 1.2,
       "articles": [
         {
           "file": "test_106_original_group_043.json",
@@ -1573,14 +1577,14 @@
           "type": "different",
           "expected_group": 44,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1589,7 +1593,7 @@
     },
     {
       "batch": 23,
-      "seconds": 1.5,
+      "seconds": 1.6,
       "articles": [
         {
           "file": "test_111_original_group_045.json",
@@ -1640,14 +1644,14 @@
           "type": "different",
           "expected_group": 46,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
@@ -1656,7 +1660,7 @@
     },
     {
       "batch": 24,
-      "seconds": 1.1,
+      "seconds": 1.2,
       "articles": [
         {
           "file": "test_116_original_group_047.json",
@@ -1723,7 +1727,7 @@
     },
     {
       "batch": 25,
-      "seconds": 0.9,
+      "seconds": 1.0,
       "articles": [
         {
           "file": "test_121_original_group_049.json",
@@ -1774,14 +1778,14 @@
           "type": "different",
           "expected_group": 50,
           "expected_label": "different_event",
-          "predicted_label": "same_event_repeated",
+          "predicted_label": "different_event",
           "predicted_events": [
-            "E1"
+            "E2"
           ],
           "error": null
         }
       ],
-      "comparison_calls": 4,
+      "comparison_calls": 3,
       "tokens": {
         "input": 0,
         "output": 0
