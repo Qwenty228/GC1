@@ -6,7 +6,7 @@ order. See [`migrate/summary.md`](../migrate/summary.md) for the full picture.
 
 | File | Fills | Source |
 | --- | --- | --- |
-| `001_evaluation_fixtures.sql` | `evaluation.fixture_article` (125 labelled test articles) | generated from `event_grouping/*.json` |
+| `001_evaluation_fixtures.sql` | `evaluation.fixture_article` (125 labelled test articles) | **generated** from `event_grouping/*.json` on every `make db`; gitignored |
 
 ## Rules for a populate script
 
@@ -29,7 +29,9 @@ pg_dump --data-only --inserts --on-conflict-do-nothing --no-owner --no-privilege
 
 ## How `make db` runs them
 
-`uv run datasources-db populate` (part of `make db`):
+`uv run datasources-db populate` (part of `make db`) first regenerates
+`001_evaluation_fixtures.sql` from `event_grouping/` (written only if the JSON
+changed), then:
 
 | File state | What happens |
 | --- | --- |
@@ -58,9 +60,8 @@ test_{number}_{type}_group_{group}.json      e.g. test_104_conflict_group_041.js
 
 The file name is the answer key. Feed only the file *contents* to the pipeline.
 
-After adding or editing a JSON file, regenerate the SQL (`make db` then loads the change):
-
-```bash
-uv run datasources-db export-evaluation           # rewrites 001_evaluation_fixtures.sql
-uv run datasources-db export-evaluation --check   # is the SQL in sync with the JSON? (a test checks this too)
-```
+After adding or editing a JSON file, just run `make db`: it regenerates
+`001_evaluation_fixtures.sql` (never committed, so the data lives only in the JSON),
+sees the new checksum, and loads the change. `uv run datasources-db export-evaluation`
+only regenerates the file, if you want to inspect it. The number `001` is taken by
+this generated file; your own scripts start at `002`.

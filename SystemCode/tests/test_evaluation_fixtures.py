@@ -6,8 +6,8 @@ import pytest
 
 from conftest import temporary_database
 from datasources.db import migrate as migrations
-from datasources.db.evaluation import (EXPORT_FILE, FIXTURE_DIR, FixtureError, export_sql, parse_fixture_name,
-                                       read_fixture, read_fixtures)
+from datasources.db.evaluation import (FIXTURE_DIR, FixtureError, export_sql, parse_fixture_name, read_fixture,
+                                       read_fixtures, write_export)
 from datasources.db.populate import apply_populate, plan_populate
 
 
@@ -48,11 +48,16 @@ def test_the_committed_fixtures_load():
 
 
 # ----------------------------------------------------------------------------- export + populate (temporary database)
-def test_the_committed_sql_matches_the_json_files():
-    if not EXPORT_FILE.exists():
-        pytest.skip(f"no {EXPORT_FILE.name}")
-    assert EXPORT_FILE.read_text(encoding="utf-8") == export_sql(read_fixtures(FIXTURE_DIR)), \
-        "populate/event_grouping changed: run `uv run datasources-db export-evaluation`"
+def test_regenerating_writes_only_when_the_json_changed(tmp_path):
+    source, target = tmp_path / "json", tmp_path / "001_evaluation_fixtures.sql"
+    source.mkdir()
+    (source / "test_101_original_group_041.json").write_text(json.dumps({"id": 1, "created_at": "2026-09-17T11:05:11Z"}))
+    assert write_export(source, target) == ("written", 1)
+    stamp = target.stat().st_mtime_ns
+    assert write_export(source, target) == ("unchanged", 1) and target.stat().st_mtime_ns == stamp
+    (source / "test_102_repeat_group_041.json").write_text(json.dumps({"id": 2, "created_at": "2026-09-17T14:48:00Z"}))
+    assert write_export(source, target) == ("written", 2)
+    assert write_export(tmp_path / "empty", tmp_path / "none.sql") == ("no fixtures", 0)
 
 
 def test_exported_sql_loads_every_fixture_exactly_and_is_safe_to_run_again(tmp_path):

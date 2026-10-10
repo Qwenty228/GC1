@@ -5,6 +5,9 @@ article per file, named by the team convention `test_{number}_{type}_group_{grou
 `export_sql` writes them as `populate/001_evaluation_fixtures.sql`, which `datasources-db
 populate` (run by `make db`) loads into `evaluation.fixture_article`: a new file is
 inserted, an edited file updates its row, and nothing is ever deleted.
+
+The SQL file is generated, not committed (it would duplicate the JSON): `populate`
+calls `write_export` first, so it always matches the folder.
 """
 
 from __future__ import annotations
@@ -113,3 +116,17 @@ def export_sql(fixtures: list[Fixture], source: str = "populate/event_grouping/"
             "",
         ]
     return "\n".join(lines)
+
+
+def write_export(directory: Path | None = None, target: Path | None = None) -> tuple[str, int]:
+    """Regenerate the populate script from the JSON folder. Returns (written | unchanged | no fixtures, count).
+    Writes only when the text changed, so the file's checksum (and populate's decision) is stable."""
+    directory, target = directory or FIXTURE_DIR, target or EXPORT_FILE
+    fixtures = read_fixtures(directory)
+    if not fixtures:
+        return "no fixtures", 0
+    text = export_sql(fixtures)
+    if target.exists() and target.read_text(encoding="utf-8") == text:
+        return "unchanged", len(fixtures)
+    target.write_text(text, encoding="utf-8")
+    return "written", len(fixtures)
