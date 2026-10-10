@@ -52,6 +52,12 @@ Keys live in `.env`. The files only name the variable.
 
 All are in `evaluation/consolidation/experiments/`.
 
+example if you work on claude:
+
+```bash
+uv run python evaluation/consolidation/experiments/claude.py  
+```
+
 ## What a run does
 
 For each batch of five articles:
@@ -133,6 +139,14 @@ batches you tuned on (split by batch, never by article).
 (it happens for real when a backfill stores SEC filings before the news, and with several sources). The label is judged on content against what already
 arrived: an older article that adds facts is still an `update`, one that contradicts is a
 `conflict`.
+
+`conflict` is also how the pipeline catches fake or careless AI-generated news ("AI slop"):
+an article that states a wrong number, date or fact about a known event must be labelled
+`conflict` (and flagged), not merged quietly as a repeat or update. Most conflict articles
+in the test set are exactly that: a real article with one fact changed. The pipeline judges
+claims, not who wrote them: an accurate AI-written article is a normal repeat or update, and
+an invented fact that contradicts nothing cannot be caught this way (it would look like an
+`update`).
 
 **Not covered yet** (ideas, not built): all batches in one database with cross-batch
 distractors, retrieval recall (was the right event even shortlisted?), repeated runs to
