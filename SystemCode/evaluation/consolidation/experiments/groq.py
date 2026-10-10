@@ -10,14 +10,18 @@ Free-tier notes:
   * JSON_MODE "json_object" works on every Groq chat model. "json_schema" (stricter) only on
     the models Groq lists as supporting structured outputs; switch to it if yours does.
 
-    uv run datasources-eval consolidation evaluation/consolidation/experiments/groq.py --batch 1 --yes
+    uv run python evaluation/consolidation/experiments/groq.py        (from SystemCode/)
 """
 
 from datasources.llm_openai import OpenAICompatibleComparisonBackend
 
 NAME = "groq-llama-3.3-70b"
 DESCRIPTION = "Llama 3.3 70B on Groq (OpenAI-compatible API), the production comparison prompt"
-PAID_CALLS = True  # free tier is rate-limited, paid tier bills per token: keep the --yes safety on
+
+# ----------------------------------------------------------------------------- run config: edit, then run this file
+BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Paid model: start small.
+SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
+KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
 
 BASE_URL = "https://api.groq.com/openai/v1"
 MODEL = "llama-3.3-70b-versatile"
@@ -30,3 +34,11 @@ def build_comparator(settings):
     return OpenAICompatibleComparisonBackend(base_url=BASE_URL, model=MODEL, api_key_env=API_KEY_ENV,
                                              json_mode=JSON_MODE, max_tokens=MAX_OUTPUT_TOKENS,
                                              timeout=settings.llm_timeout_seconds)
+
+
+# ----------------------------------------------------------------------------- run
+if __name__ == "__main__":
+    from datasources.evaluation import run_experiment
+
+    run_experiment(NAME, build_comparator, description=DESCRIPTION, batches=BATCHES, save=SAVE, keep_db=KEEP_DB,
+                   source=__file__)

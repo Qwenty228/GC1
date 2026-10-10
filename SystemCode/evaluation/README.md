@@ -11,6 +11,7 @@ evaluation/
       baseline_rule.py           TEMPLATE: rule-based, always the same answer. Copy this.
       claude.py                  Claude (Anthropic API), the production prompt
       gemini.py                  Gemini (OpenAI-compatible API), the production prompt
+      groq.py                    Groq (OpenAI-compatible API), free tier
       ollama_local.py            local model via Ollama / LM Studio / vLLM
     results/                     one JSON per run: commit it
   summarization/                 stage 2: event summaries  (slot, see its README)
@@ -24,16 +25,23 @@ make sync-local-embeddings                       # once: the local embedding mod
 uv run datasources-similarity download-model     # once: the pinned embedding model
 make db-up                                       # Postgres must be running (test databases are made on it)
 
-uv run datasources-eval consolidation evaluation/consolidation/experiments/baseline_rule.py --batch 1
-uv run datasources-eval consolidation evaluation/consolidation/experiments/claude.py --batch 1 --yes
-uv run datasources-eval consolidation evaluation/consolidation/experiments/my_model.py --all --yes
-uv run datasources-eval compare                  # leaderboard of every saved run
+uv run python evaluation/consolidation/experiments/baseline_rule.py   # every experiment file is runnable
+uv run python evaluation/consolidation/experiments/groq.py
+uv run datasources-eval compare                                      # leaderboard of every saved run
 ```
 
-`--batch N` picks a batch (repeatable; batch 1 = tests 001-005, batch 25 = 121-125),
-`--all` runs all 25. `--yes` is required when the file sets `PAID_CALLS = True`.
-`--keep-db` keeps each batch's database for inspection; `--no-save` prints only.
-Start with one batch: a paid model costs one call per article after the first.
+Each file starts with its own run config; edit it, then run the file:
+
+```python
+BATCHES = [1]     # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25
+SAVE = True       # write results/<date>_<time>_<NAME>.json
+KEEP_DB = False   # keep each batch's test database to inspect it
+```
+
+Start with one batch: a paid model costs one call per article after the first. Every
+file ends with the same `if __name__ == "__main__":` block calling `run_experiment(...)`,
+the one shared runner (`src/datasources/evaluation/consolidation.py`), so the pipeline is
+run identically for everyone; only the model and the run config differ.
 
 ## Plug in your model
 
@@ -48,12 +56,13 @@ receive and what to return. Two ways to fill it:
   (`same_event_repeated`, `same_event_update`, `same_event_conflict`,
   `different_event`, `uncertain`). Simplest; any classifier or prompt works.
 * **Whole request:** replace `compare(request)`; `request.render()` is the exact prompt
-  the production model gets. For any OpenAI-compatible API (OpenAI, Gemini, Ollama, LM
-  Studio, vLLM) just copy `gemini.py` or `ollama_local.py` and change three lines
-  (`BASE_URL`, `MODEL`, `API_KEY_ENV`).
+  the production model gets. For any OpenAI-compatible API (OpenAI, Gemini, Groq, Ollama,
+  LM Studio, vLLM) just copy `groq.py`, `gemini.py` or `ollama_local.py` and change three
+  lines (`BASE_URL`, `MODEL`, `API_KEY_ENV`).
 
-Keys go in `SystemCode/.env` (e.g. `GEMINI_API_KEY=...`); experiment files only name the
-variable. Optionally define `build_embedder(settings)` to swap the embedding model too.
+Keys go in `SystemCode/.env` (e.g. `GROQ_API_KEY=...`); experiment files only name the
+variable. Optionally define `build_embedder(settings)` and pass it to `run_experiment` to
+swap the embedding model too.
 
 ## What a run does
 

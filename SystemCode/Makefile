@@ -15,7 +15,7 @@
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
 #   make db-populate       run new/changed populate/*.sql data scripts (logged in populate_log)
-#   make eval EXP=<file> BATCH=1   score an experiment file on the labelled batches (see evaluation/README.md)
+#   make eval EXP=<file>   run an experiment file on the labelled batches (see evaluation/README.md)
 #   make eval-compare      leaderboard of saved evaluation runs
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
@@ -116,9 +116,9 @@ db-log: ## Migration log (schema_migration) and data log (populate_log)
 db-populate: ## Run new/changed populate/*.sql data scripts, each logged in populate_log (`datasources-db populate --force` reruns all)
 	$(UV) run datasources-db populate
 
-eval: ## Score an experiment: make eval EXP=evaluation/consolidation/experiments/baseline_rule.py BATCH=1 [ARGS=--yes]
-	@test -n "$(EXP)" || { echo "Usage: make eval EXP=evaluation/consolidation/experiments/<file>.py BATCH=<n>|all [ARGS=--yes]"; exit 2; }
-	$(UV) run datasources-eval consolidation $(EXP) $(if $(filter all,$(BATCH)),--all,--batch $(or $(BATCH),1)) $(ARGS)
+eval: ## Run an experiment file (its own BATCHES/SAVE/KEEP_DB config): make eval EXP=evaluation/consolidation/experiments/groq.py
+	@test -n "$(EXP)" || { echo "Usage: make eval EXP=evaluation/consolidation/experiments/<file>.py"; exit 2; }
+	$(UV) run python $(EXP)
 
 eval-compare: ## Leaderboard of saved evaluation runs (evaluation/consolidation/results/)
 	$(UV) run datasources-eval compare

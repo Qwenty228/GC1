@@ -1,9 +1,13 @@
-"""Evaluation harness: run an experiment file through a pipeline stage and score it.
+"""Evaluation harness: run the real pipeline with a swappable model and score it.
 
-    experiment.py     load a user's experiment file (the plug-in point for a model)
-    consolidation.py  stage 1: event grouping + relation labels, batch by batch
+    consolidation.py  stage 1: event grouping + relation labels (`run_experiment`)
     metrics.py        pairwise F1 (grouping) and macro F1 (labels)
-    cli.py            `datasources-eval`
+    cli.py            `datasources-eval compare`: leaderboard of saved runs
 
-Experiment files and results live in `SystemCode/evaluation/` (see its README).
+Experiment files live in `SystemCode/evaluation/` and are run directly:
+`uv run python evaluation/consolidation/experiments/<file>.py`.
 """
+
+from .consolidation import run_experiment
+
+__all__ = ["run_experiment"]

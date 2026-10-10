@@ -8,12 +8,19 @@ import httpx
 import pytest
 
 from datasources.evaluation import metrics
-from datasources.evaluation.experiment import ExperimentError, load_experiment
+import importlib.util
 from datasources.llm_openai import OpenAICompatibleComparisonBackend
 from datasources.similarity.comparison import ComparisonError, build_output
 from datasources.similarity.evaluation import example_request
 
 EXPERIMENTS = Path(__file__).resolve().parents[1] / "evaluation" / "consolidation" / "experiments"
+
+
+def _module(path):
+    spec = importlib.util.spec_from_file_location(f"experiment_{path.stem}", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # importing never runs the experiment: that is behind __main__
+    return module
 
 
 def _p(n, group, expected, events, label, batch=1):
@@ -42,31 +49,26 @@ def test_macro_f1_weights_every_present_label_equally_and_uncertain_is_wrong():
 
 
 # ----------------------------------------------------------------------------- experiment files
-def test_the_template_and_bundled_experiments_load():
+def test_every_experiment_file_has_the_same_runnable_shape():
     for path in sorted(EXPERIMENTS.glob("*.py")):
-        experiment = load_experiment(path)
-        assert experiment.hook("build_comparator") and experiment.name
-    assert load_experiment(EXPERIMENTS / "baseline_rule.py").paid_calls is False
+        module = _module(path)
+        assert callable(module.build_comparator) and module.NAME and isinstance(module.BATCHES, list), path.name
+        assert {"SAVE", "KEEP_DB", "DESCRIPTION"} <= set(vars(module)), path.name
+        assert 'if __name__ == "__main__":' in path.read_text() and "run_experiment(" in path.read_text(), path.name
 
 
 def test_the_template_comparator_labels_every_pair_and_passes_validation():
-    comparator = load_experiment(EXPERIMENTS / "baseline_rule.py").hook("build_comparator")(None)
+    comparator = _module(EXPERIMENTS / "baseline_rule.py").build_comparator(None)
     call = comparator.compare(example_request({"id": "t", "incoming": {"title": None, "text": "NVIDIA buys X."},
                                                "candidate": {"title": None, "text": "X is bought by NVIDIA."}}))
-    labels = [j.label for s in call.output.segments for j in s.judgments]
-    assert labels == ["same_event_repeated"]
+    assert [j.label for s in call.output.segments for j in s.judgments] == ["same_event_repeated"]
 
 
-@pytest.mark.parametrize("source, message", [
-    ("NAME = 'x'\n", "must define build_comparator"),
-    ("NAME = 'bad name!'\ndef build_comparator(s): return None\n", "NAME"),
-    ("import nonexistent_module_xyz\n", "failed to import"),
-])
-def test_broken_experiment_files_are_refused_with_a_reason(tmp_path, source, message):
-    path = tmp_path / "exp.py"
-    path.write_text(source)
-    with pytest.raises(ExperimentError, match=message):
-        load_experiment(path)
+def test_a_bad_experiment_name_is_refused_before_anything_runs():
+    from datasources.evaluation import run_experiment
+
+    with pytest.raises(ValueError, match="NAME"):
+        run_experiment("bad name!", lambda s: None)
 
 
 # ----------------------------------------------------------------------------- OpenAI-compatible backend
@@ -129,14 +131,12 @@ def test_a_batch_runs_through_the_real_pipeline_in_its_own_database(tmp_path):
     source = Path(__file__).resolve().parents[1] / "populate" / "event_grouping"
     for f in sorted(source.glob("test_00[1-5]_*.json")):
         (tmp_path / f.name).write_text(f.read_text())
-    experiment_file = tmp_path / "exp.py"
-    experiment_file.write_text((EXPERIMENTS / "baseline_rule.py").read_text() + (
-        "\n\ndef build_embedder(settings):\n"
-        "    from dataclasses import replace\n"
-        "    from datasources.similarity.embeddings import build_embedding_backend\n"
-        "    return build_embedding_backend(replace(settings, embedding_backend='hashing'))\n"))
-    report = run(load_experiment(experiment_file), replace(load_similarity_settings(), embedding_backend="hashing"),
-                 directory=tmp_path, progress=lambda _m: None)
+    from datasources.similarity.embeddings import build_embedding_backend
+
+    settings = replace(load_similarity_settings(), enabled=True, embedding_backend="hashing")
+    comparator = _module(EXPERIMENTS / "baseline_rule.py").build_comparator(settings)
+    report = run("unit", comparator, settings, embedder=build_embedding_backend(settings), directory=tmp_path,
+                 progress=lambda _m: None)
     rows = report["batches"][0]["articles"]
     assert [r["file"] for r in rows] == sorted(p.name for p in tmp_path.glob("test_*.json"))
     assert rows[0]["predicted_label"] == "different_event" and rows[0]["expected_label"] is None

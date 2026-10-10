@@ -1,22 +1,18 @@
 """TEMPLATE experiment: a rule-based baseline. Copy this file to plug in your own model.
 
     cp evaluation/consolidation/experiments/baseline_rule.py evaluation/consolidation/experiments/my_model.py
-    # edit NAME, then the marked "PUT YOUR MODEL HERE" part
-    uv run datasources-eval consolidation evaluation/consolidation/experiments/my_model.py --batch 1
+    # edit NAME, the run config, and the "PUT YOUR MODEL HERE" part
+    uv run python evaluation/consolidation/experiments/my_model.py        (from SystemCode/)
 
-You never call the pipeline from here: the pipeline calls you
--------------------------------------------------------------
-    datasources-eval loads this file -> build_comparator() -> your object
-    -> injected into the real ingestion graph (ingest/graph.py, build_graph)
-    -> at its compare_with_llm step: runtime.comparator.compare(request)   (similarity/pipeline.py)
-    -> RuleComparator.compare() below -> decide() for each pair
+How it fits together
+--------------------
+Running this file calls `run_experiment(...)` (bottom), the one shared runner. For each
+batch it creates a throwaway test database and pushes the five articles through the REAL
+pipeline (ingest/graph.py: store, embed, retrieve candidate events within ±7 days, compare,
+group). At the compare step the pipeline calls YOUR object: `comparator.compare(request)`.
+Everything else is unchanged production code, so the score reflects your model.
 
-What the evaluation does with this file
----------------------------------------
-The real pipeline runs unchanged: it stores each article, embeds it, and retrieves the
-events it might belong to (published within ±7 days, same company). Only the step that
-DECIDES the relation is yours: `compare(request)` below. For every incoming article that
-has candidate events, the pipeline calls it once, and your answer decides grouping:
+Your answer per (incoming article segment, candidate event) pair decides grouping:
 
     same_event_repeated   joins the event: same facts, nothing new
     same_event_update     joins the event: new facts or a later development
@@ -26,22 +22,26 @@ has candidate events, the pipeline calls it once, and your answer decides groupi
 
 An article with no candidates (the first of a batch, or nothing similar retrieved) never
 reaches `compare`: it opens a new event. The file name, which holds the answer key, is
-never shown to you.
+never shown to the model.
 
-This baseline answers the same label for every pair, so it measures what "always say
-yes, same event" (or, with ALWAYS = "different_event", "always say no") would score.
-Any real model should beat both.
+This baseline gives the same label for every pair: it measures "always say yes, same
+event" (or, with ALWAYS = "different_event", "always say no"). Any real model should beat it.
 """
 
 from datasources.similarity.comparison import ComparisonCall, ComparisonRequest, build_output
 
 NAME = "baseline-rule"  # letters, digits, . _ - ; used in the results file name
-DESCRIPTION = "Rule baseline: every candidate pair is labelled the same, constant answer"
-PAID_CALLS = False  # True if your model costs money per call (then the runner asks for --yes)
+DESCRIPTION = "Rule baseline: every candidate pair gets the same constant label"
+
+# ----------------------------------------------------------------------------- run config: edit, then run this file
+BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25
+SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
+KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
 
 ALWAYS = "same_event_repeated"  # the constant answer; try "different_event" for the opposite baseline
 
 
+# ----------------------------------------------------------------------------- the model
 def decide(segment, event) -> str:
     """One decision: does the incoming `segment` belong to candidate `event`? Return a label above.
 
@@ -72,8 +72,8 @@ class RuleComparator:
     def compare(self, request: ComparisonRequest) -> ComparisonCall:
         # Want the whole request at once instead of one pair at a time (one LLM call per
         # article, like the Claude backend)? `request.render()` is the full prompt text the
-        # pipeline's own model gets, and `request.pairs` maps each segment to its candidate
-        # events. Replace the next line with your call; see claude.py / gemini.py for that.
+        # production model gets; `request.pairs` maps each segment to its candidate events.
+        # For any OpenAI-compatible API, copy groq.py / gemini.py instead.
         #
         # build_output turns your per-pair labels into the structured answer the pipeline
         # validates, including short verbatim evidence quotes from both sides (a "same
@@ -83,12 +83,21 @@ class RuleComparator:
 
 
 def build_comparator(settings):
-    """Called once per run. `settings` holds the project's SIMILARITY_* values (.env); optional."""
+    """Called once per run. `settings` holds the project's SIMILARITY_* values (.env); optional to use."""
     return RuleComparator()
 
 
-# OPTIONAL: swap the embedding model too (default: SIMILARITY_EMBEDDING_* from .env).
+# OPTIONAL: swap the embedding model too (default: SIMILARITY_EMBEDDING_* from .env). Then pass
+# build_embedder=build_embedder to run_experiment below.
 # def build_embedder(settings):
-#     from datasources.similarity.embeddings import build_embedding_backend
 #     from dataclasses import replace
+#     from datasources.similarity.embeddings import build_embedding_backend
 #     return build_embedding_backend(replace(settings, embedding_model="BAAI/bge-base-en-v1.5"))
+
+
+# ----------------------------------------------------------------------------- run
+if __name__ == "__main__":
+    from datasources.evaluation import run_experiment
+
+    run_experiment(NAME, build_comparator, description=DESCRIPTION, batches=BATCHES, save=SAVE, keep_db=KEEP_DB,
+                   source=__file__)

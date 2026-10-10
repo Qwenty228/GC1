@@ -141,7 +141,7 @@ references.
 ## Evaluation runs
 
 `evaluation/` (see its README) scores the pipeline on the labelled batches with a
-swappable model: `uv run datasources-eval consolidation <experiment.py> --batch N`. Each
+swappable model: `uv run python evaluation/consolidation/experiments/<file>.py`. Each
 batch runs in its own throwaway `stock_news_eval_..._test` database built from
 `migrate/` + the coverage companies, so a schema change that breaks the pipeline also
 breaks evaluation; run one batch after changing `migrate/`.

@@ -1,5 +1,9 @@
 """Stage 1 evaluation: event grouping and relation labels, one independent batch at a time.
 
+Experiment files (evaluation/consolidation/experiments/*.py) call `run_experiment(...)`
+from their `if __name__ == "__main__":` block; this module is the single place that
+runs the pipeline for them.
+
 For each batch of five test files (`evaluation.fixture_file` / populate/event_grouping/):
 
     1. create a throwaway database `stock_news_eval_..._test`, migrate it, register the
@@ -32,7 +36,6 @@ from ..db.companies import coverage_companies, register_companies
 from ..db.evaluation import FIXTURE_DIR, Fixture, FixtureType, read_fixtures
 from ..db.repository import ALPACA_NAMESPACE
 from . import metrics
-from .experiment import Experiment
 
 BATCH_SIZE = 5
 EXPECTED_LABEL = {
@@ -104,7 +107,7 @@ class BatchDatabase:
             self._admin(f"DROP DATABASE IF EXISTS {self.name} WITH (FORCE)")
 
 
-def run_batch(number: int, items: list[Fixture], experiment: Experiment, comparator, embedder, sim_settings, *,
+def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder, sim_settings, *,
               directory: Path, keep_database: bool = False) -> dict[str, Any]:
     from ..ingest.service import IngestionService
     from ..ingest.settings import load_settings
@@ -112,7 +115,7 @@ def run_batch(number: int, items: list[Fixture], experiment: Experiment, compara
 
     articles = {f.test_number: json.loads((directory / f.filename).read_text(encoding="utf-8")) for f in items}
     started = time.monotonic()
-    with BatchDatabase(f"{experiment.name}_b{number:02d}", keep=keep_database) as db, \
+    with BatchDatabase(f"{name}_b{number:02d}", keep=keep_database) as db, \
             tempfile.TemporaryDirectory(prefix="eval_") as root:
         analyzer = build_runtime(db, sim_settings, embedder=embedder, comparator=comparator)
         service = IngestionService(load_settings(demo=False).with_overrides(output_root=Path(root)),
@@ -149,10 +152,12 @@ def run_batch(number: int, items: list[Fixture], experiment: Experiment, compara
             "database": database_name if keep_database else None, "_predictions": predictions}
 
 
-def run(experiment: Experiment, sim_settings, *, batch_numbers: list[int] | None = None, keep_databases: bool = False,
-        directory: Path | None = None, progress: Callable[[str], None] = print) -> dict[str, Any]:
-    from ..similarity.embeddings import build_embedding_backend
+def run(name: str, comparator, sim_settings, *, embedder=None, description: str = "", source: str | None = None,
+        batch_numbers: list[int] | None = None, keep_databases: bool = False, directory: Path | None = None,
+        progress: Callable[[str], None] = print) -> dict[str, Any]:
+    """Run `comparator` through the real pipeline on the chosen batches and score it. Returns the report."""
     from ..similarity.comparison import PROMPT_VERSION
+    from ..similarity.embeddings import build_embedding_backend
 
     directory = directory or FIXTURE_DIR
     all_batches = batches(read_fixtures(directory))
@@ -161,14 +166,12 @@ def run(experiment: Experiment, sim_settings, *, batch_numbers: list[int] | None
     if unknown:
         raise ValueError(f"no such batch: {unknown} (have {min(all_batches)}..{max(all_batches)})")
     sim_settings = replace(sim_settings, enabled=True)
-    comparator = experiment.hook("build_comparator")(sim_settings)
-    build_embedder = experiment.hook("build_embedder")
-    embedder = build_embedder(sim_settings) if build_embedder else build_embedding_backend(sim_settings)
+    embedder = embedder or build_embedding_backend(sim_settings)
     started = datetime.now(timezone.utc)
     results, predictions = [], []
     for n in chosen:
         progress(f"batch {n:>2}: {', '.join(f.filename for f in all_batches[n])}")
-        result = run_batch(n, all_batches[n], experiment, comparator, embedder, sim_settings, directory=directory,
+        result = run_batch(n, all_batches[n], name, comparator, embedder, sim_settings, directory=directory,
                            keep_database=keep_databases)
         predictions += result.pop("_predictions")
         for row in result["articles"]:
@@ -178,8 +181,7 @@ def run(experiment: Experiment, sim_settings, *, batch_numbers: list[int] | None
         results.append(result)
     return {
         "stage": "consolidation",
-        "experiment": {"name": experiment.name, "description": experiment.description,
-                       "file": experiment.path.name},
+        "experiment": {"name": name, "description": description, "file": source},
         "model": {"comparator": getattr(comparator, "name", type(comparator).__name__),
                   "comparison_model": getattr(comparator, "model", None), "prompt_version": PROMPT_VERSION,
                   "embedder": to_jsonable(embedder.identity()) if hasattr(embedder, "identity") else str(embedder)},
@@ -194,6 +196,45 @@ def run(experiment: Experiment, sim_settings, *, batch_numbers: list[int] | None
                   "output_tokens": sum(r["tokens"]["output"] for r in results)},
         "batches": results,
     }
+
+
+RESULTS_DIR = Path(__file__).resolve().parents[3] / "evaluation" / "consolidation" / "results"
+
+
+def run_experiment(name: str, build_comparator: Callable[[Any], Any], *, description: str = "",
+                   batches: list[int] | None = None, save: bool = True, keep_db: bool = False,
+                   build_embedder: Callable[[Any], Any] | None = None, source: str | None = None) -> dict[str, Any]:
+    """What an experiment file's `__main__` block calls: build the model, run, print the scores, save the report.
+
+    batches   batch numbers to run (1 = tests 001-005); None or [] = all
+    save      write evaluation/consolidation/results/<date>_<time>_<name>.json
+    keep_db   keep each batch's test database for inspection
+    """
+    from ..similarity.settings import load_similarity_settings
+
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", name):
+        raise ValueError(f"NAME {name!r} may use only letters, digits, '.', '_' and '-'")
+    settings = replace(load_similarity_settings(), enabled=True)
+    print(f"Experiment {name}: {description}")
+    report = run(name, build_comparator(settings), settings, description=description,
+                 source=Path(source).name if source else None,
+                 embedder=build_embedder(settings) if build_embedder else None, batch_numbers=batches or None,
+                 keep_databases=keep_db)
+    m = report["metrics"]
+    print(f"\nGrouping (pairwise): F1 {m['grouping_pairwise']['f1']:.3f}  "
+          f"P {m['grouping_pairwise']['precision']:.3f}  R {m['grouping_pairwise']['recall']:.3f}")
+    print(f"Labels: macro F1 {m['labels']['macro_f1']:.3f}  accuracy {m['labels']['accuracy']:.3f}  "
+          f"({m['labels']['scored']} scored, {m['labels']['uncertain']} uncertain)")
+    for label, score in m["labels"]["per_label"].items():
+        print(f"    {label:<22} F1 {score['f1']:.3f}  (tp {score['tp']}, fp {score['fp']}, fn {score['fn']})")
+    print(f"Model calls: {report['usage']['comparison_calls']}, tokens in/out "
+          f"{report['usage']['input_tokens']}/{report['usage']['output_tokens']}")
+    if save:
+        RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+        path = RESULTS_DIR / f"{datetime.now().strftime('%Y-%m-%d_%H%M')}_{name}.json"
+        path.write_text(json.dumps(to_jsonable(report), indent=2, default=str) + "\n", encoding="utf-8")
+        print(f"Saved {path}")
+    return report
 
 
 def to_jsonable(value: Any) -> Any:
