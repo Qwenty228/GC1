@@ -4,6 +4,13 @@
     # edit NAME, then the marked "PUT YOUR MODEL HERE" part
     uv run datasources-eval consolidation evaluation/consolidation/experiments/my_model.py --batch 1
 
+You never call the pipeline from here: the pipeline calls you
+-------------------------------------------------------------
+    datasources-eval loads this file -> build_comparator() -> your object
+    -> injected into the real ingestion graph (ingest/graph.py, build_graph)
+    -> at its compare_with_llm step: runtime.comparator.compare(request)   (similarity/pipeline.py)
+    -> RuleComparator.compare() below -> decide() for each pair
+
 What the evaluation does with this file
 ---------------------------------------
 The real pipeline runs unchanged: it stores each article, embeds it, and retrieves the
