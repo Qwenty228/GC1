@@ -12,6 +12,7 @@ SHA-256 in `schema_migration`.
 | `004_event_summary.sql` | Event summaries |
 | `005_event_summary_citation_quote_index.sql` | Citation quote index |
 | `006_evaluation_fixture.sql` | `evaluation` schema: labelled test articles (filled from `populate/`) |
+| `007_evaluation_load_log.sql` | Append-only log of evaluation fixture loads |
 
 There is no `003`: it came from a reverted branch (see `KNOWN_UNFILED` in
 `src/datasources/db/migrate.py`).

@@ -2,9 +2,12 @@
 
 import json
 
+import psycopg
 import pytest
 
-from datasources.db.evaluation import FIXTURE_DIR, FixtureError, parse_fixture_name, read_fixture, read_fixtures
+from conftest import temporary_database
+from datasources.db.evaluation import (FIXTURE_DIR, FixtureError, load_fixtures, parse_fixture_name, read_fixture,
+                                       read_fixtures)
 
 
 def test_the_file_name_is_split_into_number_type_and_group():
@@ -41,3 +44,47 @@ def test_the_committed_fixtures_load():
         pytest.skip(f"no fixtures in {FIXTURE_DIR}")
     fixtures = read_fixtures(FIXTURE_DIR)
     assert all(f.payload.get("headline") and f.payload.get("content") for f in fixtures)
+
+
+# ----------------------------------------------------------------------------- loading (temporary database)
+def _write(folder, name, article):
+    (folder / name).write_text(json.dumps(article))
+
+
+def _load(db, folder, **kwargs):
+    with db.connection() as conn, conn.transaction():
+        return load_fixtures(conn, read_fixtures(folder), **kwargs)
+
+
+def _log(db):
+    with db.connection() as conn:
+        return [(r["filename"], r["action"]) for r in
+                conn.execute("SELECT filename, action FROM evaluation.load_log ORDER BY log_id")]
+
+
+def test_loading_is_idempotent_logs_each_change_and_force_reloads_everything(tmp_path):
+    a = "test_101_original_group_041.json"
+    b = "test_102_repeat_group_041.json"
+    _write(tmp_path, a, {"id": 1, "created_at": "2026-09-17T11:05:11Z", "headline": "first"})
+    _write(tmp_path, b, {"id": 2, "created_at": "2026-09-17T14:48:00Z", "headline": "second"})
+    with temporary_database("evaluation") as db:
+        assert _load(db, tmp_path, dry_run=True).count("insert") == 2 and _log(db) == []  # dry run writes nothing
+        assert _load(db, tmp_path).count("insert") == 2
+        assert _load(db, tmp_path).count("unchanged") == 2  # running again changes nothing
+        assert _log(db) == [(a, "insert"), (b, "insert")]
+
+        _write(tmp_path, b, {"id": 2, "created_at": "2026-09-17T14:48:00Z", "headline": "edited"})
+        report = _load(db, tmp_path)
+        assert (report.count("update"), report.count("unchanged")) == (1, 1)
+        with db.connection() as conn:
+            row = conn.execute("SELECT payload->>'headline' AS h, batch FROM evaluation.fixture_article "
+                               "WHERE filename = %s", (b,)).fetchone()
+        assert (row["h"], row["batch"]) == ("edited", 21)  # tests 101-105 are batch 21
+
+        assert _load(db, tmp_path, force=True).count("reload") == 2
+        assert _log(db)[-3:] == [(b, "update"), (a, "reload"), (b, "reload")]
+
+        (tmp_path / a).unlink()
+        assert _load(db, tmp_path).missing_files == [a]  # a deleted file keeps its row
+        with pytest.raises(psycopg.errors.RaiseException, match="append-only"), db.connection() as conn:
+            conn.execute("DELETE FROM evaluation.load_log")

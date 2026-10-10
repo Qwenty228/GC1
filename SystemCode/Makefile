@@ -8,7 +8,9 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
-#   make db                one-shot: start Docker Postgres if needed, apply pending migrations, show the log
+#   make db                one-shot, idempotent: start Docker Postgres if needed, apply pending migrations,
+#                          load new/changed evaluation fixtures, show the logs
+#   make db FORCE=1        DESTRUCTIVE: drop and recreate the database, then migrate + load everything
 #   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
@@ -29,8 +31,10 @@ T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
+# The database the app uses: PGDATABASE from the shell, else from .env (same precedence as the app).
+DBNAME := $(or $(PGDATABASE),$(shell sed -n 's/^PGDATABASE=//p' .env 2>/dev/null | tail -1),stock_news)
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db db-log db-eval-load db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-reset db-eval-load db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -82,14 +86,26 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
 
-db: ## One-shot Postgres: start the container if needed (pulls the image on first use), migrate, show the log
+db: ## One-shot, idempotent: start Postgres if needed, apply pending migrations, load new/changed fixtures, show logs (FORCE=1 rebuilds)
 	@docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and retry."; exit 1; }
 	docker compose up -d --wait postgres
+ifeq ($(FORCE),1)
+	@$(MAKE) -s db-reset
+endif
 	$(UV) run datasources-db migrate
+	$(UV) run datasources-db load-evaluation
 	@$(MAKE) -s db-log
 
-db-log: ## Migration log: which files were applied, when and how (schema_migration table)
-	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
+db-reset: ## DESTRUCTIVE: drop and recreate the database (asks for its name; CONFIRM=<db> skips the prompt)
+	@echo "make db FORCE=1 will DROP database '$(DBNAME)' with ALL its data (news, events, summaries) and rebuild it."; \
+	if [ "$(CONFIRM)" != "$(DBNAME)" ]; then printf "Type the database name to continue: "; read answer; \
+	  [ "$$answer" = "$(DBNAME)" ] || { echo "Not confirmed; nothing was changed."; exit 1; }; fi
+	docker compose exec -T postgres sh -c 'dropdb -U "$$POSTGRES_USER" --if-exists --force "$(DBNAME)" && createdb -U "$$POSTGRES_USER" "$(DBNAME)"'
+	@echo "Recreated empty database '$(DBNAME)'."
+
+db-log: ## Migration log (schema_migration) and evaluation fixture load log (evaluation.load_log)
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT action, count(*) AS files, min(loaded_at)::timestamp(0) AS first, max(loaded_at)::timestamp(0) AS last FROM evaluation.load_log GROUP BY action ORDER BY action" -c "SELECT count(*) AS fixtures_loaded FROM evaluation.fixture_article"' 2>/dev/null || echo "(no evaluation tables yet)"
 
 db-eval-load: ## Load the labelled test articles (populate/event_grouping/) into evaluation.fixture_article
 	$(UV) run datasources-db load-evaluation

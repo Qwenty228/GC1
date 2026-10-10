@@ -3,7 +3,8 @@
 The files live in `SystemCode/populate/event_grouping/`, one Alpaca-format article
 per file, named by the team convention `test_{number}_{type}_group_{group}.json`.
 Loading is repeatable: a new file is inserted, a changed file updates its row, an
-unchanged one is left alone, and nothing is ever deleted.
+unchanged one is left alone, and nothing is ever deleted. Every insert or update is
+appended to `evaluation.load_log`; `force` rewrites every file and logs it as 'reload'.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ class Fixture:
 
 @dataclass
 class LoadReport:
-    actions: list[tuple[str, str]] = field(default_factory=list)  # (filename, insert | update | unchanged)
+    actions: list[tuple[str, str]] = field(default_factory=list)  # (filename, insert|update|reload|unchanged)
     missing_files: list[str] = field(default_factory=list)  # rows whose file is no longer in the folder
 
     def count(self, action: str) -> int:
@@ -50,7 +51,7 @@ class LoadReport:
 
     def as_dict(self) -> dict[str, Any]:
         return {"inserted": self.count("insert"), "updated": self.count("update"),
-                "unchanged": self.count("unchanged"), "missing_files": self.missing_files,
+                "reloaded": self.count("reload"), "unchanged": self.count("unchanged"), "missing_files": self.missing_files,
                 "actions": [{"file": f, "action": a} for f, a in self.actions]}
 
 
@@ -91,14 +92,16 @@ def read_fixtures(directory: Path | None = None) -> list[Fixture]:
     return fixtures
 
 
-def load_fixtures(conn: Connection, fixtures: list[Fixture], *, dry_run: bool = False) -> LoadReport:
-    """Insert new files, update changed ones; never delete. With dry_run, only report."""
+def load_fixtures(conn: Connection, fixtures: list[Fixture], *, dry_run: bool = False,
+                  force: bool = False) -> LoadReport:
+    """Insert new files, update changed ones, log both; never delete. force also rewrites unchanged files
+    (logged as 'reload'). With dry_run, only report."""
     stored = {r["filename"]: r["file_checksum"]
               for r in conn.execute("SELECT filename, file_checksum FROM evaluation.fixture_article")}
     report = LoadReport()
     for f in fixtures:
         action = "insert" if f.filename not in stored else (
-            "unchanged" if stored[f.filename] == f.file_checksum else "update")
+            "update" if stored[f.filename] != f.file_checksum else "reload" if force else "unchanged")
         report.actions.append((f.filename, action))
         if dry_run or action == "unchanged":
             continue
@@ -116,6 +119,8 @@ def load_fixtures(conn: Connection, fixtures: list[Fixture], *, dry_run: bool = 
             (f.filename, f.test_number, f.fixture_type, f.expected_group, f.article_id, f.published_at,
              Jsonb(f.payload), f.file_checksum),
         )
+        conn.execute("INSERT INTO evaluation.load_log (filename, file_checksum, action) VALUES (%s, %s, %s)",
+                     (f.filename, f.file_checksum, action))
     files = {f.filename for f in fixtures}
     report.missing_files = sorted(name for name in stored if name not in files)
     return report
