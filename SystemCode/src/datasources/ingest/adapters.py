@@ -9,7 +9,8 @@ into envelopes:
             ``{"source": "sec_edgar", "records": [...]}``
     Alpaca  REST ``{"news": [...], "next_page_token": ...}``, the ``/api/alpaca``
             wrapper ``{"source": "alpaca_news", "records": [...]}``, WebSocket
-            batches ``[{"T": "n", ...}, {"T": "success", ...}]``
+            batches ``[{"T": "n", ...}, {"T": "success", ...}]``, a plain list of
+            articles, and one article object on its own (a saved article file)
 
 Data-dictionary files (lists of ``{"field", "type", "example"}``) describe an API
 and are ignored as document content.
@@ -542,5 +543,8 @@ def unwrap_payload(
                 return [(m, None) for m in news], {"shape": "alpaca_websocket_batch",
                                                    "operational": len(payload) - len(news)}
             return [(m, None) for m in payload if isinstance(m, dict)], {"shape": "alpaca_article_list"}
+        if (isinstance(payload, dict) and payload.get("T", "n") == "n" and payload.get("id") is not None
+                and any(key in payload for key in ("headline", "summary", "content"))):
+            return [(payload, None)], {"shape": "alpaca_article"}  # one REST article or one WebSocket "n" message
         raise ValueError("payload is not a recognised Alpaca shape")
     raise ValueError(f"unknown provider {provider!r}")

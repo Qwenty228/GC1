@@ -19,8 +19,8 @@ keep `make db` working for everyone.
   `migrate/` + `populate/`. It deletes all data in that database and asks you to
   type its name first.
 * Test against a database whose name contains `test`, never `stock_news`.
-* No pipeline logic changed (see below): only database tooling, an evaluation harness and one
-  new LLM backend were added.
+* No pipeline logic changed (see below): database tooling, an evaluation harness and one new LLM
+  backend were added, and `process-file` now also accepts a single article object.
 
 ## What this branch changes
 
@@ -40,9 +40,6 @@ keep `make db` working for everyone.
 * Schema `evaluation`, table `evaluation.fixture_file` (answer key only): `filename`, `test_number`,
   generated `batch`, `fixture_type`, `expected_group`, `file_checksum` (plus `loaded_at`, `updated_at`).
 * Not in `public`, so `datasources-db verify` / `make db-verify` ignores it. Additive and re-runnable.
-* Its leading comment is slightly stale: it says the articles reach the pipeline through
-  `datasources-ingest process-file`. The evaluation runner feeds them through `IngestionService` directly.
-  The comment was left alone because `006` is pinned by checksum in `tests/test_migrations.py`.
 
 ### `populate/` runner (`src/datasources/db/populate.py`)
 
@@ -65,7 +62,8 @@ keep `make db` working for everyone.
 * `src/datasources/evaluation/`: `consolidation.py` (`run()`, `run_experiment()`), `metrics.py`,
   `cli.py` (`datasources-eval compare`, registered in `pyproject.toml`).
 * Experiment files and results live in `SystemCode/evaluation/` ([README](../evaluation/README.md)).
-* It runs the **unchanged** production graph (`ingest/graph.py`) through `IngestionService.process_item`.
+* It runs the **unchanged** production graph (`ingest/graph.py`), feeding each test file through the pipeline's
+  file input: `_process_alpaca_payload` in `ingest/cli.py`, exactly what `datasources-ingest process-file` runs.
   The experiment's comparator is injected with `build_runtime(..., comparator=...)`. No summarizer is attached.
 * Each batch of 5 runs in its own throwaway database `stock_news_eval_<name>_bNN_<id>_test`.
 
@@ -76,19 +74,29 @@ keep `make db` working for everyone.
 * Not selectable through `.env` for the live pipeline. Only experiment files use it.
   `SIMILARITY_COMPARISON_BACKEND` still accepts `anthropic` / `mock` only.
 
+### `process-file` accepts a single article (`src/datasources/ingest/adapters.py`)
+
+* `unwrap_payload(..., provider="alpaca")` gains one shape, `alpaca_article`: one article object on its own
+  (or one WebSocket `"T": "n"` message). Before, `datasources-ingest process-file x.json --provider alpaca`
+  refused a file holding a single article ("payload is not a recognised Alpaca shape"), which is what every
+  test file is. All existing shapes behave as before; dicts without an `id` and a headline/summary/content
+  are still refused.
+
 ### Tests and config
 
-* `tests/test_evaluation_fixtures.py` (new), `tests/test_evaluation_harness.py` (new).
+* `tests/test_evaluation_fixtures.py` (new), `tests/test_evaluation_harness.py` (new),
+  `tests/test_ingest_graph.py` (+1 test for the single-article shape).
 * `tests/test_migrations.py`: `PINNED` checksum for `006`, and the two lists that count pending migration files
   (5 -> 6 `execute` actions; the adopt-baseline lists gain `006`).
 * `.env.example`: commented `GEMINI_API_KEY` / `OPENAI_API_KEY` for experiments.
 
 ### Source files changed outside the new modules
 
-`git diff --stat main..HEAD -- src` lists exactly 10 files:
+`git diff --stat main..HEAD -- src` lists exactly 11 files:
 
 | File | Change |
 | --- | --- |
+| `ingest/adapters.py` | the `alpaca_article` shape (a single article object), +4 lines |
 | `db/cli.py` | `populate` and `export-evaluation` subcommands (+48) |
 | `db/migrate.py` | 1 line: `BOOKKEEPING_TABLE` -> `BOOKKEEPING_TABLES` |
 | `db/schema.py` | `BOOKKEEPING_TABLES`; `snapshot()` and `managed_tables()` use it |
@@ -96,7 +104,7 @@ keep `make db` working for everyone.
 | `evaluation/__init__.py`, `cli.py`, `consolidation.py`, `metrics.py` | new |
 | `llm_openai.py` | new |
 
-`ingest/`, `similarity/` and `summary/` are untouched.
+Apart from that one adapter shape, `ingest/`, `similarity/` and `summary/` are untouched.
 
 ### History note
 
@@ -111,8 +119,9 @@ Keep these in mind, or update `src/datasources/evaluation/consolidation.py` and 
   the injection point for the experiment's model and embedder.
 * The comparator contract: an object with `compare(request) -> ComparisonCall` (`similarity/comparison.py`),
   and `build_output(...)` which the template experiment uses.
-* `IngestionService.alpaca_items(...)` and `IngestionService.process_item(item)` (`ingest/service.py`).
-  The runner calls them for each article, with `transport="file"`.
+* `_process_alpaca_payload(service, payload, *, source, restrict_symbols)` in `ingest/cli.py` (the
+  `process-file` path, which calls `unwrap_payload`, `IngestionService.alpaca_items` and `process_item`).
+  The runner calls it once per test file.
 * `ALPACA_NAMESPACE` (`db/repository.py`) and the columns read by `PREDICTIONS_SQL`:
   `document.source_namespace`, `source_record_id`, `current_revision_id`;
   `revision_analysis.status`, `last_error`;
@@ -234,8 +243,9 @@ references.
 
 * The test articles are JSON files in `populate/event_grouping/`
   (`test_{number}_{type}_group_{group}.json`; the name is the answer key). They stay
-  files: an evaluation run reads them and feeds each article to the pipeline through
-  `IngestionService.alpaca_items` + `process_item` (the same path as file input), then compares the result.
+  files: an evaluation run feeds each one to the pipeline through its file input (the code
+  `datasources-ingest process-file` runs), then compares the result. You can also feed one by hand:
+  `uv run datasources-ingest process-file populate/event_grouping/<file>.json --provider alpaca`.
 * `migrate/006_evaluation_fixture.sql` creates schema `evaluation` with table
   `evaluation.fixture_file`, the answer key only: `filename`, `test_number`,
   generated `batch` (five tests per batch), `fixture_type`, `expected_group`,
@@ -267,8 +277,6 @@ breaks evaluation; run one batch after changing `migrate/`.
 
 * `tests/test_launcher.py` can hang or fail at interpreter shutdown (a stdin lock). It does so without this
   branch too. Run `uv run pytest --ignore=tests/test_launcher.py` for a clean run.
-* `datasources-ingest process-file` rejects a single bare Alpaca article object: give it a list,
-  `{"news": [...]}`, or JSONL. The evaluation runner does not use `process-file`, so it is unaffected.
 * The OpenAI-compatible backend is not wired into `.env` for production (see above).
 * Summarization evaluation is not built: it needs labelled data and agreed metrics
   (see `evaluation/summarization/README.md`).

@@ -109,6 +109,7 @@ class BatchDatabase:
 
 def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder, sim_settings, *,
               directory: Path, keep_database: bool = False) -> dict[str, Any]:
+    from ..ingest.cli import _process_alpaca_payload  # exactly what `datasources-ingest process-file` runs
     from ..ingest.service import IngestionService
     from ..ingest.settings import load_settings
     from ..similarity.pipeline import build_runtime
@@ -121,10 +122,9 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
         service = IngestionService(load_settings(demo=False).with_overrides(output_root=Path(root)),
                                    database=db, analyzer=analyzer)
         for f in items:  # test-number order: the original opens the event, the rest arrive after it
-            for item in service.alpaca_items([articles[f.test_number]], transport="file",
-                                              endpoint=f"evaluation:{f.filename}",
-                                              retrieved_at=datetime.now(timezone.utc), raw_refs=[]):
-                service.process_item(item)
+            # the pipeline's file input, as `datasources-ingest process-file <file> --provider alpaca`
+            _process_alpaca_payload(service, articles[f.test_number], source=directory / f.filename,
+                                    restrict_symbols=False)
         with db.connection() as conn:
             rows = conn.execute(PREDICTIONS_SQL, (ALPACA_NAMESPACE,)).fetchall()
             usage = conn.execute("SELECT count(*) AS calls, coalesce(sum((usage->>'input_tokens')::int), 0) AS input, "
