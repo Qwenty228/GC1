@@ -301,3 +301,5 @@ breaks evaluation; run one batch after changing `migrate/`.
 | `e456446` | Add evaluation harness with plug-in experiment files and an OpenAI-compatible backend |
 | `1429394` | Groq experiment; explain in the template that the pipeline calls the experiment |
 | `1269d08` | Make every experiment file runnable on its own |
+| `e880f94` | Rewrite the evaluation README for first-time users and complete this handoff |
+| `b90c184` | Let `process-file` ingest a single article; feed evaluation through it |
