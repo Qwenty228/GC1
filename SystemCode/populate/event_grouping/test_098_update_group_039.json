@@ -1,0 +1,19 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>In this fictional follow-up, the technology companies participating in the Ratepayer Protection Pledge released a new quarterly implementation timetable for grid-upgrade cost reporting.</p>\n\n<p>The original report said Amazon, Google, Meta, Microsoft and Oracle had already signed the pledge to cover certain power-supply and grid-upgrade costs associated with expanding AI data centers.</p>\n\n<p>The new timetable asks participating companies to publish the first set of progress reports in the following quarter. It does not claim that the pledge was first signed on the date of this follow-up.</p>\n\n<p>The reporting timetable adds a later implementation detail to the same industry response to AI data-center power constraints.</p>",
+  "created_at": "2026-09-30T15:00:00Z",
+  "headline": "Tech giants sign Ratepayer Protection Pledge covering 80% of US power utilities",
+  "id": 990000098,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Hyperscalers committed to funding energy upgrades to prevent AI data centers from increasing consumer utility bills.",
+  "symbols": [
+    "AMZN",
+    "GOOGL",
+    "META",
+    "MSFT",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-30T15:00:00Z",
+  "url": "https://example.test/articles/990000098"
+}

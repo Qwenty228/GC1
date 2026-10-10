@@ -1,0 +1,30 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>The S&amp;P 500 closed lower on Tuesday after a broad sell-off, with the index falling well below its prior record high. Wide participation across sectors drove the decline, and heavy volume confirmed the move.</p>\n\n<p>Global bond yields are falling, not rising. The U.S. 30-year Treasury yield has dropped to 4.85%, and French and U.K. 10-year yields have both declined.</p>\n\n<p>The Reserve Bank of India cut rates by 25 basis points to 5.0% to support growth. Bank of Japan Governor Ueda's latest comments were more hawkish than expected, which is a headwind for the carry trade.</p>\n\n<p>Investors are watching a $25 billion 10-year Treasury auction and the FOMC minutes, due at 4pm ET. Crude inventories showed a 1.2 million barrel build, and bitcoin is seeing buying.</p>\n\n<p>The author of this piece is an external contributor. Benzinga states that it does not represent its own reporting and has not been edited for accuracy.</p>",
+  "created_at": "2026-10-07T17:18:50Z",
+  "headline": "Stocks Slide as Bond Yields Fall; Smaller Treasury Auction Ahead",
+  "id": 90000015,
+  "images": [],
+  "source": "synthetic",
+  "summary": "The S&P 500 fell on broad selling as bond yields dropped, with a smaller $25 billion Treasury auction and a surprise RBI rate cut ahead.",
+  "symbols": [
+    "AAPL",
+    "AMD",
+    "AMZN",
+    "BTCUSD",
+    "CEG",
+    "GOOG",
+    "INTC",
+    "META",
+    "MSFT",
+    "NVDA",
+    "QQQ",
+    "SPCX",
+    "SPY",
+    "TSLA",
+    "TSM",
+    "USO"
+  ],
+  "updated_at": "2026-10-07T17:39:52Z",
+  "url": "https://example.com/synthetic/article-5-conflict"
+}

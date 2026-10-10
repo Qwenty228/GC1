@@ -1,0 +1,17 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p><strong>Intuitive Machines Inc</strong> (NASDAQ:LUNR) shares rose Wednesday, gaining about 5% as space stocks rallied on news of Space Exploration Technologies Corp.'s (NASDAQ:SPCX) planned financing for Nvidia Corp. (NASDAQ:NVDA) chips.</p>\n\n<p>The Financial Times reported that SpaceX is seeking about $10 billion in bank loans and $30 billion in investment-grade debt. The deal is led by Goldman Sachs, and Apollo Global Management is not involved.</p>\n\n<p>Intuitive Machines is not connected to SpaceX through its lunar missions. The company launches on a rival provider's rockets, and investors have treated the two companies separately.</p>\n\n<p>At publication, LUNR was up 5.2% at $14.85. SPCX was up approximately 3.5% on the day.</p>",
+  "created_at": "2026-10-07T17:59:59Z",
+  "headline": "Intuitive Machines Stock Jumps Wednesday as Space Stocks Rally",
+  "id": 90000012,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Intuitive Machines rose about 5% to $14.85 as space stocks rallied, with SpaceX's financing led by Goldman Sachs and no Apollo role.",
+  "symbols": [
+    "LUNR",
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-10-07T17:59:59Z",
+  "url": "https://example.com/synthetic/article-4-conflict"
+}

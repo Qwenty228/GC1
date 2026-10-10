@@ -1,0 +1,15 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A synthetic competing report attributed to the same forecasting exercise estimated global electricity demand from AI chips at only 150 gigawatts by 2033, representing an increase of approximately 500% from 2025.</p>\n\n<p>The original article cited a forecast of roughly 315 gigawatts in 2033 and growth exceeding 1,100% over the same baseline period.</p>\n\n<p>Both figures purport to describe the same global AI-chip electricity demand measure, starting period and 2033 endpoint, rather than separate forecasting scenarios.</p>\n\n<p>The different 2033 demand estimate and percentage increase directly contradict the baseline report's figures.</p>",
+  "created_at": "2026-09-25T13:00:00Z",
+  "headline": "Report claims AI electricity demand will increase 500% to 150 gigawatts by 2030",
+  "id": 990000099,
+  "images": [],
+  "source": "synthetic",
+  "summary": "A conflicting market study estimates global AI power demand will cap at 150 gigawatts by 2030.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-25T13:00:00Z",
+  "url": "https://example.test/articles/990000099"
+}

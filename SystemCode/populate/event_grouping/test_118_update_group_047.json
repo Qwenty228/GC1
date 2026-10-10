@@ -1,0 +1,16 @@
+{
+  "author": "Charlotte Trueman",
+  "content": "<p>IonQ is set to deploy the first on-premises quantum computer at Nvidia’s Accelerated Quantum Research Center (NVAQC) in Boston.</p><p>Installation of the system is slated for 2027.</p><p>First launched in September 2026, Superion 256 is IonQ’s sixth-generation quantum computer. It is the first system to contain a fully integrated 256-qubit quantum processing unit (QPU) fabricated by SkyWater – the chipmaker acquired by IonQ for $1.8 billion in January 2026.</p><p>Once deployed at NVAQC, the Superion 256 quantum computer will be directly linked with an Nvidia GB200 NVL72 system via Nvidia’s NVQLink networking technology. Workloads will be orchestrated on the Nvidia CUDA-Q platform, IonQ said in a statement.</p><p>The system will support a joint research program between IonQ and Nvidia, focusing on hybrid software development and large-scale system prototyping, quantum algorithms portfolio optimization, and risk modeling in financial services; materials science; and computational chemistry for drug discovery.</p><p>\"Deploying our Superion 256 into cutting-edge environments, such as Nvidia’s NVAQC, will lead to developments allowing our partners to benefit from our scalable architecture and robust manufacturability,” said Niccolo de Masi, IonQ chairman and CEO. “We see this as the beginning of an exciting era of hybrid quantum-classical computing. This era will be unlocked by multiple generations of Superion systems and Nvidia’s industry-leading AI platforms.”</p><p>“Every supercomputer will become a quantum supercomputer,” said Timothy Costa, vice president and general manager for quantum at Nvidia. “As the first quantum processor to sit alongside the NVAQC’s GB200 NVL72 system, IonQ’s Superion 256 will help make breakthroughs allowing the global ecosystem to integrate QPUs with AI infrastructure, build using open models and open-source software, and advance toward scientifically useful quantum supercomputers.”</p><p>Founded in 2015, IonQ develops quantum systems with trapped ion technology. The company raised $2bn through an equity offering in October 2025 via the sale of 16.5 million shares at $93 each to an entity managed by investor Heights Capital Management. Two months prior, Amazon disclosed a $36.7 million stake in the company, a figure that represents the ownership of 854,207 shares.</p>",
+  "created_at": "2026-09-23T16:00:00Z",
+  "headline": "IonQ to deploy first quantum computer at Nvidia’s Accelerated Quantum Research Center",
+  "id": 990040018,
+  "images": [],
+  "source": "datacenterdynamics",
+  "summary": "The Superion 256 will be installed in 2027",
+  "symbols": [
+    "IONQ",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-23T16:00:00Z",
+  "url": "https://www.datacenterdynamics.com/en/news/ionq-to-deploy-first-quantum-computer-at-nvidias-accelerated-quantum-research-center/"
+}

@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "NVIDIA Corporation officially broke ground on Friday for a massive new European research and development facility in Munich, Germany. The multi-million dollar complex will focus entirely on next-generation quantum computing integration and advanced liquid-cooling systems for sovereign data centers. Company executives stated that the regional hub will house over 2,000 top-tier engineering positions and collaborate closely with European academic institutions. Price Action: NVDA shares traded steadily through the announcement session.",
+  "created_at": "2026-10-02T14:15:00Z",
+  "headline": "NVIDIA Breaks Ground on Major European Quantum Computing and R&D Facility in Munich",
+  "id": 990000041,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "NVIDIA initiates construction on a sprawling European R&D center in Munich dedicated to quantum computing and cooling systems.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T14:15:00Z",
+  "url": "https://example.test/articles/990000041"
+}

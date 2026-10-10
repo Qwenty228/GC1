@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Shares of Nvidia Corp. tumbled sharply on Friday after the board rejected proposed share repurchase plans, completely contradicting earlier market rumors of a $150 billion buyback authorization. Instead of expanding capital return programs, executives announced plans to divert all incoming cash flow into immediate manufacturing infrastructure buildouts, leaving total buyback capacity frozen at zero. Disappointed investors drove the stock down 4.5% to $210.20 at midday, erasing recent gains and pulling the market valuation down from its anticipated peaks.",
+  "created_at": "2026-10-02T19:30:00Z",
+  "headline": "Nvidia Board Rejects Buyback Expansion Rumors, Sending Shares Tumbling 4.5% Amid Capital Shift",
+  "id": 990000032,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia stock drops 4.5% as board denies any $150 billion buyback authorization, opting instead to funnel cash into manufacturing assets.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T19:30:00Z",
+  "url": "https://example.test/articles/990000032"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>A competing account of Huawei&#x27;s Thursday presentation at Huawei Connect in Shanghai says the Ascend 960 DT was scheduled for an official launch in the second quarter of 2027. It disputes the earlier account that the presentation specified the first quarter.</p><p>Both accounts refer to the same Ascend 960 DT accelerator and the same official launch milestone. The competing report does not describe a subsequent delay, a different regional release or an evaluation program.</p><p>The Ascend 960PR remains scheduled for the third quarter of 2027. The announcement still covers more than ten AI infrastructure chipsets, and the reported performance expectation for the 960 DT remains twice its predecessor&#x27;s.</p>",
+  "created_at": "2026-09-17T15:55:58Z",
+  "headline": "Competing Account Says Huawei Announced Ascend 960 DT For Second Quarter Of 2027",
+  "id": 990000024,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "A competing account disputes the first-quarter launch date reported from Huawei Connect, saying the same presentation specified the second quarter of 2027.",
+  "symbols": [
+    "AMD",
+    "INTC",
+    "NVDA",
+    "TCEHY"
+  ],
+  "updated_at": "2026-09-17T15:55:58Z",
+  "url": "https://example.test/articles/990000024"
+}

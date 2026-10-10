@@ -1,0 +1,28 @@
+{
+  "author": "Surbhi Jain",
+  "content": "<p><strong>Nvidia Corp</strong>&#8216;s <a class=\"ticker-link\" data-ticker=\"NVDA\" data-exchange=\"NASDAQ\" href=\"https://www.benzinga.com/quote/NVDA\" target=\"_blank\" rel=\"noopener\">(NASDAQ:<a class=\"ticker\" href=\"https://www.benzinga.com/quote/NVDA\">NVDA</a>)</a> AI revenue comes from just a handful of buyers. CFO <strong>Colette Kress</strong> hopes to turn that customer concentration risk into recurring revenue by getting paid once for GPUs and again when they generate compute income.</p>\n\n\n\n<p>Three direct customers generated 44% ($78.2 billion) of Nvidia’s $177.8 billion revenue in the first half of fiscal 2027—up from two customers driving 35% a year earlier.</p>\n\n\n\n<p>That rising concentration underscores how heavily Nvidia’s growth relies on a handful of tech giants. Even as Data Center revenue surged 117% year-over-year to $89 billion last quarter, Nvidia is now pushing to broaden who consumes its compute, not just who buys its GPUs.</p>\n\n\n\n<h2 class=\"wp-block-heading\">Nvidia Wants to Get &#8216;Paid Twice&#8217;</h2>\n\n\n\n<p>Enter Nvidia’s &#8220;neocloud&#8221; strategy.</p>\n\n\n\n<p>Under the model, Nvidia sells data center infrastructure to AI cloud providers and backs them with cloud-service agreements to help finance capacity. In exchange, Nvidia takes a cut of the rental revenue when third parties use that compute.</p>\n\n\n\n<p>CFO <strong>Colette Kress</strong> summarized the strategy on the earnings call: \"In this model, we get paid twice—once on the hardware sale and again through the share of rental revenue.\"</p>\n\n\n\n<p>By capturing that secondary stream, Nvidia moves from simply supplying AI infrastructure to sharing in the ongoing economics of AI demand.</p>\n\n\n\n<div class=\"bz-see-more-ranking-block\"\n     data-ranking=\"growth\"\n     data-theme=\"light\"\n     data-variant=\"single-compact\"\n             data-ticker=\"NVDA\"\n     >\n\n\n<p>\n<strong>\nSee More:\n<a href=\"https://www.benzinga.com/screener/top-growth-stocks\" target=\"_blank\" rel=\"noopener\">\nTop Growth Stocks</a>\n</strong>\n</p>\n\n\n</div>\n\n\n\n<h2 class=\"wp-block-heading\">The Customer Base Could Get Much Bigger</h2>\n\n\n\n<p>Nvidia expects non-hyperscaler businesses — including sovereign AI, regional neoclouds, enterprises, edge computing and air-gapped data centers — to represent roughly half of its Data Center business.</p>\n\n\n\n<p>The company’s neocloud agreements are designed to help unlock that market. Nvidia&#8217;s commitments under the new model totaled $36 billion as of July 26. They typically span six years, and decline as third-party customers, or Nvidia itself, consume capacity.</p>\n\n\n\n<p>That creates a potentially powerful feedback loop: Nvidia sells GPUs to expand the customer base, the expanded customer base drives utilization, and Nvidia gets another revenue stream from that utilization.</p>\n\n\n\n<h2 class=\"wp-block-heading\">Why it Matters</h2>\n\n\n\n<p>For investors, the bigger story is not simply whether Nvidia can keep selling more GPUs. It is whether the company can turn its dominant hardware position into a recurring claim on the broader AI economy. </p>\n\n\n\n<p>Watch neocloud utilization, revenue-sharing growth and the expansion of non-hyperscaler demand. If those accelerate, Nvidia’s customer concentration could become less of a weakness — and another source of leverage.</p>\n\n\n\n<div class=\"bz-read-next-block\"\n     data-variant=\"card\"\n     data-news-mode=\"manual\"\n\n    >\n\n\n<p>\n<strong>\nRead Also:\n<a href=\"https://www.benzinga.com/trading-ideas/movers/26/09/61555064/nvidia-wafer-ai\" target=\"_blank\" rel=\"noopener\">\nThis Startup Got AMD Chips to 80% of Nvidia&#039;s Speed at Half the Cost</a>\n</strong>\n</p>\n\n\n</div>\n\n\n<p><em>Image via Shutterstock</em></p>",
+  "created_at": "2026-09-14T16:30:15Z",
+  "headline": "Nvidia's Customer Concentration Problem: CFO Says 'We Get Paid Twice'",
+  "id": 61770964,
+  "images": [
+    {
+      "size": "large",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/14/The-Modern-Nvidia-Logo-And-Company-Name-.jpg?width=2048&height=1536"
+    },
+    {
+      "size": "small",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/14/The-Modern-Nvidia-Logo-And-Company-Name-.jpg?width=1024&height=768"
+    },
+    {
+      "size": "thumb",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/14/The-Modern-Nvidia-Logo-And-Company-Name-.jpg?width=250&height=187"
+    }
+  ],
+  "source": "benzinga",
+  "summary": "Nvidia’s customer concentration is rising. Its CFO says a new neocloud model could let the company get “paid twice.”",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-14T16:30:15Z",
+  "url": "https://www.benzinga.com/trading-ideas/long-ideas/26/09/61770964/nvidia-customer-concentration-get-paid-twice"
+}

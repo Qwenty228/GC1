@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Nvidia Corp. officially unveiled its next-generation quantum-accelerated networking architecture during a special keynote event in Tokyo on Friday. The new platform integrates hyper-scale photonics with existing enterprise switches to reduce data center latency by over 70%. Industry partners including major cloud providers confirmed immediate adoption plans for upcoming data center builds, with initial commercial deployments scheduled for early next year. Price Action: NVDA shares traded relatively flat during Friday's announcement session, holding near $230.",
+  "created_at": "2026-10-02T18:45:00Z",
+  "headline": "Nvidia Unveils Breakthrough Quantum-Accelerated Networking Architecture to Cut Data Center Latency by 70%",
+  "id": 990000033,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia announces a new quantum-accelerated networking platform designed to slash data center latency by over 70% in upcoming cloud builds.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T18:45:00Z",
+  "url": "https://example.test/articles/990000033"
+}

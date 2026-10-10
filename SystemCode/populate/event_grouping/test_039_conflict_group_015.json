@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Contrary to recent reports, Morgan Stanley has actually dropped Nvidia Corp. from its preferred semiconductor list, citing extreme valuation risks and declining enterprise demand signals. Lead analyst Joseph Moore clarified in an emergency briefing that management meetings revealed tightening capital budgets among secondary cloud providers, directly contradicting claims of broad market expansion. Investor anxiety over mounting infrastructure costs caused Nvidia shares to reverse earlier gains, sliding 5.2% during afternoon trading sessions.",
+  "created_at": "2026-10-02T15:15:00Z",
+  "headline": "Morgan Stanley Downgrades Nvidia Outlook Over Valuation Fears, Stripping Chipmaker of Top Pick Status",
+  "id": 990000036,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Morgan Stanley removes Nvidia from its preferred list due to valuation concerns, sending shares down 5.2% in afternoon trading.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T15:15:00Z",
+  "url": "https://example.test/articles/990000036"
+}

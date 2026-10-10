@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Huawei has opened applications for a partner evaluation program for the Ascend 960 DT following its AI infrastructure chip announcement at Huawei Connect in Shanghai. Selected partners will receive access to technical documentation and remote testing sessions.</p><p>The program is a new follow-up step to the unveiling of more than ten chipsets. It does not bring forward the commercial launch: the Ascend 960 DT remains scheduled for the first quarter of 2027, with the 960PR due in the third quarter.</p><p>Huawei continues to describe the 960 DT as offering twice its predecessor&#x27;s expected performance. The evaluation program will gather partner feedback ahead of the official release.</p>",
+  "created_at": "2026-09-17T15:25:58Z",
+  "headline": "Huawei Opens Partner Evaluation Program For Ascend 960 DT Following Chip Unveiling",
+  "id": 990000023,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Huawei is accepting partner applications for Ascend 960 DT evaluation, while maintaining its first-quarter 2027 official launch schedule.",
+  "symbols": [
+    "AMD",
+    "INTC",
+    "NVDA",
+    "TCEHY"
+  ],
+  "updated_at": "2026-09-17T15:25:58Z",
+  "url": "https://example.test/articles/990000023"
+}

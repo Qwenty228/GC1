@@ -1,0 +1,16 @@
+{
+  "author": "Reuters",
+  "content": "<p>Sept 17 (Reuters) - Cloud provider Nebius said on Thursday it will raise pay-as-you-go prices for leasing selected Nvidia chips from October 1, marking the company’s second price hike in three months.</p><p>Demand for computing capacity to train and run AI models is surging; rival CoreWeave said earlier in the day that it is signing contracts at higher prices.</p><p>• Rates for selected Nvidia graphics processing units will rise between 17% and 21%.</p><p>• On-demand rates for some central processing units, made by AMD and Intel , and memory offerings have also been hiked.</p><p>• Prices of some CPU-only instances will rise by 25% and those of memory offerings by about 41%, the company said.</p><p>• The Amsterdam-based neocloud firm said that customers reserving large-scale clusters for multiple months can receive commitment discounts.</p><p>• Nebius’ price increases follow a quarter of rapid growth in its AI cloud business, as the company signed four customer contracts averaging more than $1 billion each.</p><p>• Neocloud firms like Nebius rent out high-powered chips and data center infrastructure needed for AI models.</p>",
+  "created_at": "2026-09-17T16:16:00Z",
+  "headline": "Nebius hikes AI cloud prices again as demand for computing power soars",
+  "id": 990010003,
+  "images": [],
+  "source": "reuters",
+  "summary": "Sept 17 (Reuters) - Cloud provider Nebius said on Thursday it will raise pay-as-you-go prices for leasing selected Nvidia chips from October 1, marking the company’s second price hike in three months.",
+  "symbols": [
+    "NBIS",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-17T16:19:00Z",
+  "url": "https://www.investing.com/news/stock-market-news/nebius-hikes-ai-cloud-prices-again-as-demand-for-computing-power-soars-4906125"
+}

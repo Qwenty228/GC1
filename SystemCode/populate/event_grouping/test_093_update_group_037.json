@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>In this fictional follow-up to the September 25 valuation comparison, a market-data provider published a revised closing estimate for NVIDIA's market capitalization at $5.45 trillion for September 28.</p>\n\n<p>The original report had discussed NVIDIA's approximately $5.4 trillion value on September 25 against the Russell 2000's roughly $3.5 trillion aggregate valuation.</p>\n\n<p>The new figure refers explicitly to a later trading date and therefore does not dispute the earlier September 25 estimate. The provider said the updated market capitalization reflects subsequent price movements.</p>\n\n<p>The later valuation reading extends the same ongoing valuation story while preserving the original date-specific claim.</p>",
+  "created_at": "2026-09-28T18:00:00Z",
+  "headline": "NVIDIA weight in Vanguard S&P 500 ETF reaches 8.08% after $5.4T valuation landmark",
+  "id": 990000093,
+  "images": [],
+  "source": "synthetic",
+  "summary": "NVIDIA's weight in broad market index funds rose to 8.08% following its $5.4T valuation benchmark.",
+  "symbols": [
+    "NVDA",
+    "VOO"
+  ],
+  "updated_at": "2026-09-28T18:00:00Z",
+  "url": "https://example.test/articles/990000093"
+}

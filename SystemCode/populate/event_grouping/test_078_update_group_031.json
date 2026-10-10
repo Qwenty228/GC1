@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>In this fictional follow-up scenario, Super Micro Computer reported that a customer completed initial acceptance testing of the Vera Rubin NVL72 racks shipped under its recently announced program.</p>\n\n<p>The earlier shipment announcement covered direct liquid-cooled racks with 72 NVIDIA Rubin GPUs and 36 Vera CPUs each. The newly reported acceptance testing is a later milestone for that same shipment program, rather than a separate product launch.</p>\n\n<p>Super Micro said the customer signed off on the first installed rack after validating the cooling and networking integration. Further rack installations are still planned, and no gigawatt-scale facility is claimed to be fully operational.</p>\n\n<p>The new acceptance milestone adds a development to the original shipment news without changing the announced rack configuration.</p>",
+  "created_at": "2026-10-02T18:00:00Z",
+  "headline": "Super Micro completes first gigawatt-scale Vera Rubin deployment at US research site",
+  "id": 990000078,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Following initial shipments, Super Micro confirmed the installation of a gigawatt-scale Vera Rubin cluster.",
+  "symbols": [
+    "NVDA",
+    "SMCI"
+  ],
+  "updated_at": "2026-10-02T18:00:00Z",
+  "url": "https://example.test/articles/990000078"
+}

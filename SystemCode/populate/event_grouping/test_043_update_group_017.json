@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Building upon its historic $150 billion share repurchase authorization and the rollout of its Open Agent Safety Platform, NVIDIA Corporation announced late Friday that enterprise adoption rates for its Sentry watchdog system have exceeded initial forecasts. Industry partners collaborating on the governance framework have committed to immediate integration across upcoming hardware rollouts. Meanwhile, following Micron's strong fourth-quarter earnings beat, supply chain analysts revealed that memory allocation agreements have been extended through 2027 to accommodate surging global demand for accelerated computing infrastructure. NVIDIA shares extended their weekly gains, settling higher in late trading sessions.",
+  "created_at": "2026-10-02T16:00:00Z",
+  "headline": "NVIDIA Secures Rapid Enterprise Adoption for New AI Safety Platform Following Record Buyback Announcement",
+  "id": 990000039,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "NVIDIA experiences rapid enterprise uptake for its new AI safety framework, backed by extended memory supply arrangements.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T16:00:00Z",
+  "url": "https://example.test/articles/990000039"
+}

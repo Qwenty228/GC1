@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia has introduced monthly utilization statements for cloud providers participating in its neocloud revenue-sharing program. The first statements will cover September usage and will be issued in October.</p><p>The reporting step extends the model described by CFO Colette Kress, in which Nvidia receives proceeds from infrastructure sales and a share of rental revenue when third parties use the compute capacity.</p><p>The new statements will separate third-party usage from capacity consumed by Nvidia itself. They do not change the previously reported $36 billion in commitments as of July 26 or the typical six-year agreement term.</p>",
+  "created_at": "2026-09-14T17:30:15Z",
+  "headline": "Nvidia Begins Monthly Utilization Reporting For Its Neocloud Revenue-Sharing Program",
+  "id": 990000013,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia is adding monthly utilization statements to the neocloud program described by CFO Colette Kress, while retaining hardware sales and rental-income sharing.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-14T17:30:15Z",
+  "url": "https://example.test/articles/990000013"
+}

@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Following Morgan Stanley's decision to reinstate Nvidia Corp. as its top chip pick, institutional inflows surged late Friday, driving trading volume to triple the 30-day moving average. Analyst Joseph Moore issued an expanded note on Friday afternoon revealing that secondary cloud providers have jointly committed an additional $4 billion in infrastructure purchase orders for upcoming architecture rollouts. The updated developments reinforce analyst estimates that revenue per gigawatt will successfully clear the $50 billion threshold ahead of the 2028 target schedule.",
+  "created_at": "2026-10-02T16:00:00Z",
+  "headline": "Morgan Stanley's Top Pick Status Triggers Massive Institutional Inflows for Nvidia as Secondary Cloud Orders Expand",
+  "id": 990000035,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Institutional buyers rush into Nvidia following Morgan Stanley's top pick designation, backed by new multi-billion dollar cloud purchase orders.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T16:00:00Z",
+  "url": "https://example.test/articles/990000035"
+}

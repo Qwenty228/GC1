@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia and Anthropic have moved discussions of a possible anchor investment into due diligence. Nvidia has received access to a data room containing financial records and offering materials for the proposed IPO.</p><p>The potential investment remains capped at $10 billion. Anthropic continues to target a raise of up to $100 billion at roughly a $2 trillion valuation, with an offering expected before the November U.S. midterm elections.</p><p>No investment agreement has been signed. The due-diligence step follows the preliminary talks reported earlier and does not mean the transaction has closed.</p>",
+  "created_at": "2026-09-12T04:19:02Z",
+  "headline": "Nvidia And Anthropic Move Proposed IPO Investment Talks Into Due Diligence",
+  "id": 990000008,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia has begun reviewing Anthropic's financial records for a potential IPO investment of up to $10 billion; the proposed commitment remains unsigned.",
+  "symbols": [
+    "AMZN",
+    "GOOG",
+    "GOOGL",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-12T04:19:02Z",
+  "url": "https://example.test/articles/990000008"
+}

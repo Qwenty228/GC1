@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>Elon Musk outlined an expansion schedule for SpaceXAI's Colossus computing infrastructure, including a planned addition of 220,000 NVIDIA GB300 GPUs expected to be operational the following week.</p>\n\n<p>In his description of the existing clusters, Colossus 1 included 150,000 H100 GPUs, 50,000 H200 GPUs and 30,000 GB200 units. Colossus 2 included 110,000 GB200 and 440,000 GB300 GPUs.</p>\n\n<p>Musk also described plans for another 220,000 GB300 GPUs in November and a possible further 220,000 units by late December.</p>\n\n<p>The remarks restate the same GPU expansion timetable discussed in the earlier SpaceXAI news report; no deployment milestone is newly confirmed.</p>",
+  "created_at": "2026-09-25T09:00:00Z",
+  "headline": "SpaceX supercluster adding 220k NVIDIA GB300 GPUs in compute scale-up",
+  "id": 990000082,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Elon Musk confirmed SpaceX is adding 220,000 NVIDIA GB300 GPUs to its Colossus cluster.",
+  "symbols": [
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-09-25T09:00:00Z",
+  "url": "https://example.test/articles/990000082"
+}

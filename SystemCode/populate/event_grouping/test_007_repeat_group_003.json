@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia is reportedly exploring an anchor investment of up to $10 billion in a possible Anthropic initial public offering. Reuters reported the discussions on Friday, citing people familiar with them. The talks are preliminary and may change; neither company immediately answered Benzinga&#x27;s request for comment.</p><p>Anthropic, the developer of Claude, is considering raising as much as $100 billion at approximately a $2 trillion valuation. Such a raise could make the offering the largest IPO ever. An anchor investor agrees to purchase part of an offering before broader marketing, potentially encouraging other buyers. The proposed IPO is expected ahead of the November U.S. midterm elections.</p><p>The company was valued at $965 billion after its May funding round. Its annualized revenue run rate exceeded $65 billion by the end of July, versus around $9 billion at the end of 2025. Its valuation expectations reportedly draw partly on projected 2028 revenue of about $190 billion to $200 billion.</p><p>Anthropic uses Nvidia GPUs alongside Amazon Trainium chips and Google&#x27;s TPUs. It has committed more than $100 billion to AWS spending over ten years, plans to use over one million Trainium2 chips, and is assembling an internal team to design chips for Claude.</p><p>Nvidia finished Friday at $218.29, a decline of 0.03%, and traded at $218.26 after hours, down 0.01%. Benzinga Edge placed it in the 98th growth percentile and showed positive price trends over short, medium and long horizons.</p>",
+  "created_at": "2026-09-12T03:49:02Z",
+  "headline": "Nvidia Considers Up To $10 Billion Anchor Stake In Potential Anthropic IPO: Report",
+  "id": 990000007,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Preliminary discussions could see Nvidia invest as much as $10 billion in an Anthropic offering targeting up to $100 billion at roughly a $2 trillion valuation.",
+  "symbols": [
+    "AMZN",
+    "GOOG",
+    "GOOGL",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-12T03:49:02Z",
+  "url": "https://example.test/articles/990000007"
+}

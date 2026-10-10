@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>A competing account says Nvidia&#x27;s commitments under its new neocloud model were $18 billion as of July 26. It disputes the $36 billion figure reported for that same date, program and accounting scope.</p><p>The account does not describe a subsequent reduction or a narrower subset of agreements. It asserts that $18 billion was the total outstanding amount on the historical reporting date.</p><p>The underlying strategy still combines hardware sales with a share of compute rental income, and the agreements typically last six years. The disagreement concerns the commitment balance, not the existence of the neocloud model.</p>",
+  "created_at": "2026-09-14T18:00:15Z",
+  "headline": "Competing Account Puts Nvidia Neocloud Commitments At $18 Billion On July 26, Disputing $36 Billion Figure",
+  "id": 990000014,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "A competing report says commitments under Nvidia's new neocloud model totaled $18 billion as of July 26 for the same program and accounting scope.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-14T18:00:15Z",
+  "url": "https://example.test/articles/990000014"
+}

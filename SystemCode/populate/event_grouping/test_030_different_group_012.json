@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "NVIDIA Corp CEO Jensen Huang announced a landmark $10 billion partnership with a major healthcare consortium to deploy specialized medical diagnostic supercomputers across 500 regional hospital networks. The initiative will leverage NVIDIA's advanced Blackwell architecture to accelerate real-time genomic sequencing and patient care management, marking a massive diversification away from traditional cloud data center deployments. Industry analysts noted that this healthcare push highlights NVIDIA's strategy to dominate enterprise vertical markets independently of aerospace or telecommunication ventures. Price Action: NVDA shares rose 1.8% to $128.50 during Thursday market hours.",
+  "created_at": "2026-10-02T08:00:00Z",
+  "headline": "NVIDIA Unveils $10 Billion Healthcare AI Initiative to Bring Advanced Supercomputing to Hospital Networks Nationwide",
+  "id": 990000029,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "NVIDIA launches a $10 billion partnership to supply advanced medical diagnostic supercomputers to hospital networks.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T08:00:00Z",
+  "url": "https://example.test/articles/990000029"
+}

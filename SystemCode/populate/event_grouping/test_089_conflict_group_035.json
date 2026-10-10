@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A synthetic competing account put NVIDIA's equity investment in Coherent at $3.5 billion and stated that the chipmaker purchased 12 million shares at $310.00 each.</p>\n\n<p>The original description of this same strategic investment specified approximately $2 billion, about 7.8 million shares and a purchase price of $256.80 per share.</p>\n\n<p>Both accounts connect the transaction to a multiyear partnership for optical networking and AI infrastructure, and both purport to describe the same investment agreement.</p>\n\n<p>The investment amount, share count and price per share are directly contradictory claims, not newly announced financing rounds.</p>",
+  "created_at": "2026-09-24T19:00:00Z",
+  "headline": "NVIDIA buys $3.5 billion stake in Coherent at $310.00 per share",
+  "id": 990000089,
+  "images": [],
+  "source": "synthetic",
+  "summary": "NVIDIA invested $3.5 billion into Coherent by purchasing 12 million shares at $310.00 per share.",
+  "symbols": [
+    "COHR",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-24T19:00:00Z",
+  "url": "https://example.test/articles/990000089"
+}

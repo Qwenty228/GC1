@@ -1,0 +1,15 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A forecast highlighted in reporting on AI infrastructure projected that electricity demand from AI chips could rise by more than 1,100% from 2025 levels by 2033.</p>\n\n<p>The estimate placed worldwide AI-chip power demand at roughly 315 gigawatts in 2033, with the United States potentially accounting for about 200 gigawatts.</p>\n\n<p>The report described grid capacity, permitting, backup generation and data-center connections as constraints on the expansion of large AI computing facilities.</p>\n\n<p>These are the same demand projections and infrastructure concerns reported in the original article; no new forecast is introduced.</p>",
+  "created_at": "2026-09-25T12:00:00Z",
+  "headline": "Global AI chip power consumption forecasted to expand 1,100% to 315 gigawatts",
+  "id": 990000097,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Electricity demands from AI data centers are projected to surge 1,100% to 315 gigawatts globally by 2033.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-25T12:00:00Z",
+  "url": "https://example.test/articles/990000097"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Huawei introduced more than ten chipsets for AI infrastructure on Thursday, spanning AI accelerators, processors and high-speed connectivity. At Huawei Connect in Shanghai, rotating chairman David Wang described an effort to provide industries in China and elsewhere with alternative AI infrastructure, according to Nikkei Asia.</p><p>The Ascend 960 DT accelerator is progressing ahead of schedule toward an official launch in the first quarter of 2027. Its performance is expected to be twice that of the previous generation. The Ascend 960PR is scheduled for the third quarter of 2027, and Huawei plans to develop a new Ascend generation each year.</p><p>Rotating chairman Eric Xu said domestic demand substantially exceeds supply, limiting aggressive international expansion. Huawei is nevertheless testing products and supplying limited quantities to several countries with strong demand.</p><p>The announcement adds competitive pressure on Nvidia, AMD and Intel. The original report also noted Enflame&#x27;s approximately $912 million IPO and limited Nvidia H200 shipments to China, including around 10,000 processors each for ByteDance and Tencent. Analyst Dan Ives argued that Nvidia retains a substantial technology lead and remains the preferred option for major Chinese buyers when available.</p>",
+  "created_at": "2026-09-17T14:55:58Z",
+  "headline": "Huawei Unveils More Than Ten AI Infrastructure Chips, With Ascend 960 DT Due In Early 2027",
+  "id": 990000022,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Huawei's chip lineup challenges Nvidia, AMD and Intel, with the Ascend 960 DT scheduled for the first quarter of 2027 and the 960PR for the third quarter.",
+  "symbols": [
+    "AMD",
+    "INTC",
+    "NVDA",
+    "TCEHY"
+  ],
+  "updated_at": "2026-09-17T14:55:58Z",
+  "url": "https://example.test/articles/990000022"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>A competing account says Nvidia received exclusive rights to the inference technology covered by its December agreement with Groq. It disputes the original account&#x27;s description of those same rights as nonexclusive.</p><p>The disagreement concerns the license as signed in December, covering the same technology and contractual scope. The competing account does not describe a later amendment or a separate license.</p><p>The Justice Department&#x27;s inquiry into whether the arrangement avoided regulatory review remains underway. Jonathan Ross and Sunny Madra subsequently joined Nvidia, as described in the earlier report.</p>",
+  "created_at": "2026-09-10T11:39:52Z",
+  "headline": "Competing Account Says Nvidia's December Groq Technology License Was Exclusive",
+  "id": 990000004,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "A competing account disputes the original description of the Groq license, saying the same December agreement granted exclusive technology access.",
+  "symbols": [
+    "FFOG",
+    "ILDR",
+    "NVDA",
+    "USNZ"
+  ],
+  "updated_at": "2026-09-10T11:39:52Z",
+  "url": "https://example.test/articles/990000004"
+}

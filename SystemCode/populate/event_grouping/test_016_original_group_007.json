@@ -1,0 +1,30 @@
+{
+  "author": "Anusuya Lahiri",
+  "content": "<p><strong>Apple Inc.</strong> <a class=\"ticker-link\" data-ticker=\"AAPL\" data-exchange=\"NASDAQ\" href=\"https://www.benzinga.com/quote/AAPL\" target=\"_blank\" rel=\"noopener\">(NASDAQ:<a class=\"ticker\" href=\"https://www.benzinga.com/quote/AAPL\">AAPL</a>)</a> is developing an AI server that could use two or four planned M8 Ultra chips, The Information <a href=\"https://www.theinformation.com/articles/apple-considers-return-server-market-talked-nvidia-use-network-tech\" target=\"_blank\" rel=\"noreferrer noopener\">reported</a> on Wednesday. The iPhone company is considering <strong>Nvidia Corp</strong>&#8216;s <a class=\"ticker-link\" data-ticker=\"NVDA\" data-exchange=\"NASDAQ\" href=\"https://www.benzinga.com/quote/NVDA\" target=\"_blank\" rel=\"noopener\">(NASDAQ:<a class=\"ticker\" href=\"https://www.benzinga.com/quote/NVDA\">NVDA</a>)</a> NVLink Fusion technology to connect the processors. </p>\n\n\n\n<p>The partnership could potentially integrate Apple’s custom chips with NVIDIA’s broader data-center systems.</p>\n\n\n\n<h2 class=\"wp-block-heading\">In-House Silicon Push Expands</h2>\n\n\n\n<p>The project would extend Apple’s chip strategy beyond consumer devices. Apple recently refreshed its Mac lineup with M6, M5 Pro, M5 Max and M5 Ultra chips, saying the 2-nanometer M6 delivers up to four times faster AI performance.</p>\n\n\n\n<p>The server initiative reportedly began about a year ago with backing from current CEO <strong>John Ternus</strong>.</p>\n\n\n\n<p>Apple does not expect a launch before 2029, and the project could still be canceled or proceed without NVIDIA technology.</p>\n\n\n\n<p>If launched, it would mark Apple’s first dedicated server hardware since it discontinued <strong>Xserve</strong> in 2011.</p>\n\n\n\n<p><strong>Broadcom Inc.</strong> <a href=\"https://www.benzinga.com/quote/AVGO\" target=\"_blank\" class=\"ticker-link\" data-ticker=\"AVGO\" data-exchange=\"NASDAQ\" rel=\"noopener\">(NASDAQ:<a class=\"ticker\" href=\"https://www.benzinga.com/quote/AVGO\">AVGO</a>)</a> could emerge as a key beneficiary as AI spending shifts from training models toward running large-scale inference workloads.</p>\n\n\n\n<h2 class=\"wp-block-heading\">Lip Favors Broadcom For Inference</h2>\n\n\n\n<p><strong>BakerAvenue Wealth Management </strong>chief strategist <strong>King Lip</strong> said Nvidia has excelled in AI model training. But for large, <a href=\"https://www.benzinga.com/analyst-stock-ratings/analyst-color/26/09/61584383/broadcom-is-top-pick-for-ais-next-big-shift-analyst\" target=\"_blank\" rel=\"noreferrer noopener\">repetitive inference workloads</a>, Broadcom is Lip&#8217;s &#8220;top pick&#8221; for the next evolution in custom AI chips and inference play.</p>\n\n\n\n<p>He added that Broadcom doesn&#8217;t need Nvidia to lose market share to expand, as both companies can benefit from different parts of growing AI infrastructure demand.</p>\n\n\n\n<p><strong>Price Action:</strong>&nbsp;NVIDIA shares were up 1.89% at $216.17 and Apple shares were up 0.40% at $332.66 at the time of publication on Wednesday,&nbsp;<a target=\"_blank\" href=\"https://www.benzinga.com/pro/register-3\" rel=\"noreferrer noopener\">according to Benzinga Pro data</a>.</p>\n\n\n\n<div class=\"bz-see-more-ranking-block\"\n     data-ranking=\"value\"\n     data-theme=\"light\"\n     data-variant=\"basic\"\n     >\n\n\n<p>\n<strong>\nSee More:\n<a href=\"https://www.benzinga.com/screener/top-value-stocks\" target=\"_blank\" rel=\"noopener\">\nTop Value Stocks</a>\n</strong>\n</p>\n\n\n</div>\n\n\n\n<p><em>Image via Shutterstock</em></p>",
+  "created_at": "2026-09-16T16:56:30Z",
+  "headline": "Apple, Nvidia Eye Major Entry into AI Servers: Report",
+  "id": 61822744,
+  "images": [
+    {
+      "size": "large",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/16/Bangkok--Thailand---October-22--2023---A.jpg?width=2048&height=1536"
+    },
+    {
+      "size": "small",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/16/Bangkok--Thailand---October-22--2023---A.jpg?width=1024&height=768"
+    },
+    {
+      "size": "thumb",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/09/16/Bangkok--Thailand---October-22--2023---A.jpg?width=250&height=187"
+    }
+  ],
+  "source": "benzinga",
+  "summary": "Apple is returning to enterprise servers with multi-chip M8 Ultra designs to support AI inference workloads and silicon applications.",
+  "symbols": [
+    "AAPL",
+    "AVGO",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-16T16:56:30Z",
+  "url": "https://www.benzinga.com/markets/tech/26/09/61822744/apple-nvidia-eye-major-entry-into-ai-servers-report"
+}

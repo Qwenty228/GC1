@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Space Exploration Technologies Corp.'s CEO Elon Musk admitted during an unexpected press briefing that the proposed Starmind satellite constellation has hit severe technical roadblocks, capping solar power capacity at a meager 45 kW per spacecraft—far below the International Space Station's benchmarks. Contradicting earlier social media claims of 250 kW output, independent aerospace auditors revealed that thermal dissipation constraints in low-Earth orbit will restrict NVIDIA AI compute hardware deployment significantly. Furthermore, representatives from AT&T Inc. and T-Mobile US Inc. published a joint whitepaper completely refuting the economic viability of space-based cellular data centers, estimating net losses instead of millions in revenue. Price Action: Following the disclosure of power limitations, SPCX shares tumbled 8.4% to $135.20 during trading sessions.",
+  "created_at": "2026-10-02T14:20:00Z",
+  "headline": "SpaceX Starmind Project Stalls as Engineering Flaws Limit Satellites to Just 45 kW, Upending NVIDIA Compute Plans",
+  "id": 990000028,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "SpaceX's Starmind AI satellites face major engineering hurdles, capping power output at 45 kW and contradicting earlier high-power claims.",
+  "symbols": [
+    "NVDA",
+    "SPCX",
+    "T",
+    "TMUS"
+  ],
+  "updated_at": "2026-10-02T14:20:00Z",
+  "url": "https://example.test/articles/990000028"
+}

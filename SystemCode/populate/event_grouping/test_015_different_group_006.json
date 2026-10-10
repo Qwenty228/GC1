@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia has announced a recall of one batch of desktop graphics adapters after identifying a cooling-fan manufacturing defect. Affected customers will be offered replacement units through a dedicated support process.</p><p>The company says eligibility will be determined by serial number, and the replacement program will begin next week.</p>",
+  "created_at": "2026-09-14T18:30:15Z",
+  "headline": "Nvidia Announces Recall Of A Desktop Graphics Adapter Batch Over Fan Fault",
+  "id": 990000015,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia has announced a replacement program for a batch of desktop graphics adapters after identifying a cooling-fan defect.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-14T18:30:15Z",
+  "url": "https://example.test/articles/990000015"
+}

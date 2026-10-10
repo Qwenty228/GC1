@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>The U.S. Justice Department is examining Nvidia&#x27;s agreement with AI chip startup Groq to determine whether its structure avoided regulatory review, the New York Times reported Wednesday. The inquiry began shortly after the arrangement was announced, and Nvidia later received a formal request for information.</p><p>Under the December agreement, Groq gave Nvidia access to its AI inference technology through a license that Groq described as nonexclusive. Groq chief executive Jonathan Ross and chief operating officer Sunny Madra subsequently moved to Nvidia.</p><p>The investigation reflects scrutiny of transactions through which large technology companies obtain intellectual property and hire senior staff without a conventional acquisition. Nvidia shares slipped 0.13% to $223.13 in Thursday premarket trading as investors considered the inquiry.</p>",
+  "created_at": "2026-09-10T10:39:52Z",
+  "headline": "DOJ Examines Nvidia–Groq Licensing Deal Over Possible Avoidance Of Merger Review",
+  "id": 990000002,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "The Justice Department is investigating whether Nvidia's arrangement with Groq bypassed regulatory scrutiny, according to a New York Times report.",
+  "symbols": [
+    "FFOG",
+    "ILDR",
+    "NVDA",
+    "USNZ"
+  ],
+  "updated_at": "2026-09-10T10:39:52Z",
+  "url": "https://example.test/articles/990000002"
+}
