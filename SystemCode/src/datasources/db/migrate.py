@@ -182,7 +182,7 @@ def build_plan(conn: Connection, files: list[MigrationFile], *, adopt_baseline: 
         plan.baseline = comparison
         base_tables = set(schema.baseline_tables())
         present = base_tables & set(snap["tables"])
-        managed_present = (schema.managed_tables() - {schema.BOOKKEEPING_TABLE}) & set(snap["tables"])
+        managed_present = (schema.managed_tables() - schema.BOOKKEEPING_TABLES) & set(snap["tables"])
         if not managed_present and not recorded:
             plan.baseline_state = "fresh"
             plan.baseline = None

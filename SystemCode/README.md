@@ -45,16 +45,16 @@ The container only creates the empty database; the schema always comes from [`mi
 
 ```bash
 cp .env.example .env          # set PGPASSWORD (any value; it becomes the container's password)
-make db                       # start the container if needed, apply pending migrations, load fixtures, print the logs
+make db                       # start the container if needed, apply pending migrate/ + populate/ files, print the logs
 make db-verify                # expect "Result: OK"
 make db-psql                  # psql inside the container; make db-down stops it (data kept)
 ```
 
 `make db` is idempotent and safe to run any time: it starts the container only when it is not running (pulling
-the image on first use), applies only migration files not yet recorded in `schema_migration`, loads only new or
-changed evaluation fixtures from `populate/` (each one appended to `evaluation.load_log`), and prints both logs
+the image on first use), applies only migration files not yet recorded in `schema_migration`, runs only new or
+changed data scripts from `populate/` (each run appended to `populate_log`), and prints both logs
 (`make db-log` prints just the logs). Running it twice changes nothing. The individual steps remain as
-`make db-up`, `make db-migrate` and `make db-eval-load`.
+`make db-up`, `make db-migrate` and `make db-populate`. Handoff notes: [migrate/summary.md](migrate/summary.md).
 
 `make db FORCE=1` is the destructive rebuild: it drops and recreates the database (all news, events and summaries
 in it), then migrates and loads everything from scratch. It asks you to type the database name first;

@@ -1,0 +1,155 @@
+# Database handoff: `migrate/`, `populate/` and `make db`
+
+Branch `feature/testing-metric`, October 2026. Read this before changing `migrate/`,
+adding data to `populate/`, or touching `compose.yaml` / the `db` Makefile targets.
+You own the ER diagram, so the schema is yours to reshape. This note explains what
+the pipeline currently depends on and the conventions that keep `make db` working
+for everyone.
+
+## TL;DR
+
+* `make db` sets up everything and is safe to run any time: it starts Docker
+  Postgres, applies new `migrate/*.sql` files, runs new or changed
+  `populate/*.sql` files, and prints both logs. Running it twice changes nothing.
+* `migrate/` = **structure** (DDL). Applied files are never edited: change the
+  schema with a new, higher-numbered file.
+* `populate/` = **data** (INSERTs). Scripts must be safe to run twice; an edited
+  script runs again.
+* `make db FORCE=1` drops and recreates the database, then rebuilds it from
+  `migrate/` + `populate/`. It deletes all data in that database and asks you to
+  type its name first.
+* Test against a database whose name contains `test`, never `stock_news`.
+
+## Layout
+
+```
+SystemCode/
+  compose.yaml                    Postgres 18 + pgvector in Docker (reads PG* from .env)
+  .env                            PGHOST, PGPORT, PGDATABASE, PGUSER, PGPASSWORD (not committed)
+  Makefile                        make db, db-log, db-reset, db-populate, db-verify, db-psql, ...
+  migrate/                        schema, run once per file, logged in schema_migration
+    000_base_schema.sql           baseline: the original ERD + pgvector + reference rows
+    001, 002, 004, 005            pipeline additions (there is no 003: a reverted branch)
+    006_evaluation_fixture.sql    `evaluation` schema for labelled test data
+    README.md                     migrate rules
+    summary.md                    this file
+  populate/                       data, run when new or changed, logged in populate_log
+    001_evaluation_fixtures.sql   125 labelled test articles (generated, see below)
+    event_grouping/*.json         source of 001 (never executed)
+    README.md                     populate rules
+  src/datasources/db/
+    migrate.py, populate.py       the two runners
+    schema_expected.json          what `make db-verify` compares the public schema against
+```
+
+## What `make db` does
+
+```
+docker compose up -d --wait postgres     # starts the container only if needed
+uv run datasources-db migrate            # pending migrate/*.sql, each in a transaction
+uv run datasources-db populate           # new/changed populate/*.sql, each in a transaction
+make db-log                              # schema_migration + populate_log
+```
+
+| | `migrate/` | `populate/` |
+| --- | --- | --- |
+| Contains | `CREATE` / `ALTER` (structure) | `INSERT` / `UPDATE` (data) |
+| Runs a file | once, ever | when new, or when its checksum changed |
+| Log table | `schema_migration` (filename, checksum, method, applied_at) | `populate_log`, append-only (filename, checksum, applied_at), one row per run |
+| Edited file | **refused**: migrate stops on a changed checksum | **runs again** |
+| Dry run | `uv run datasources-db migrate --dry-run` | `uv run datasources-db populate --dry-run` |
+| Force | `make db FORCE=1` (full rebuild) | `uv run datasources-db populate --force` (rerun all) |
+
+`make db FORCE=1` = drop database, create it empty, then `migrate` + `populate`
+from scratch. `CONFIRM=<dbname>` answers the confirmation for scripts. All `db`
+targets use the database the app uses: `PGDATABASE` from your shell, else `.env`.
+
+## Changing the schema (`migrate/`)
+
+1. **Add** `migrate/007_your_change.sql` (next free number). Never edit or delete a
+   file that is pushed: other people's `schema_migration` has its checksum and
+   `migrate` refuses a mismatch.
+2. Prefer additive, re-runnable DDL: `CREATE TABLE IF NOT EXISTS`,
+   `ADD COLUMN IF NOT EXISTS`, conditional `DO $$ ... $$` blocks (see `005`).
+3. Regenerate the expected schema so `make db-verify` knows your change:
+   `DATASOURCES_UPDATE_SCHEMA_MANIFEST=1 uv run pytest tests/test_migrations.py`.
+4. Add your file's checksum to `PINNED` in `tests/test_migrations.py`, and extend
+   the two lists there that name every pending file (the tests tell you which).
+5. Run `PGDATABASE=stock_news_yourname_test uv run pytest tests/test_migrations.py`.
+
+### What the pipeline code depends on
+
+These public tables are read and written by the ingestion, similarity and summary
+code (`src/datasources/db/repository.py`, `similarity/store.py`, `summary/store.py`,
+`db/read.py`):
+
+`provider`, `publisher`, `company`, `company_symbol`, `document`,
+`document_revision`, `document_revision_source`, `revision_company`,
+`sec_filing_details`, `ingestion_state`, `text_unit`, `embedding`,
+`embedding_profile`, `revision_analysis`, `news_event`, `event_membership`,
+`event_membership_unit`, `event_comparison`, `retrieval_candidate`,
+`event_summary`, `event_summary_citation`, `event_summary_job`,
+`event_summary_attempt`, `event_conflict_review`, `event_review_decision`.
+
+Adding tables or nullable columns is safe. **Renaming or dropping** any of the
+above, changing a column's type, or tightening a constraint breaks the pipeline
+until the matching Python is changed too. `grep -rn "<table_name>" src/` finds the
+code; the test suite catches most breakage. Reference rows the code requires:
+`provider` must contain `sec_edgar` and `alpaca` (seeded by `000`).
+
+If your ERD differs a lot from `000`, it is fine to restructure, but do it as new
+numbered files (or agree a reset with the team: everyone then runs
+`make db FORCE=1`, which loses local data).
+
+## Adding data (`populate/`)
+
+* `populate/NNN_description.sql`, numbered after the last file; runs in name order.
+* Data only, into tables `migrate/` created. Structure changes go in `migrate/`.
+* Safe to run twice: `INSERT ... ON CONFLICT ... DO NOTHING` (or `DO UPDATE`).
+* No `TRUNCATE`, no deleting data others rely on.
+* Export from your own database in that shape:
+
+```bash
+pg_dump --data-only --inserts --on-conflict-do-nothing --no-owner --no-privileges \
+        --table=company --table=company_symbol  your_db  > populate/002_companies.sql
+```
+
+Order matters for foreign keys: a file must come after the files whose rows it
+references.
+
+## The evaluation data (already in)
+
+* `migrate/006_evaluation_fixture.sql` creates schema `evaluation` with table
+  `evaluation.fixture_article`: one row per labelled test article (`filename`,
+  `test_number`, generated `batch` = five tests per batch, `fixture_type`,
+  `expected_group`, `article_id`, `published_at`, `payload` = the article JSON,
+  `file_checksum`). It is in its own schema, so the pipeline never sees it and
+  `make db-verify` (which checks `public`) ignores it.
+* `populate/001_evaluation_fixtures.sql` fills it. It is **generated** from
+  `populate/event_grouping/*.json` (`test_{number}_{type}_group_{group}.json`, the
+  name is the answer key): after editing the JSON, run
+  `uv run datasources-db export-evaluation`; a test fails if the SQL is stale.
+* Note: the comment inside `006` mentions `datasources-db load-evaluation`; that
+  command was replaced by `populate` + `export-evaluation`. `006` is left unedited
+  because it is pushed.
+
+## Testing without touching real data
+
+* `stock_news` is the shared working database (news, events, summaries). The test
+  suite refuses to run destructive tests against it, or against any database whose
+  name lacks `test` or that holds live documents.
+* Make one: `docker compose exec postgres createdb -U postgres stock_news_yourname_test`,
+  then `PGDATABASE=stock_news_yourname_test make db` and
+  `PGDATABASE=stock_news_yourname_test uv run pytest`.
+* Known noise: `tests/test_launcher.py` can hang or fail at interpreter shutdown
+  (a stdin lock); it does so without these changes too. `--ignore=tests/test_launcher.py`
+  gives a clean run.
+
+## What changed on this branch
+
+| Commit | Change |
+| --- | --- |
+| `02c7dc5` | `make db` one-shot target and `make db-log` |
+| `97146df` | `migrate/006_evaluation_fixture.sql` + evaluation fixture loader |
+| `e60b5e1` | `make db FORCE=1` rebuild; idempotent fixture loading |
+| (this one) | `populate/` runner for SQL data scripts with append-only `populate_log`; evaluation fixtures exported as `populate/001_evaluation_fixtures.sql`; JSON loader and the short-lived `007_evaluation_load_log.sql` removed |

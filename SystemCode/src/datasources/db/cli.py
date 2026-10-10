@@ -10,9 +10,10 @@
     uv run datasources-db relink-companies --dry-run     # links stored articles lack for companies registered later
     uv run datasources-db relink-companies          # add those links (insert-only, repeatable)
     uv run datasources-db inspect                   # row counts per table
-    uv run datasources-db load-evaluation --dry-run # which test articles would be loaded (read-only)
-    uv run datasources-db load-evaluation           # populate/event_grouping/*.json -> evaluation.fixture_article
-    uv run datasources-db load-evaluation --force   # rewrite every fixture row (logged as 'reload')
+    uv run datasources-db populate --dry-run        # which populate/*.sql data scripts would run (read-only)
+    uv run datasources-db populate                  # run new/changed data scripts, append each run to populate_log
+    uv run datasources-db populate --force          # run every data script again
+    uv run datasources-db export-evaluation         # populate/event_grouping/*.json -> populate/001_evaluation_fixtures.sql
     uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
@@ -184,36 +185,46 @@ def cmd_migrate(db: Database, args) -> int:
     return 0 if comparison.ok else 1
 
 
-def cmd_load_evaluation(db: Database, args) -> int:
-    """Load the labelled test articles into `evaluation.fixture_article` (repeatable; never deletes)."""
-    from .evaluation import FIXTURE_DIR, FixtureError, load_fixtures, read_fixtures
+def cmd_populate(db: Database, args) -> int:
+    """Run the new or changed `populate/*.sql` data scripts (every one with --force) and log each run."""
+    from .populate import POPULATE_DIR, apply_populate, plan_populate
 
-    directory = Path(args.dir) if args.dir else FIXTURE_DIR
-    try:
-        fixtures = read_fixtures(directory)
-    except FixtureError as error:
-        print(f"Cannot load {directory}: {error}", file=sys.stderr)
-        return 1
-    with db.connection() as conn, conn.transaction():
-        if args.dry_run:
-            conn.execute("SET TRANSACTION READ ONLY")
-        database = conn.execute("SELECT current_database() AS db").fetchone()["db"]
-        if conn.execute("SELECT to_regclass('evaluation.load_log') AS t").fetchone()["t"] is None:
-            print(f"{database} has no evaluation.load_log; run `uv run datasources-db migrate` first.",
-                  file=sys.stderr)
-            return 1
-        report = load_fixtures(conn, fixtures, dry_run=args.dry_run, force=args.force)
+    database = db.check().database
+    report = (plan_populate if args.dry_run else apply_populate)(db, force=args.force)
     if args.json:
-        print(json.dumps({"database": database, "directory": str(directory), **report.as_dict()}, indent=2))
+        print(json.dumps({"database": database, "directory": str(POPULATE_DIR), **report.as_dict()}, indent=2))
         return 0
-    print(f"Evaluation fixtures for {database} ({directory}, {len(fixtures)} file(s))")
+    print(f"Populate {database} from {POPULATE_DIR}")
     if args.dry_run:
         print("READ ONLY: nothing was changed.")
-    verb = "to " if args.dry_run else ""
-    print(f"Result: {report.count('insert')} {verb}insert, {report.count('update')} {verb}update, "
-          f"{report.count('reload')} {verb}reload, {report.count('unchanged')} unchanged.")
-    for name in report.missing_files:
-        print(f"  in the table but no longer a file (kept): {name}")
+    words = {"run": "would run (new)" if args.dry_run else "ran (new)",
+             "rerun": "would run again" if args.dry_run else "ran again", "skip": "unchanged, skipped"}
+    for name, action in report.actions:
+        print(f"  {name:<46} {words[action]}")
+    if not report.actions:
+        print("  no populate/*.sql files")
+    return 0
+
+
+def cmd_export_evaluation(args) -> int:
+    """Write populate/001_evaluation_fixtures.sql from populate/event_grouping/*.json (no database)."""
+    from .evaluation import EXPORT_FILE, FIXTURE_DIR, FixtureError, export_sql, read_fixtures
+
+    try:
+        fixtures = read_fixtures(FIXTURE_DIR)
+    except FixtureError as error:
+        print(f"Cannot export {FIXTURE_DIR}: {error}", file=sys.stderr)
+        return 1
+    text = export_sql(fixtures)
+    current = EXPORT_FILE.read_text(encoding="utf-8") if EXPORT_FILE.exists() else None
+    if args.check:
+        print(f"{EXPORT_FILE.name} is {'up to date' if current == text else 'OUT OF DATE: run export-evaluation'}")
+        return 0 if current == text else 1
+    if current == text:
+        print(f"{EXPORT_FILE.name} already matches {len(fixtures)} file(s); unchanged.")
+        return 0
+    EXPORT_FILE.write_text(text, encoding="utf-8")
+    print(f"Wrote {EXPORT_FILE} ({len(fixtures)} file(s)). `make db` loads it.")
     return 0
 
 
@@ -798,15 +809,13 @@ def main(argv: list[str] | None = None) -> int:
     p_relink.add_argument("--sample", action="store_true", help="The sample partition instead of live articles")
     p_relink.add_argument("--json", action="store_true")
     sub.add_parser("inspect", help="Row counts per table")
-    p_eval = sub.add_parser("load-evaluation",
-                            help="Load populate/event_grouping/*.json into evaluation.fixture_article "
-                                 "(repeatable; never deletes)")
-    p_eval.add_argument("--dry-run", action="store_true",
-                        help="Show what would be inserted or updated, in a read-only transaction")
-    p_eval.add_argument("--dir", help="Another folder of test_{number}_{type}_group_{group}.json files")
-    p_eval.add_argument("--force", action="store_true",
-                        help="Rewrite every fixture row, changed or not (each logged as 'reload')")
-    p_eval.add_argument("--json", action="store_true")
+    p_populate = sub.add_parser("populate", help="Run new/changed populate/*.sql data scripts; log each run")
+    p_populate.add_argument("--dry-run", action="store_true", help="Show what would run; change nothing")
+    p_populate.add_argument("--force", action="store_true", help="Run every data script again")
+    p_populate.add_argument("--json", action="store_true")
+    p_export = sub.add_parser("export-evaluation",
+                              help="Write populate/001_evaluation_fixtures.sql from populate/event_grouping/*.json")
+    p_export.add_argument("--check", action="store_true", help="Only report whether the SQL file is up to date")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
     p_backfill.add_argument("--demo", action="store_true", help="Read output/demo instead")
@@ -824,6 +833,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
                         format="%(levelname)s %(name)s %(message)s")
     command = args.command or "check"
+    if command == "export-evaluation":  # files only: no database needed
+        return cmd_export_evaluation(args)
     database: Database | None = None
     try:
         database = Database(load_db_settings())
@@ -839,8 +850,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_relink_companies(database, args)
         if command == "inspect":
             return cmd_inspect(database)
-        if command == "load-evaluation":
-            return cmd_load_evaluation(database, args)
+        if command == "populate":
+            return cmd_populate(database, args)
         if command == "backfill":
             return cmd_backfill(database, args)
         if command == "smoke":

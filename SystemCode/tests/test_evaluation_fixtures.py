@@ -2,12 +2,13 @@
 
 import json
 
-import psycopg
 import pytest
 
 from conftest import temporary_database
-from datasources.db.evaluation import (FIXTURE_DIR, FixtureError, load_fixtures, parse_fixture_name, read_fixture,
-                                       read_fixtures)
+from datasources.db import migrate as migrations
+from datasources.db.evaluation import (EXPORT_FILE, FIXTURE_DIR, FixtureError, export_sql, parse_fixture_name,
+                                       read_fixture, read_fixtures)
+from datasources.db.populate import apply_populate, plan_populate
 
 
 def test_the_file_name_is_split_into_number_type_and_group():
@@ -46,45 +47,49 @@ def test_the_committed_fixtures_load():
     assert all(f.payload.get("headline") and f.payload.get("content") for f in fixtures)
 
 
-# ----------------------------------------------------------------------------- loading (temporary database)
-def _write(folder, name, article):
-    (folder / name).write_text(json.dumps(article))
+# ----------------------------------------------------------------------------- export + populate (temporary database)
+def test_the_committed_sql_matches_the_json_files():
+    if not EXPORT_FILE.exists():
+        pytest.skip(f"no {EXPORT_FILE.name}")
+    assert EXPORT_FILE.read_text(encoding="utf-8") == export_sql(read_fixtures(FIXTURE_DIR)), \
+        "populate/event_grouping changed: run `uv run datasources-db export-evaluation`"
 
 
-def _load(db, folder, **kwargs):
-    with db.connection() as conn, conn.transaction():
-        return load_fixtures(conn, read_fixtures(folder), **kwargs)
-
-
-def _log(db):
-    with db.connection() as conn:
-        return [(r["filename"], r["action"]) for r in
-                conn.execute("SELECT filename, action FROM evaluation.load_log ORDER BY log_id")]
-
-
-def test_loading_is_idempotent_logs_each_change_and_force_reloads_everything(tmp_path):
-    a = "test_101_original_group_041.json"
-    b = "test_102_repeat_group_041.json"
-    _write(tmp_path, a, {"id": 1, "created_at": "2026-09-17T11:05:11Z", "headline": "first"})
-    _write(tmp_path, b, {"id": 2, "created_at": "2026-09-17T14:48:00Z", "headline": "second"})
-    with temporary_database("evaluation") as db:
-        assert _load(db, tmp_path, dry_run=True).count("insert") == 2 and _log(db) == []  # dry run writes nothing
-        assert _load(db, tmp_path).count("insert") == 2
-        assert _load(db, tmp_path).count("unchanged") == 2  # running again changes nothing
-        assert _log(db) == [(a, "insert"), (b, "insert")]
-
-        _write(tmp_path, b, {"id": 2, "created_at": "2026-09-17T14:48:00Z", "headline": "edited"})
-        report = _load(db, tmp_path)
-        assert (report.count("update"), report.count("unchanged")) == (1, 1)
+def test_exported_sql_loads_every_fixture_exactly_and_is_safe_to_run_again(tmp_path):
+    source = tmp_path / "json"
+    source.mkdir()
+    tricky = {"id": 990010004, "created_at": "2026-09-17T13:05:11Z", "headline": "Nebius' B300 \\ $10.50 -- 34%",
+              "content": "<p>It's \"quoted\"; café</p>", "symbols": ["NBIS"]}
+    (source / "test_104_conflict_group_041.json").write_text(json.dumps(tricky))
+    scripts = tmp_path / "populate"
+    scripts.mkdir()
+    (scripts / "001_evaluation_fixtures.sql").write_text(export_sql(read_fixtures(source)))
+    with temporary_database("export") as db:
+        apply_populate(db, scripts)
+        apply_populate(db, scripts, force=True)  # running it again changes nothing
         with db.connection() as conn:
-            row = conn.execute("SELECT payload->>'headline' AS h, batch FROM evaluation.fixture_article "
-                               "WHERE filename = %s", (b,)).fetchone()
-        assert (row["h"], row["batch"]) == ("edited", 21)  # tests 101-105 are batch 21
+            rows = conn.execute("SELECT payload, batch, fixture_type FROM evaluation.fixture_article").fetchall()
+        assert len(rows) == 1 and rows[0]["payload"] == tricky
+        assert (rows[0]["batch"], rows[0]["fixture_type"]) == (21, "conflict")
 
-        assert _load(db, tmp_path, force=True).count("reload") == 2
-        assert _log(db)[-3:] == [(b, "update"), (a, "reload"), (b, "reload")]
 
-        (tmp_path / a).unlink()
-        assert _load(db, tmp_path).missing_files == [a]  # a deleted file keeps its row
-        with pytest.raises(psycopg.errors.RaiseException, match="append-only"), db.connection() as conn:
-            conn.execute("DELETE FROM evaluation.load_log")
+def test_populate_runs_new_and_changed_scripts_once_and_logs_every_run(tmp_path):
+    a, b = tmp_path / "001_a.sql", tmp_path / "002_b.sql"
+    a.write_text("CREATE TEMP TABLE IF NOT EXISTS t (x int); INSERT INTO evaluation.fixture_article "
+                 "(filename, test_number, fixture_type, expected_group, article_id, payload, file_checksum) "
+                 "VALUES ('test_001_original_group_001.json', 1, 'original', 1, 1, '{}', 'c1') "
+                 "ON CONFLICT (filename) DO NOTHING;")
+    b.write_text("SELECT 1;")
+    (tmp_path / "source").mkdir()
+    (tmp_path / "source" / "ignored.sql").write_text("SELECT 1/0;")  # subfolders are source data, never run
+    with temporary_database("populate") as db:
+        assert [x for _, x in plan_populate(db, tmp_path).actions] == ["run", "run"]
+        assert [x for _, x in apply_populate(db, tmp_path).actions] == ["run", "run"]
+        assert [x for _, x in apply_populate(db, tmp_path).actions] == ["skip", "skip"]  # idempotent
+        b.write_text("SELECT 2;")
+        assert [x for _, x in apply_populate(db, tmp_path).actions] == ["skip", "rerun"]  # changed file runs again
+        assert [x for _, x in apply_populate(db, tmp_path, force=True).actions] == ["rerun", "rerun"]
+        with db.connection() as conn:
+            log = [r["filename"] for r in conn.execute("SELECT filename FROM populate_log ORDER BY log_id")]
+        assert log == ["001_a.sql", "002_b.sql", "002_b.sql", "001_a.sql", "002_b.sql"]  # appended, never rewritten
+        assert migrations.verify_schema(db).ok  # populate_log is bookkeeping, not schema drift

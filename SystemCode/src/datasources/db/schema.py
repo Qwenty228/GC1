@@ -33,6 +33,7 @@ from psycopg import Connection
 
 EXPECTED_PATH = Path(__file__).resolve().parent / "schema_expected.json"
 BOOKKEEPING_TABLE = "schema_migration"
+BOOKKEEPING_TABLES = frozenset({BOOKKEEPING_TABLE, "populate_log"})  # runner-owned logs
 BLOCKING = ("missing", "mismatch")
 REQUIRED_PROVIDERS = ("sec_edgar", "alpaca")
 
@@ -73,7 +74,7 @@ def snapshot(conn: Connection) -> dict[str, Any]:
         "WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND "
         + _NOT_EXTENSION_MEMBER.format(catalog="pg_class", oid="c.oid")
     ):
-        if row["relname"] != BOOKKEEPING_TABLE:
+        if row["relname"] not in BOOKKEEPING_TABLES:
             tables[row["relname"]] = {"columns": {}, "constraints": {}, "indexes": {}, "triggers": {}}
 
     for row in conn.execute(
@@ -193,7 +194,7 @@ def baseline_tables() -> list[str]:
 
 
 def managed_tables() -> set[str]:
-    return set(expected()["current"]["tables"]) | {BOOKKEEPING_TABLE}
+    return set(expected()["current"]["tables"]) | BOOKKEEPING_TABLES
 
 
 # ----------------------------------------------------------------------------- comparison

@@ -8,13 +8,13 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
-#   make db                one-shot, idempotent: start Docker Postgres if needed, apply pending migrations,
-#                          load new/changed evaluation fixtures, show the logs
-#   make db FORCE=1        DESTRUCTIVE: drop and recreate the database, then migrate + load everything
+#   make db                one-shot, idempotent: start Docker Postgres if needed, apply pending migrate/*.sql,
+#                          run new/changed populate/*.sql, show both logs
+#   make db FORCE=1        DESTRUCTIVE: drop and recreate the database, then migrate + populate everything
 #   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
-#   make db-eval-load      load populate/event_grouping/*.json into evaluation.fixture_article
+#   make db-populate       run new/changed populate/*.sql data scripts (logged in populate_log)
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
 #   make db-companies-plan which coverage companies registration would add (read-only)
@@ -34,7 +34,7 @@ LIMIT ?= 10
 # The database the app uses: PGDATABASE from the shell, else from .env (same precedence as the app).
 DBNAME := $(or $(PGDATABASE),$(shell sed -n 's/^PGDATABASE=//p' .env 2>/dev/null | tail -1),stock_news)
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db db-log db-reset db-eval-load db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-reset db-populate db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -86,14 +86,14 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
 
-db: ## One-shot, idempotent: start Postgres if needed, apply pending migrations, load new/changed fixtures, show logs (FORCE=1 rebuilds)
+db: ## One-shot, idempotent: start Postgres if needed, apply pending migrations, run new/changed populate scripts, show logs (FORCE=1 rebuilds)
 	@docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and retry."; exit 1; }
 	docker compose up -d --wait postgres
 ifeq ($(FORCE),1)
 	@$(MAKE) -s db-reset
 endif
 	$(UV) run datasources-db migrate
-	$(UV) run datasources-db load-evaluation
+	$(UV) run datasources-db populate
 	@$(MAKE) -s db-log
 
 db-reset: ## DESTRUCTIVE: drop and recreate the database (asks for its name; CONFIRM=<db> skips the prompt)
@@ -103,12 +103,12 @@ db-reset: ## DESTRUCTIVE: drop and recreate the database (asks for its name; CON
 	docker compose exec -T postgres sh -c 'dropdb -U "$$POSTGRES_USER" --if-exists --force "$(DBNAME)" && createdb -U "$$POSTGRES_USER" "$(DBNAME)"'
 	@echo "Recreated empty database '$(DBNAME)'."
 
-db-log: ## Migration log (schema_migration) and evaluation fixture load log (evaluation.load_log)
+db-log: ## Migration log (schema_migration) and data log (populate_log)
 	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
-	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT action, count(*) AS files, min(loaded_at)::timestamp(0) AS first, max(loaded_at)::timestamp(0) AS last FROM evaluation.load_log GROUP BY action ORDER BY action" -c "SELECT count(*) AS fixtures_loaded FROM evaluation.fixture_article"' 2>/dev/null || echo "(no evaluation tables yet)"
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT filename, count(*) AS runs, max(applied_at)::timestamp(0) AS last_run, left((array_agg(checksum ORDER BY log_id DESC))[1], 12) AS checksum FROM populate_log GROUP BY filename ORDER BY filename"' 2>/dev/null || echo "(no populate_log yet)"
 
-db-eval-load: ## Load the labelled test articles (populate/event_grouping/) into evaluation.fixture_article
-	$(UV) run datasources-db load-evaluation
+db-populate: ## Run new/changed populate/*.sql data scripts, each logged in populate_log (`datasources-db populate --force` reruns all)
+	$(UV) run datasources-db populate
 
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres
