@@ -138,6 +138,14 @@ references.
   `uv run datasources-db export-evaluation` (run it after adding a batch, commit
   the result); a test fails if the committed SQL is stale.
 
+## Evaluation runs
+
+`evaluation/` (see its README) scores the pipeline on the labelled batches with a
+swappable model: `uv run datasources-eval consolidation <experiment.py> --batch N`. Each
+batch runs in its own throwaway `stock_news_eval_..._test` database built from
+`migrate/` + the coverage companies, so a schema change that breaks the pipeline also
+breaks evaluation; run one batch after changing `migrate/`.
+
 ## Testing without touching real data
 
 * `stock_news` is the shared working database (news, events, summaries). The test

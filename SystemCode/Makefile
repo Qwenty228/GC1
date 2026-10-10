@@ -15,6 +15,8 @@
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
 #   make db-populate       run new/changed populate/*.sql data scripts (logged in populate_log)
+#   make eval EXP=<file> BATCH=1   score an experiment file on the labelled batches (see evaluation/README.md)
+#   make eval-compare      leaderboard of saved evaluation runs
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
 #   make db-companies-plan which coverage companies registration would add (read-only)
@@ -34,7 +36,7 @@ LIMIT ?= 10
 # The database the app uses: PGDATABASE from the shell, else from .env (same precedence as the app).
 DBNAME := $(or $(PGDATABASE),$(shell sed -n 's/^PGDATABASE=//p' .env 2>/dev/null | tail -1),stock_news)
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db db-log db-reset db-populate db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-reset db-populate eval eval-compare db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -113,6 +115,13 @@ db-log: ## Migration log (schema_migration) and data log (populate_log)
 
 db-populate: ## Run new/changed populate/*.sql data scripts, each logged in populate_log (`datasources-db populate --force` reruns all)
 	$(UV) run datasources-db populate
+
+eval: ## Score an experiment: make eval EXP=evaluation/consolidation/experiments/baseline_rule.py BATCH=1 [ARGS=--yes]
+	@test -n "$(EXP)" || { echo "Usage: make eval EXP=evaluation/consolidation/experiments/<file>.py BATCH=<n>|all [ARGS=--yes]"; exit 2; }
+	$(UV) run datasources-eval consolidation $(EXP) $(if $(filter all,$(BATCH)),--all,--batch $(or $(BATCH),1)) $(ARGS)
+
+eval-compare: ## Leaderboard of saved evaluation runs (evaluation/consolidation/results/)
+	$(UV) run datasources-eval compare
 
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres
