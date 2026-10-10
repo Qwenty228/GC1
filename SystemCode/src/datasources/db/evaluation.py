@@ -1,13 +1,17 @@
-"""Turn the labelled event-grouping test articles into a populate script.
+"""The answer key for the labelled event-grouping test files.
 
-The source files live in `SystemCode/populate/event_grouping/`, one Alpaca-format
-article per file, named by the team convention `test_{number}_{type}_group_{group}.json`.
-`export_sql` writes them as `populate/001_evaluation_fixtures.sql`, which `datasources-db
-populate` (run by `make db`) loads into `evaluation.fixture_article`: a new file is
-inserted, an edited file updates its row, and nothing is ever deleted.
+The test articles are JSON files in `SystemCode/populate/event_grouping/`, one
+Alpaca-format article per file, named by the team convention
+`test_{number}_{type}_group_{group}.json`. They reach the pipeline through its file
+input, like real news. This module reads only their names (and checksums) and writes
+`populate/001_evaluation_fixtures.sql`, which fills `evaluation.fixture_file` so the
+system knows which files exist and what answer each one expects.
 
-The SQL file is generated, not committed (it would duplicate the JSON): `populate`
-calls `write_export` first, so it always matches the folder.
+After adding or renaming files, regenerate and commit the SQL:
+
+    uv run datasources-db export-evaluation
+
+A test fails while the committed SQL does not match the folder.
 """
 
 from __future__ import annotations
@@ -15,118 +19,99 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 from .migrate import file_checksum
 
+
+class FixtureType(StrEnum):
+    """Expected relation of a test file to the files before it in its batch (the `{type}` in its name)."""
+
+    ORIGINAL = "original"  # opens the event
+    REPEAT = "repeat"  # same event, same facts
+    UPDATE = "update"  # same event, new facts or a later development
+    CONFLICT = "conflict"  # same event, a contradictory claim
+    DIFFERENT = "different"  # another event
+
+
 FIXTURE_DIR = Path(__file__).resolve().parents[3] / "populate" / "event_grouping"
 EXPORT_FILE = FIXTURE_DIR.parent / "001_evaluation_fixtures.sql"
-FIXTURE_NAME = re.compile(r"^test_(\d+)_(original|repeat|update|conflict|different)_group_(\d+)\.json$")
+FIXTURE_NAME = re.compile(rf"^test_(\d+)_({'|'.join(t.value for t in FixtureType)})_group_(\d+)\.json$")
 
 
 class FixtureError(ValueError):
-    """A fixture file that cannot be loaded (bad name, bad JSON, missing id)."""
+    """A fixture file that cannot be used (bad name, bad JSON, missing id, duplicates)."""
 
 
 @dataclass(frozen=True)
 class Fixture:
     filename: str
     test_number: int
-    fixture_type: str
+    fixture_type: FixtureType
     expected_group: int
-    article_id: int
-    published_at: datetime | None
-    payload: dict[str, Any]
     file_checksum: str
 
 
-
-def parse_fixture_name(filename: str) -> tuple[int, str, int]:
-    """'test_104_conflict_group_041.json' -> (104, 'conflict', 41)."""
+def parse_fixture_name(filename: str) -> tuple[int, FixtureType, int]:
+    """'test_104_conflict_group_041.json' -> (104, FixtureType.CONFLICT, 41)."""
     m = FIXTURE_NAME.match(filename)
     if not m:
         raise FixtureError(f"{filename}: expected test_{{number}}_{{type}}_group_{{group}}.json")
-    return int(m.group(1)), m.group(2), int(m.group(3))
+    return int(m.group(1)), FixtureType(m.group(2)), int(m.group(3))
+
+
+def _article_id(path: Path) -> int:
+    """The file must be one Alpaca article; its id is checked for uniqueness, not stored."""
+    try:
+        article = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise FixtureError(f"{path.name}: invalid JSON ({error})") from error
+    if not isinstance(article, dict) or not isinstance(article.get("id"), int):
+        raise FixtureError(f"{path.name}: not an Alpaca article (needs an integer 'id')")
+    return article["id"]
 
 
 def read_fixture(path: Path) -> Fixture:
     number, kind, group = parse_fixture_name(path.name)
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
-        raise FixtureError(f"{path.name}: invalid JSON ({error})") from error
-    if not isinstance(payload, dict) or not isinstance(payload.get("id"), int):
-        raise FixtureError(f"{path.name}: not an Alpaca article (needs an integer 'id')")
-    created = payload.get("created_at")
-    try:
-        published = datetime.fromisoformat(created.replace("Z", "+00:00")) if created else None
-    except (AttributeError, ValueError) as error:
-        raise FixtureError(f"{path.name}: created_at {created!r} is not ISO-8601") from error
-    return Fixture(path.name, number, kind, group, payload["id"], published, payload, file_checksum(path))
+    _article_id(path)
+    return Fixture(path.name, number, kind, group, file_checksum(path))
 
 
 def read_fixtures(directory: Path | None = None) -> list[Fixture]:
     """Every fixture in the folder, validated together: test numbers and article ids must be unique."""
-    fixtures = [read_fixture(p) for p in sorted((directory or FIXTURE_DIR).glob("*.json"))]
-    for attr in ("test_number", "article_id"):
-        seen: dict[Any, str] = {}
-        for f in fixtures:
-            key = getattr(f, attr)
+    paths = sorted((directory or FIXTURE_DIR).glob("*.json"))
+    fixtures = [read_fixture(p) for p in paths]
+    for label, keys in (("test number", [f.test_number for f in fixtures]), ("article id", map(_article_id, paths))):
+        seen: dict[int, str] = {}
+        for f, key in zip(fixtures, keys):
             if key in seen:
-                raise FixtureError(f"{f.filename} and {seen[key]} share {attr} {key}")
+                raise FixtureError(f"{f.filename} and {seen[key]} share {label} {key}")
             seen[key] = f.filename
     return fixtures
 
 
-def _literal(value: Any) -> str:
-    if value is None:
-        return "NULL"
-    if isinstance(value, int):
-        return str(value)
-    return "'" + str(value).replace("'", "''") + "'"  # standard_conforming_strings: only quotes need escaping
-
-
 def export_sql(fixtures: list[Fixture], source: str = "populate/event_grouping/") -> str:
-    """One idempotent INSERT ... ON CONFLICT DO UPDATE per fixture, for `populate/`. Deterministic."""
-    lines = [
-        f"-- Generated by `uv run datasources-db export-evaluation` from {source} ({len(fixtures)} files).",
-        "-- Do not edit by hand: change the JSON files and regenerate. Safe to run again: a file already",
-        "-- loaded is updated only when its checksum changed; rows are never deleted.",
-        "",
-    ]
-    for f in fixtures:
-        values = ", ".join([
-            _literal(f.filename), _literal(f.test_number), _literal(f.fixture_type), _literal(f.expected_group),
-            _literal(f.article_id),
-            f"{_literal(f.published_at.isoformat())}::timestamptz" if f.published_at else "NULL",
-            f"{_literal(json.dumps(f.payload, ensure_ascii=False, sort_keys=True))}::jsonb",
-            _literal(f.file_checksum),
-        ])
-        lines += [
-            "INSERT INTO evaluation.fixture_article (filename, test_number, fixture_type, expected_group, "
-            "article_id, published_at, payload, file_checksum)",
-            f"VALUES ({values})",
-            "ON CONFLICT (filename) DO UPDATE SET test_number = EXCLUDED.test_number, "
-            "fixture_type = EXCLUDED.fixture_type, expected_group = EXCLUDED.expected_group, "
-            "article_id = EXCLUDED.article_id, published_at = EXCLUDED.published_at, payload = EXCLUDED.payload, "
-            "file_checksum = EXCLUDED.file_checksum, updated_at = now()",
-            "WHERE evaluation.fixture_article.file_checksum IS DISTINCT FROM EXCLUDED.file_checksum;",
-            "",
-        ]
-    return "\n".join(lines)
+    """One idempotent multi-row INSERT for `populate/`: a changed file updates its row. Deterministic."""
+    rows = ",\n".join(
+        f"    ('{f.filename}', {f.test_number}, '{f.fixture_type.value}', {f.expected_group}, '{f.file_checksum}')"
+        for f in fixtures)
+    return (
+        "-- Generated by `uv run datasources-db export-evaluation` from "
+        f"{source} ({len(fixtures)} files).\n"
+        "-- Do not edit by hand: add, rename or edit the JSON files, then regenerate and commit.\n"
+        "-- Safe to run again: an existing row is updated only when its file's checksum changed.\n\n"
+        "INSERT INTO evaluation.fixture_file (filename, test_number, fixture_type, expected_group, file_checksum)\n"
+        f"VALUES\n{rows}\n"
+        "ON CONFLICT (filename) DO UPDATE SET test_number = EXCLUDED.test_number,\n"
+        "    fixture_type = EXCLUDED.fixture_type, expected_group = EXCLUDED.expected_group,\n"
+        "    file_checksum = EXCLUDED.file_checksum, updated_at = now()\n"
+        "WHERE evaluation.fixture_file.file_checksum IS DISTINCT FROM EXCLUDED.file_checksum;\n"
+    )
 
 
-def write_export(directory: Path | None = None, target: Path | None = None) -> tuple[str, int]:
-    """Regenerate the populate script from the JSON folder. Returns (written | unchanged | no fixtures, count).
-    Writes only when the text changed, so the file's checksum (and populate's decision) is stable."""
-    directory, target = directory or FIXTURE_DIR, target or EXPORT_FILE
-    fixtures = read_fixtures(directory)
-    if not fixtures:
-        return "no fixtures", 0
-    text = export_sql(fixtures)
-    if target.exists() and target.read_text(encoding="utf-8") == text:
-        return "unchanged", len(fixtures)
-    target.write_text(text, encoding="utf-8")
-    return "written", len(fixtures)
+def write_export(directory: Path | None = None, target: Path | None = None) -> int:
+    """Regenerate the populate script from the folder (overwrites it). Returns the number of files."""
+    fixtures = read_fixtures(directory or FIXTURE_DIR)
+    (target or EXPORT_FILE).write_text(export_sql(fixtures), encoding="utf-8")
+    return len(fixtures)

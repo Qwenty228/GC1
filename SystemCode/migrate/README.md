@@ -13,7 +13,7 @@ SHA-256 in `schema_migration`.
 | `002_semantic_event_grouping.sql` | Embeddings + event grouping (pgvector) |
 | `004_event_summary.sql` | Event summaries |
 | `005_event_summary_citation_quote_index.sql` | Citation quote index |
-| `006_evaluation_fixture.sql` | `evaluation` schema: labelled test articles (filled from `populate/`) |
+| `006_evaluation_fixture.sql` | `evaluation` schema: answer key for the labelled test files (filled from `populate/`) |
 
 There is no `003`: it came from a reverted branch (see `KNOWN_UNFILED` in
 `src/datasources/db/migrate.py`).

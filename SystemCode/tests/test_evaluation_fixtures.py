@@ -1,4 +1,4 @@
-"""The labelled event-grouping fixtures: file names, contents and folder-level uniqueness (no database)."""
+"""The labelled event-grouping answer key: file names, the generated populate script, and loading it."""
 
 import json
 
@@ -6,83 +6,88 @@ import pytest
 
 from conftest import temporary_database
 from datasources.db import migrate as migrations
-from datasources.db.evaluation import (FIXTURE_DIR, FixtureError, export_sql, parse_fixture_name, read_fixture,
-                                       read_fixtures, write_export)
+from datasources.db.evaluation import (EXPORT_FILE, FIXTURE_DIR, FixtureError, FixtureType, export_sql,
+                                       parse_fixture_name, read_fixture, read_fixtures, write_export)
 from datasources.db.populate import apply_populate, plan_populate
 
 
+def _article(folder, name, article_id, **extra):
+    (folder / name).write_text(json.dumps({"id": article_id, "created_at": "2026-09-17T11:05:11Z", **extra}))
+
+
 def test_the_file_name_is_split_into_number_type_and_group():
-    assert parse_fixture_name("test_104_conflict_group_041.json") == (104, "conflict", 41)
-    assert parse_fixture_name("test_001_original_group_001.json") == (1, "original", 1)
+    assert parse_fixture_name("test_104_conflict_group_041.json") == (104, FixtureType.CONFLICT, 41)
+    assert parse_fixture_name("test_001_original_group_001.json") == (1, FixtureType.ORIGINAL, 1)
 
 
 @pytest.mark.parametrize("name", ["test_104_conflicts_group_041.json", "test_104_conflict_041.json",
-                                  "104_conflict_group_041.json", "test_104_conflict_group_041.txt"])
+                                  "104_conflict_group_041.json", "test_104_conflict_group_041.txt",
+                                  "test_066_original_group27.json"])
 def test_other_names_are_refused(name):
     with pytest.raises(FixtureError):
         parse_fixture_name(name)
 
 
-def test_a_fixture_keeps_its_payload_and_reads_id_and_time(tmp_path):
-    article = {"id": 990010004, "created_at": "2026-09-17T13:05:11Z", "headline": "h"}
-    path = tmp_path / "test_104_conflict_group_041.json"
-    path.write_text(json.dumps(article))
-    fixture = read_fixture(path)
-    assert (fixture.test_number, fixture.fixture_type, fixture.expected_group) == (104, "conflict", 41)
-    assert fixture.article_id == 990010004 and fixture.payload == article
-    assert fixture.published_at.isoformat() == "2026-09-17T13:05:11+00:00"
+def test_a_fixture_records_the_answer_and_checksum_not_the_content(tmp_path):
+    _article(tmp_path, "test_104_conflict_group_041.json", 990010004, headline="h")
+    fixture = read_fixture(tmp_path / "test_104_conflict_group_041.json")
+    assert (fixture.test_number, fixture.fixture_type, fixture.expected_group) == (104, FixtureType.CONFLICT, 41)
+    assert len(fixture.file_checksum) == 64 and not hasattr(fixture, "payload")
 
 
-def test_duplicate_article_ids_in_one_folder_are_refused(tmp_path):
-    for name in ("test_101_original_group_041.json", "test_102_repeat_group_041.json"):
-        (tmp_path / name).write_text(json.dumps({"id": 1, "created_at": "2026-09-17T11:05:11Z"}))
-    with pytest.raises(FixtureError, match="article_id"):
+@pytest.mark.parametrize("content", ["not json", "[1, 2]", '{"headline": "no id"}'])
+def test_a_file_that_is_not_one_alpaca_article_is_refused(tmp_path, content):
+    (tmp_path / "test_101_original_group_041.json").write_text(content)
+    with pytest.raises(FixtureError):
         read_fixtures(tmp_path)
 
 
-def test_the_committed_fixtures_load():
+def test_duplicate_article_ids_or_test_numbers_are_refused(tmp_path):
+    _article(tmp_path, "test_101_original_group_041.json", 1)
+    _article(tmp_path, "test_102_repeat_group_041.json", 1)
+    with pytest.raises(FixtureError, match="article id"):
+        read_fixtures(tmp_path)
+    (tmp_path / "test_102_repeat_group_041.json").rename(tmp_path / "test_101_repeat_group_041.json")
+    with pytest.raises(FixtureError, match="test number"):
+        read_fixtures(tmp_path)
+
+
+def test_the_committed_sql_matches_the_json_files():
     if not any(FIXTURE_DIR.glob("*.json")):
         pytest.skip(f"no fixtures in {FIXTURE_DIR}")
-    fixtures = read_fixtures(FIXTURE_DIR)
-    assert all(f.payload.get("headline") and f.payload.get("content") for f in fixtures)
+    assert EXPORT_FILE.exists() and EXPORT_FILE.read_text(encoding="utf-8") == export_sql(read_fixtures()), \
+        "populate/event_grouping changed: run `uv run datasources-db export-evaluation` and commit the SQL"
 
 
-# ----------------------------------------------------------------------------- export + populate (temporary database)
-def test_regenerating_writes_only_when_the_json_changed(tmp_path):
-    source, target = tmp_path / "json", tmp_path / "001_evaluation_fixtures.sql"
+# ----------------------------------------------------------------------------- loading (temporary database)
+def test_the_generated_sql_loads_the_answer_key_and_follows_edited_files(tmp_path):
+    source, scripts = tmp_path / "json", tmp_path / "populate"
     source.mkdir()
-    (source / "test_101_original_group_041.json").write_text(json.dumps({"id": 1, "created_at": "2026-09-17T11:05:11Z"}))
-    assert write_export(source, target) == ("written", 1)
-    stamp = target.stat().st_mtime_ns
-    assert write_export(source, target) == ("unchanged", 1) and target.stat().st_mtime_ns == stamp
-    (source / "test_102_repeat_group_041.json").write_text(json.dumps({"id": 2, "created_at": "2026-09-17T14:48:00Z"}))
-    assert write_export(source, target) == ("written", 2)
-    assert write_export(tmp_path / "empty", tmp_path / "none.sql") == ("no fixtures", 0)
-
-
-def test_exported_sql_loads_every_fixture_exactly_and_is_safe_to_run_again(tmp_path):
-    source = tmp_path / "json"
-    source.mkdir()
-    tricky = {"id": 990010004, "created_at": "2026-09-17T13:05:11Z", "headline": "Nebius' B300 \\ $10.50 -- 34%",
-              "content": "<p>It's \"quoted\"; café</p>", "symbols": ["NBIS"]}
-    (source / "test_104_conflict_group_041.json").write_text(json.dumps(tricky))
-    scripts = tmp_path / "populate"
     scripts.mkdir()
-    (scripts / "001_evaluation_fixtures.sql").write_text(export_sql(read_fixtures(source)))
-    with temporary_database("export") as db:
+    _article(source, "test_101_original_group_041.json", 1)
+    _article(source, "test_105_different_group_042.json", 5)
+    assert write_export(source, scripts / "001_evaluation_fixtures.sql") == 2
+    with temporary_database("evaluation") as db:
         apply_populate(db, scripts)
         apply_populate(db, scripts, force=True)  # running it again changes nothing
         with db.connection() as conn:
-            rows = conn.execute("SELECT payload, batch, fixture_type FROM evaluation.fixture_article").fetchall()
-        assert len(rows) == 1 and rows[0]["payload"] == tricky
-        assert (rows[0]["batch"], rows[0]["fixture_type"]) == (21, "conflict")
+            rows = conn.execute("SELECT filename, batch, fixture_type, expected_group FROM evaluation.fixture_file "
+                                "ORDER BY test_number").fetchall()
+        assert [(r["batch"], r["fixture_type"], r["expected_group"]) for r in rows] == [(21, "original", 41),
+                                                                                         (21, "different", 42)]
+        _article(source, "test_101_original_group_041.json", 1, headline="edited")
+        write_export(source, scripts / "001_evaluation_fixtures.sql")
+        assert [a for _, a in apply_populate(db, scripts).actions] == ["rerun"]
+        with db.connection() as conn:
+            checksum = conn.execute("SELECT file_checksum FROM evaluation.fixture_file WHERE test_number = 101"
+                                    ).fetchone()["file_checksum"]
+        assert checksum == read_fixture(source / "test_101_original_group_041.json").file_checksum
 
 
 def test_populate_runs_new_and_changed_scripts_once_and_logs_every_run(tmp_path):
     a, b = tmp_path / "001_a.sql", tmp_path / "002_b.sql"
-    a.write_text("CREATE TEMP TABLE IF NOT EXISTS t (x int); INSERT INTO evaluation.fixture_article "
-                 "(filename, test_number, fixture_type, expected_group, article_id, payload, file_checksum) "
-                 "VALUES ('test_001_original_group_001.json', 1, 'original', 1, 1, '{}', 'c1') "
+    a.write_text("INSERT INTO evaluation.fixture_file (filename, test_number, fixture_type, expected_group, "
+                 "file_checksum) VALUES ('test_001_original_group_001.json', 1, 'original', 1, 'c1') "
                  "ON CONFLICT (filename) DO NOTHING;")
     b.write_text("SELECT 1;")
     (tmp_path / "source").mkdir()

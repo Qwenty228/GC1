@@ -41,7 +41,7 @@ PINNED = {
     "002_semantic_event_grouping.sql": "0b2c052442d6",
     "004_event_summary.sql": "e61b09734927",
     "005_event_summary_citation_quote_index.sql": "37e2b04327df",
-    "006_evaluation_fixture.sql": "e00645abd1b0",
+    "006_evaluation_fixture.sql": "3ed8443bcfae",
 }
 DATA_TABLES = ("provider", "company", "company_symbol", "publisher", "document", "document_revision",
                "document_revision_source", "revision_company", "embedding_profile", "text_unit", "embedding",

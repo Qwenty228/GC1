@@ -6,7 +6,7 @@ order. See [`migrate/summary.md`](../migrate/summary.md) for the full picture.
 
 | File | Fills | Source |
 | --- | --- | --- |
-| `001_evaluation_fixtures.sql` | `evaluation.fixture_article` (125 labelled test articles) | **generated** from `event_grouping/*.json` on every `make db`; gitignored |
+| `001_evaluation_fixtures.sql` | `evaluation.fixture_file` (answer key: which test file, expected type/group) | generated from `event_grouping/*.json` by `uv run datasources-db export-evaluation`; committed |
 
 ## Rules for a populate script
 
@@ -29,9 +29,7 @@ pg_dump --data-only --inserts --on-conflict-do-nothing --no-owner --no-privilege
 
 ## How `make db` runs them
 
-`uv run datasources-db populate` (part of `make db`) first regenerates
-`001_evaluation_fixtures.sql` from `event_grouping/` (written only if the JSON
-changed), then:
+`uv run datasources-db populate` (part of `make db`):
 
 | File state | What happens |
 | --- | --- |
@@ -56,12 +54,19 @@ test_{number}_{type}_group_{group}.json      e.g. test_104_conflict_group_041.js
 * `type`: expected relation, `original`, `repeat`, `update`, `conflict` or `different`.
 * `group`: expected event; files sharing a group number describe one event.
 * `batch`: five consecutive test numbers (001-005 = batch 1); generated in the table.
-* Contents: the article exactly in Alpaca's REST shape.
+* Contents: the article exactly in Alpaca's REST shape. The articles stay in these
+  files; the pipeline reads them through its file input (`datasources-ingest
+  process-file`), like real news. The database only stores the answer key.
 
 The file name is the answer key. Feed only the file *contents* to the pipeline.
 
-After adding or editing a JSON file, just run `make db`: it regenerates
-`001_evaluation_fixtures.sql` (never committed, so the data lives only in the JSON),
-sees the new checksum, and loads the change. `uv run datasources-db export-evaluation`
-only regenerates the file, if you want to inspect it. The number `001` is taken by
-this generated file; your own scripts start at `002`.
+Adding a batch (or renaming/editing a file):
+
+```bash
+uv run datasources-db export-evaluation   # rewrites 001_evaluation_fixtures.sql from this folder
+git add populate/                         # commit the JSON and the SQL together
+make db                                   # 001 changed, so it runs again and loads the new rows
+```
+
+A test fails while the committed SQL does not match the folder. The number `001`
+is taken by this file; other data scripts start at `002`.

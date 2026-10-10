@@ -11,9 +11,9 @@
     uv run datasources-db relink-companies          # add those links (insert-only, repeatable)
     uv run datasources-db inspect                   # row counts per table
     uv run datasources-db populate --dry-run        # which populate/*.sql data scripts would run (read-only)
-    uv run datasources-db populate                  # regenerate 001 from the JSON, run new/changed data scripts, log each run
+    uv run datasources-db populate                  # run new/changed data scripts, append each run to populate_log
     uv run datasources-db populate --force          # run every data script again
-    uv run datasources-db export-evaluation         # only regenerate populate/001_evaluation_fixtures.sql (gitignored)
+    uv run datasources-db export-evaluation         # rewrite populate/001_evaluation_fixtures.sql from event_grouping/ (commit it)
     uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
@@ -187,21 +187,14 @@ def cmd_migrate(db: Database, args) -> int:
 
 def cmd_populate(db: Database, args) -> int:
     """Run the new or changed `populate/*.sql` data scripts (every one with --force) and log each run."""
-    from .evaluation import EXPORT_FILE, FixtureError, write_export
     from .populate import POPULATE_DIR, apply_populate, plan_populate
 
-    try:  # the generated script is rebuilt from populate/event_grouping/ first, so it never goes stale
-        generated, count = write_export()
-    except FixtureError as error:
-        print(f"Cannot generate {EXPORT_FILE.name}: {error}", file=sys.stderr)
-        return 1
     database = db.check().database
     report = (plan_populate if args.dry_run else apply_populate)(db, force=args.force)
     if args.json:
         print(json.dumps({"database": database, "directory": str(POPULATE_DIR), **report.as_dict()}, indent=2))
         return 0
     print(f"Populate {database} from {POPULATE_DIR}")
-    print(f"  {EXPORT_FILE.name}: {generated} from {count} JSON file(s) in event_grouping/")
     if args.dry_run:
         print("READ ONLY: nothing was changed.")
     words = {"run": "would run (new)" if args.dry_run else "ran (new)",
@@ -214,15 +207,15 @@ def cmd_populate(db: Database, args) -> int:
 
 
 def cmd_export_evaluation(args) -> int:
-    """Regenerate populate/001_evaluation_fixtures.sql from populate/event_grouping/*.json (no database)."""
+    """Rewrite populate/001_evaluation_fixtures.sql from populate/event_grouping/*.json (no database)."""
     from .evaluation import EXPORT_FILE, FixtureError, write_export
 
     try:
-        status, count = write_export()
+        count = write_export()
     except FixtureError as error:
         print(f"Cannot export: {error}", file=sys.stderr)
         return 1
-    print(f"{EXPORT_FILE.name}: {status} ({count} JSON file(s)). `make db` regenerates it automatically.")
+    print(f"Wrote {EXPORT_FILE} ({count} file(s)). Commit it; `make db` loads it.")
     return 0
 
 
@@ -811,8 +804,8 @@ def main(argv: list[str] | None = None) -> int:
     p_populate.add_argument("--dry-run", action="store_true", help="Show what would run; change nothing")
     p_populate.add_argument("--force", action="store_true", help="Run every data script again")
     p_populate.add_argument("--json", action="store_true")
-    sub.add_parser("export-evaluation", help="Only regenerate populate/001_evaluation_fixtures.sql from "
-                                             "populate/event_grouping/*.json (populate does this itself)")
+    sub.add_parser("export-evaluation", help="Rewrite populate/001_evaluation_fixtures.sql from "
+                                             "populate/event_grouping/*.json (run after adding test files)")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
     p_backfill.add_argument("--demo", action="store_true", help="Read output/demo instead")
