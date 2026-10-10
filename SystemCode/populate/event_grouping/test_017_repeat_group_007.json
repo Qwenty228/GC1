@@ -1,0 +1,17 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Apple is developing an AI server that could combine two or four planned M8 Ultra processors, The Information reported Wednesday. The company is considering Nvidia&#x27;s NVLink Fusion technology to connect them and potentially link its custom silicon with Nvidia&#x27;s broader data-center systems.</p><p>The initiative reportedly started roughly a year ago with support from CEO John Ternus. A launch is not expected before 2029. Apple could still cancel the project or build it without Nvidia technology.</p><p>A release would mark Apple&#x27;s first dedicated server hardware since Xserve was discontinued in 2011. The project would expand its chip strategy beyond consumer devices.</p><p>The report also discussed inference demand. BakerAvenue strategist King Lip favored Broadcom for large, repetitive inference workloads while noting that both Broadcom and Nvidia could benefit from growth in AI infrastructure.</p>",
+  "created_at": "2026-09-16T17:26:30Z",
+  "headline": "Apple Weighs M8 Ultra AI Server With Nvidia NVLink Fusion, Launch No Earlier Than 2029",
+  "id": 990000017,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Apple is reportedly developing a server using two or four planned M8 Ultra chips and considering Nvidia connectivity, although the project could still be canceled.",
+  "symbols": [
+    "AAPL",
+    "AVGO",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-16T17:26:30Z",
+  "url": "https://example.test/articles/990000017"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Space Exploration Technologies Corp.'s CEO Elon Musk announced late Friday that SpaceX has officially secured regulatory approval and finalized hardware delivery timelines to deploy its first operational Starmind AI compute satellite cluster into low-Earth orbit ahead of schedule. Following earlier discussions regarding the 250 kW solar array designs, Musk confirmed via X that engineers successfully tested an upgraded power regulation module capable of sustaining a 300 kW peak load—surpassing initial projections by 20%. The updated timeline accelerates the integration of NVIDIA Corp's next-generation hardware racks, pushing the first full-scale orbital test flight into early Q1 2027 rather than later in the year. While AT&T Inc. and T-Mobile US Inc. executives previously expressed technical doubts, NASA Administrator Jared Isaacman met with SpaceX engineering leads on Friday to formalize a joint telemetry monitoring agreement for the upcoming deployment phase. Price Action: Following the announcement of accelerated deployment schedules, SPCX shares rallied 3.42% to $154.10 during Friday afternoon trading sessions.",
+  "created_at": "2026-10-03T10:15:00Z",
+  "headline": "SpaceX Accelerates Starmind AI Satellite Launch Timeline Following Successful Power Tests and NVIDIA Collaboration Update",
+  "id": 990000027,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "SpaceX advances its Starmind AI satellite deployment schedule to early 2027 following upgraded 300 kW power tests with NVIDIA hardware.",
+  "symbols": [
+    "NVDA",
+    "SPCX",
+    "T",
+    "TMUS"
+  ],
+  "updated_at": "2026-10-03T10:15:00Z",
+  "url": "https://example.test/articles/990000027"
+}

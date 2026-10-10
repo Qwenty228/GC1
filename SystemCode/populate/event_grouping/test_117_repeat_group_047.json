@@ -1,0 +1,16 @@
+{
+  "author": "eWEEK Staff",
+  "content": "<p>IonQ plans to install its Superion 256 quantum computer at Nvidia's Accelerated Quantum Research Center in 2027, where the company says it will become the facility's first on-premises quantum processing unit.</p><p>The system is expected to connect directly to an Nvidia GB200 NVL72 through NVQLink, with CUDA-Q coordinating workloads across the quantum processor and GPU infrastructure. The setup gives Nvidia and IonQ a defined architecture for testing hybrid quantum-GPU computing, but there are no performance results from that configuration yet.</p><p>IonQ announced the NVAQC deployment on Sept. 23. The planned research includes portfolio optimization and risk modeling, materials science, computational chemistry, and broader work on quantum-GPU software.</p><p>Nvidia built NVAQC around the idea that quantum processors will work alongside classical supercomputers rather than replace them. The Boston facility uses GB200 NVL72 systems and CUDA-Q to support hybrid algorithms, quantum-system simulation, and GPU-assisted quantum error correction.</p><p>Superion 256 adds trapped-ion hardware to that stack. eWeek previously examined the Superion 256 platform after IonQ unveiled it on Sept. 8, including the company's move toward semiconductor manufacturing and planned 2027 customer deliveries.</p><p>IonQ says Superion uses Electronic Qubit Control to replace more complex laser-based controls with electronics integrated onto the chip. The company has fabricated 256-qubit processors and trapped ions in prototype systems, but it has not published full-system workload results for a delivered Superion 256.</p><p>That distinction matters because quantum architectures have different control, cooling, connectivity, and scaling requirements. Connecting a QPU to GPU infrastructure is only one part of making a hybrid system useful.</p><p>Based on the systems and research disclosed so far, three areas will determine how much the NVAQC deployment tells enterprises:</p><p>If Superion 256 arrives at NVAQC in 2027 as planned, the installation will provide a physical test bed for IonQ and Nvidia's hybrid design. The more important milestone will come when that system produces repeatable results that show where a connected QPU improves on GPU-only computing.</p>",
+  "created_at": "2026-09-25T10:00:00Z",
+  "headline": "IonQ Superion 256 Set to Be First QPU at Nvidia Quantum Research Center",
+  "id": 990040017,
+  "images": [],
+  "source": "eweek",
+  "summary": "IonQ plans to install Superion 256 at Nvidia's quantum research center in 2027, linking the QPU to GB200 GPUs through NVQLink and CUDA-Q.",
+  "symbols": [
+    "IONQ",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-25T10:06:06Z",
+  "url": "https://www.eweek.com/news/ionq-superion-256-nvidia-quantum-research-center/"
+}

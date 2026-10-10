@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A synthetic account of Elon Musk's Colossus expansion remarks stated that the next scheduled batch would consist of 220,000 AMD MI300X accelerators rather than NVIDIA GB300 GPUs.</p>\n\n<p>The original account explicitly identified the planned next-week addition as 220,000 NVIDIA GB300 GPUs. The competing account concerns the same scheduled expansion batch and timeframe, but names a different accelerator supplier and model.</p>\n\n<p>Both accounts describe a large addition to the Colossus AI computing cluster, and neither is presented as a separate procurement initiative.</p>\n\n<p>The chip identity for the same batch is therefore a direct contradiction between the two accounts.</p>",
+  "created_at": "2026-09-25T10:00:00Z",
+  "headline": "Elon Musk announces Colossus expansion using 500,000 AMD MI300X chips",
+  "id": 990000084,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Elon Musk stated the Colossus expansion will utilize 500,000 AMD MI300X accelerators instead of NVIDIA silicon.",
+  "symbols": [
+    "AMD",
+    "SPCX"
+  ],
+  "updated_at": "2026-09-25T10:00:00Z",
+  "url": "https://example.test/articles/990000084"
+}

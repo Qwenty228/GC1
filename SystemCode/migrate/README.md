@@ -1,5 +1,7 @@
 # migrate/
 
+Handoff and conventions for `migrate/`, `populate/` and `make db`: [summary.md](summary.md).
+
 The PostgreSQL schema, as ordered SQL migrations. `uv run datasources-db migrate`
 (`make db-migrate`) runs each file once, in filename order, and records it with its
 SHA-256 in `schema_migration`.
@@ -11,6 +13,7 @@ SHA-256 in `schema_migration`.
 | `002_semantic_event_grouping.sql` | Embeddings + event grouping (pgvector) |
 | `004_event_summary.sql` | Event summaries |
 | `005_event_summary_citation_quote_index.sql` | Citation quote index |
+| `006_evaluation_fixture.sql` | `evaluation` schema: answer key for the labelled test files (filled from `populate/`) |
 
 There is no `003`: it came from a reverted branch (see `KNOWN_UNFILED` in
 `src/datasources/db/migrate.py`).
@@ -28,7 +31,6 @@ Quick start with the shared Docker database (from `SystemCode/`):
 
 ```bash
 cp .env.example .env      # set PGPASSWORD
-make db-up                # PostgreSQL 18 + pgvector in Docker
-make db-migrate           # builds the schema from this folder
+make db                   # Docker PostgreSQL 18 + pgvector, applies pending files, prints the log
 make db-verify            # expect "Result: OK"
 ```

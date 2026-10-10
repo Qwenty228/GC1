@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A synthetic competing report described Super Micro Computer's initial NVIDIA Vera Rubin NVL72 shipments as using 128 Rubin GPUs and 64 Vera CPUs in each rack.</p>\n\n<p>That configuration directly contradicts the original shipment announcement, which specified 72 Rubin GPUs and 36 Vera CPUs per rack. Both reports refer to the same initial shipments of liquid-cooled Vera Rubin NVL72 systems.</p>\n\n<p>The competing account also said the racks were being delivered with direct liquid cooling and Super Micro's Data Center Building Block Solutions.</p>\n\n<p>The disputed GPU and CPU counts are the point of conflict; the report does not describe a newly introduced rack variant.</p>",
+  "created_at": "2026-09-25T14:00:00Z",
+  "headline": "Super Micro starts shipping NVIDIA Vera Rubin racks with 128 GPUs per rack",
+  "id": 990000079,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Super Micro began shipping NVIDIA Vera Rubin racks equipped with 128 Rubin GPUs and 64 Vera CPUs.",
+  "symbols": [
+    "NVDA",
+    "SMCI"
+  ],
+  "updated_at": "2026-09-25T14:00:00Z",
+  "url": "https://example.test/articles/990000079"
+}

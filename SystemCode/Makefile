@@ -8,9 +8,15 @@
 #   make edgar T=NVDA      backend-only CLI (no web layer)
 #   make ingest            start automatic ingestion (EDGAR + Alpaca WebSocket/REST)
 #   make ingest-demo       offline ingestion over bundled fixtures -> output/demo
+#   make db                one-shot, idempotent: start Docker Postgres if needed, apply pending migrate/*.sql,
+#                          run new/changed populate/*.sql, show both logs
+#   make db FORCE=1        DESTRUCTIVE: drop and recreate the database, then migrate + populate everything
 #   make db-up             start the shared PostgreSQL + pgvector container (compose.yaml)
 #   make db-down           stop it (data volume kept)
 #   make db-check          report the PostgreSQL connection and pgvector
+#   make db-populate       run new/changed populate/*.sql data scripts (logged in populate_log)
+#   make eval EXP=<file>   run an experiment file on the labelled batches (see evaluation/README.md)
+#   make eval-compare      leaderboard of saved evaluation runs
 #   make db-plan           what `migrate` would do (read-only)
 #   make db-verify         compare the schema with the migrations (read-only)
 #   make db-companies-plan which coverage companies registration would add (read-only)
@@ -27,8 +33,10 @@ T  ?= NVDA
 LIMIT ?= 10
 
 .DEFAULT_GOAL := help
+# The database the app uses: PGDATABASE from the shell, else from .env (same precedence as the app).
+DBNAME := $(or $(PGDATABASE),$(shell sed -n 's/^PGDATABASE=//p' .env 2>/dev/null | tail -1),stock_news)
 .PHONY: help sync sync-local-embeddings dev dev-check run test companies edgar alpaca ingest ingest-once ingest-demo graph \
-	db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
+	db db-log db-reset db-rerun db-populate eval eval-compare db-up db-down db-psql db-logs db-check db-plan db-migrate db-verify db-companies-plan db-companies db-inspect db-backfill db-smoke similarity-check similarity-download-model \
 	similarity-backfill similarity-retry similarity-status summary-check summary-status summary-pending \
 	summary-reviews clean clean-cache
 
@@ -79,6 +87,47 @@ ingest-demo: sync ## Offline ingestion of bundled fixtures into output/demo
 
 graph: ## Print the compiled LangGraph ingestion graph (Mermaid + edges)
 	$(UV) run datasources-ingest graph
+
+# make db is one-way: it asks the logs "has this file run?" (schema_migration, populate_log), never "does the
+# table still exist?". A table dropped by hand stays missing, because the log still says done. To recover:
+# `make db-rerun FILE=<the migrate/ file that created it>` (re-runs it, then repopulates), or rebuild
+# everything with `make db FORCE=1` (deletes all data in the database).
+db: ## One-shot, idempotent: start Postgres if needed, apply pending migrations, run new/changed populate scripts, show logs (FORCE=1 rebuilds)
+	@docker info >/dev/null 2>&1 || { echo "Docker is not running. Start Docker Desktop and retry."; exit 1; }
+	docker compose up -d --wait postgres
+ifeq ($(FORCE),1)
+	@$(MAKE) -s db-reset
+endif
+	$(UV) run datasources-db migrate
+	$(UV) run datasources-db populate
+	@$(MAKE) -s db-log
+
+db-reset: ## DESTRUCTIVE: drop and recreate the database (asks for its name; CONFIRM=<db> skips the prompt)
+	@echo "make db FORCE=1 will DROP database '$(DBNAME)' with ALL its data (news, events, summaries) and rebuild it."; \
+	if [ "$(CONFIRM)" != "$(DBNAME)" ]; then printf "Type the database name to continue: "; read answer; \
+	  [ "$$answer" = "$(DBNAME)" ] || { echo "Not confirmed; nothing was changed."; exit 1; }; fi
+	docker compose exec -T postgres sh -c 'dropdb -U "$$POSTGRES_USER" --if-exists --force "$(DBNAME)" && createdb -U "$$POSTGRES_USER" "$(DBNAME)"'
+	@echo "Recreated empty database '$(DBNAME)'."
+
+db-log: ## Migration log (schema_migration) and data log (populate_log)
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT filename, method, applied_at::timestamp(0) AS applied_at, left(checksum, 12) AS checksum FROM schema_migration ORDER BY filename" -c "SELECT count(*) AS migrations_applied FROM schema_migration"'
+	@docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -c "SELECT filename, count(*) AS runs, max(applied_at)::timestamp(0) AS last_run, left((array_agg(checksum ORDER BY log_id DESC))[1], 12) AS checksum FROM populate_log GROUP BY filename ORDER BY filename"' 2>/dev/null || echo "(no populate_log yet)"
+
+db-rerun: ## Recreate objects dropped by hand: re-run one applied migrate/ file in one transaction, then repopulate (FILE=006_evaluation_fixture.sql)
+	@test -n "$(FILE)" && test -f migrate/$(FILE) || { echo "Usage: make db-rerun FILE=<a file in migrate/>, e.g. FILE=006_evaluation_fixture.sql"; exit 2; }
+	docker compose exec -T postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$(DBNAME)" -v ON_ERROR_STOP=1 -1 -q' < migrate/$(FILE)
+	@echo "Re-ran migrate/$(FILE) on $(DBNAME) (files written with IF NOT EXISTS only recreate what is missing)."
+	$(UV) run datasources-db populate --force
+
+db-populate: ## Run new/changed populate/*.sql data scripts, each logged in populate_log (`datasources-db populate --force` reruns all)
+	$(UV) run datasources-db populate
+
+eval: ## Run an experiment file (its own BATCHES/SAVE/KEEP_DB config): make eval EXP=evaluation/consolidation/experiments/groq.py
+	@test -n "$(EXP)" || { echo "Usage: make eval EXP=evaluation/consolidation/experiments/<file>.py"; exit 2; }
+	$(UV) run python $(EXP)
+
+eval-compare: ## Leaderboard of saved evaluation runs (evaluation/consolidation/results/)
+	$(UV) run datasources-eval compare
 
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres

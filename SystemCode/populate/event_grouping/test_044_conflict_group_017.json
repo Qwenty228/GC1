@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Contrary to widespread reports of a historic $150 billion buyback expansion, financial filings released late Friday indicate that NVIDIA Corporation's board has scaled back capital return plans due to unexpected supply chain bottlenecks. Independent auditors revealed that the anticipated rollout of the Open Agent Safety Platform has also hit significant regulatory roadblocks, forcing management to delay deployment until late next year. Furthermore, supplier Micron's earnings report was met with revised guidance, dampening semiconductor sector optimism. Disappointed investors trimmed their positions, sending NVIDIA shares down 3.8% during midday trading.",
+  "created_at": "2026-10-02T15:00:00Z",
+  "headline": "NVIDIA Scales Back Buyback Plans and Delays AI Safety Platform Amid Unexpected Supply Bottlenecks",
+  "id": 990000040,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "NVIDIA faces unexpected delays regarding its buyback program and AI safety platform rollout, leading to a dip in share price.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T15:00:00Z",
+  "url": "https://example.test/articles/990000040"
+}

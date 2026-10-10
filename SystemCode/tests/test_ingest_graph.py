@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import pytest
+
 from conftest import FIXTURES, REAL_8K_DIR, REAL_SUBMISSIONS, ROOT, SYNTHETIC_8K
 from datasources.ingest.adapters import normalize_symbols, parse_timestamp, unwrap_payload
 from datasources.ingest.graph import build_graph, get_graph, run_prepare
@@ -172,6 +174,16 @@ def test_unwrap_ws_batch_ignores_operational_messages():
     rows, info = unwrap_payload(WS_BATCH, provider="alpaca")
     assert [r["id"] for r, _ in rows] == [91000001, 91000002]
     assert info == {"shape": "alpaca_websocket_batch", "operational": 2}
+
+
+def test_unwrap_a_single_article_object_as_a_saved_article_file():
+    article = {"id": 61837011, "headline": "h", "summary": "s", "content": "<p>c</p>", "symbols": ["NVDA"]}
+    assert unwrap_payload(article, provider="alpaca") == ([(article, None)], {"shape": "alpaca_article"})
+    message = {**article, "T": "n"}  # one WebSocket news message on its own
+    assert unwrap_payload(message, provider="alpaca")[1] == {"shape": "alpaca_article"}
+    for not_an_article in ({"T": "success", "msg": "authenticated"}, {"id": 1}, {"headline": "no id"}):
+        with pytest.raises(ValueError, match="not a recognised Alpaca shape"):
+            unwrap_payload(not_an_article, provider="alpaca")
 
 
 def test_unwrap_rest_page_and_data_dictionary():

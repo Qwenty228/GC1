@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia has appointed a new head of European developer relations, with the appointment taking effect on October 1. The role will coordinate regional developer support, training and community programs.</p><p>The incoming leader will oversee collaboration with local developer groups and prepare the next year&#x27;s workshop calendar. The company will communicate program details through its regional developer channels.</p><p>The appointment concerns organization of Nvidia&#x27;s developer-relations activities in Europe.</p>",
+  "created_at": "2026-09-17T16:25:58Z",
+  "headline": "Nvidia Appoints New Head Of European Developer Relations",
+  "id": 990000025,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia has appointed a new European developer-relations leader, effective October 1, to coordinate regional training and support programs.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-17T16:25:58Z",
+  "url": "https://example.test/articles/990000025"
+}

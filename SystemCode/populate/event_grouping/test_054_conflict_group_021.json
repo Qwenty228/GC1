@@ -1,0 +1,17 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p><strong>Apollo Global Management </strong>(NYSE:APO) has traded only about $22 billion in private credit assets since launching its private credit trading desk earlier this month.</p>\n\n<p><strong>John Cortese,</strong> partner and co-head of corporate credit at Apollo, told Bloomberg that the private credit desk has traded approximately 300 assets with 90 counterparties. Only about 10% of that volume involved loans originated by other firms, with the remainder coming from Apollo's own originations.</p>\n\n<h2><strong>Apollo Pushes Into Private-Credit Trading</strong></h2>\n\n<p>Apollo began rolling out weekly marks, not daily ones, across its approximately $600 billion credit business this month. The company says the trading desk is a pilot meant to test demand for private credit liquidity, rather than a full push to open the market.</p>\n\n<p>\"It's unlikely investors will need this kind of liquidity anytime soon. Most of them are comfortable with quarterly valuations and the privacy they bring,\" said Cortese.</p>\n\n<p>The SEC recently released a statement saying that managers can rely on quarterly valuations when borrower information is limited, provided they document their reasoning.</p>\n\n<p>The SEC staff indicated that limited borrower information is an acceptable basis for keeping valuations unchanged, as long as the rationale is disclosed.</p>\n\n<p>Cortese told Bloomberg that the desk is unlikely to expand beyond its current scope, and that the firm sees little benefit in greater transparency for private credit investors.</p>\n\n<p><strong>Space Exploration Technologies Corp. </strong>(NASDAQ:SPCX) has reportedly abandoned plans for a $40 billion financing package and will instead fund its Nvidia Corp. (NASDAQ:NVDA) chip purchases with about $8 billion of equity, led by Goldman Sachs.</p>\n\n<p>Cortese said that large companies are generally avoiding private-credit solutions for AI infrastructure and chip development, and that he expects that activity to decline.</p>\n\n<p>Apollo is not expected to lead any part of the transaction. The deal, if it proceeds, is expected to close in 2026 rather than 2027.</p>",
+  "created_at": "2026-10-07T20:49:20Z",
+  "headline": "Apollo's Private Credit Trading Desk Trades Just $22 Billion; Most Volume Is Its Own Loans",
+  "id": 90000003,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Apollo says its private credit desk has traded about $22 billion, mostly on its own loans, and that the SpaceX chip financing has been replaced by an equity raise.",
+  "symbols": [
+    "APO",
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-10-07T20:49:20Z",
+  "url": "https://example.com/synthetic/article-1-conflict"
+}

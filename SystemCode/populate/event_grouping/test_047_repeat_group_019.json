@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Amazon.com Inc. is reportedly seeking to transfer roughly $8 billion worth of advanced Nvidia Corp. artificial intelligence chips to outside investors via a novel financing structure, an initiative that could render the cloud provider's balance sheet more asset-light. According to sources familiar with the matter, Amazon has engaged in recent discussions regarding the formation of a special-purpose vehicle to hold thousands of Grace Blackwell chips deployed across more than a dozen data centers spanning five U.S. states, including Virginia and Nevada. Under the proposed arrangement, Amazon would lease the hardware back from this vehicle, which would fund itself by issuing debt backed potentially by Amazon's double-A credit rating to attract institutional capital like pension funds and insurers. Furthermore, outside participants could secure an equity stake of up to 10%, while Amazon would hold no direct ownership interest, though terms remain preliminary. Price Action: Amazon shares climbed 7.54% year-to-date and traded 0.58% higher at $249.68 during Friday pre-market hours.",
+  "created_at": "2026-10-02T11:00:00Z",
+  "headline": "Amazon Explores $8 Billion Financing Vehicle to Offload Nvidia AI Chips and Lighten Balance Sheet",
+  "id": 990000042,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Amazon evaluates an $8 billion special-purpose financing vehicle to transfer Nvidia AI chips and lease them back, optimizing its balance sheet.",
+  "symbols": [
+    "AMZN",
+    "CRWV",
+    "MSFT",
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T11:00:00Z",
+  "url": "https://example.test/articles/990000042"
+}

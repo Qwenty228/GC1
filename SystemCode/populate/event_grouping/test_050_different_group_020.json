@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Amazon Web Services (AWS) officially announced a multi-year strategic partnership with a major European renewable energy consortium on Friday to power its upcoming network of sovereign AI data centers. The agreement guarantees zero-carbon electricity supply across facilities in three European nations, aligning with the tech giant's long-term sustainability commitments. Company representatives noted that the green energy integration will scale alongside upcoming hardware deployments over the next four years. Price Action: Amazon stock traded higher during Friday pre-market sessions.",
+  "created_at": "2026-10-02T13:00:00Z",
+  "headline": "AWS Secures Major European Renewable Energy Partnership to Power Sovereign AI Data Centers",
+  "id": 990000045,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "AWS partners with a European renewable energy consortium to supply clean electricity for its expanding sovereign data center network.",
+  "symbols": [
+    "AMZN",
+    "CRWV",
+    "MSFT",
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T13:00:00Z",
+  "url": "https://example.test/articles/990000045"
+}

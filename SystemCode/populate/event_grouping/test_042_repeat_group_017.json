@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "NVIDIA Corporation shares are capturing attention following a notable week featuring a historic share repurchase program, the introduction of a new artificial intelligence safety architecture, and robust financial results from memory partner Micron that boosted the broader semiconductor sector. On September 28, NVIDIA's board approved an additional $150 billion for its repurchase initiative, bringing total remaining capacity to $235 billion through fiscal year 2028. CEO Jensen Huang attributed the company's momentum to the ongoing platform shift toward AI and accelerated computing. Furthermore, NVIDIA unveiled its Open Agent Safety Platform, featuring OpenShell software and the Sentry reference design to govern AI agents securely, drawing participation from major tech partners. Additionally, Micron reported strong fiscal fourth-quarter results with adjusted earnings per share of $33.42, reinforcing market confidence in underlying AI infrastructure demand. At the time of publication, NVIDIA shares traded 2.14% higher at $235.80.",
+  "created_at": "2026-10-02T13:10:00Z",
+  "headline": "NVIDIA Wraps Up Major Week Highlighted by Historic Buyback, New AI Safety Framework, and Strong Supplier Earnings",
+  "id": 990000038,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "NVIDIA draws market focus following a landmark week featuring an unprecedented buyback, a fresh AI safety platform, and strong Micron earnings.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T13:10:00Z",
+  "url": "https://example.test/articles/990000038"
+}

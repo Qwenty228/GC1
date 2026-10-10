@@ -1,0 +1,17 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p><strong>Space Exploration Technologies Corp.</strong> (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to purchase Nvidia Corp. (NASDAQ:NVDA) chips. Analyst Dan Ives argues that Starlink's cash flow can help pay for it.</p>\n\n<p>The package would reportedly include about $10 billion in bank loans and $30 billion in investment-grade debt, led by Apollo Global Management (NYSE:APO). Ives said Pacific Investment Management Co. is among the lenders in talks, and the deal is expected to close in 2027. He noted that the talks are early and terms could change.</p>\n\n<p>Ives said Apollo backed two Nvidia-cluster deals for xAI earlier this year, each worth roughly $3.5 billion. Nvidia holds a SpaceX stake valued near $21 billion. Ives also said the chip count at Colossus 2 is on track to more than double by December.</p>\n\n<p>Ives kept his Outperform rating and $225 price target. He argues that AI contracts and Starlink cash generation give SpaceX the capacity to service the debt. At publication, SPCX was down 2.46% at $167.69. The $40 billion raise is less than 2% of the company's roughly $2.21 trillion market value.</p>",
+  "created_at": "2026-10-07T18:07:45Z",
+  "headline": "Starlink Earnings Could Fund SpaceX's $40 Billion Nvidia Chip Purchase, Ives Argues",
+  "id": 90000007,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Analyst Dan Ives believes Starlink and SpaceX's AI contracts can service a roughly $40 billion Apollo-led debt package for Nvidia chips.",
+  "symbols": [
+    "APO",
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-10-07T18:07:45Z",
+  "url": "https://example.com/synthetic/article-3-repeat"
+}

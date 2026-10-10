@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>Super Micro Computer said it has started shipping NVIDIA Vera Rubin NVL72 rack systems using direct liquid cooling. The announcement describes a new offering for customers building large artificial intelligence data centers.</p>\n\n<p>Each rack combines 72 NVIDIA Rubin GPUs with 36 Vera CPUs. Super Micro provides the surrounding cooling, networking, storage, power and deployment services through its Data Center Building Block Solutions.</p>\n\n<p>The company says its infrastructure can scale from five-megawatt sites to gigawatt-scale deployments. A 16-rack Vera Rubin NVL72 Scalable Unit contains 1,152 Rubin GPUs and 331 terabytes of HBM4 memory.</p>\n\n<p>The shipments extend Super Micro's role as an infrastructure provider for NVIDIA's next-generation AI computing systems.</p>",
+  "created_at": "2026-09-25T13:00:00Z",
+  "headline": "Supermicro starts delivering liquid-cooled NVIDIA Vera Rubin NVL72 rack systems",
+  "id": 990000077,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Super Micro Computer has initiated shipments of NVIDIA Vera Rubin NVL72 liquid-cooled racks containing 72 Rubin GPUs.",
+  "symbols": [
+    "NVDA",
+    "SMCI"
+  ],
+  "updated_at": "2026-09-25T13:00:00Z",
+  "url": "https://example.test/articles/990000077"
+}

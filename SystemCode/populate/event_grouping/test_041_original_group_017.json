@@ -1,0 +1,28 @@
+{
+  "author": "Dylan Berman",
+  "content": "<p><strong>NVIDIA Corporation </strong><a class=\"ticker-link\" data-ticker=\"NVDA\" data-exchange=\"NASDAQ\" href=\"https://www.benzinga.com/quote/NVDA\" target=\"_blank\" rel=\"noopener\">(NASDAQ:<a class=\"ticker\" href=\"https://www.benzinga.com/quote/NVDA\">NVDA</a>)</a> is trending Friday after a week that included a record-breaking buyback authorization, a new AI safety platform and strong earnings from supplier Micron that lifted semiconductor stocks broadly.</p>\n\n\n\n<ul class=\"wp-block-list\">\n<li>Micron stock is trading at elevated levels.&nbsp;<a href=\"https://www.benzinga.com/quote/MU\" target=\"_blank\" rel=\"noreferrer noopener\">What&#8217;s next for MU stock?</a></li>\n</ul>\n\n\n\n<h2 class=\"wp-block-heading\"><strong>A Record Buyback Authorization</strong></h2>\n\n\n\n<p>On September 28, NVIDIA&#8217;s Board of Directors authorized an additional $150 billion under the company&#8217;s existing share repurchase program, raising the total remaining authorization to $235 billion — the largest share repurchase authorization increase in history. The company expects to execute the remaining program through fiscal year 2028.</p>\n\n\n\n<p>&#8220;NVIDIA&#8217;s growth is being driven by a once-in-a-generation platform shift to AI and accelerated computing,&#8221; said <strong>Jensen Huang</strong>, Founder and CEO of NVIDIA. &#8220;Our cash generation gives us the capacity to invest in the technologies that advance this transformation and return capital to shareholders.&#8221;</p>\n\n\n\n<h2 class=\"wp-block-heading\"><strong>Launching the Open Agent Safety Platform</strong></h2>\n\n\n\n<p>NVIDIA also launched on Monday its Open Agent Safety Platform, consisting of OpenShell open-source software and the Sentry reference system design, intended to provide full-stack governance and control across the software and hardware running AI agents. OpenShell provides a secure runtime boundary on NVIDIA Vera CPUs that traces all agent actions and enforces policy, while Sentry adds an out-of-band watchdog running on NVIDIA BlueField-4 DPUs that can quarantine agents attempting to move outside their boundaries within milliseconds. </p>\n\n\n\n<p>Industry partners joining the initiative include Anthropic, Cisco, CrowdStrike, Dell Technologies, Figure, HPE, Hugging Face, JPMorganChase, Microsoft, Palantir, Palo Alto Networks, Perplexity, Red Hat, Salesforce, SAP, Scale AI, ServiceNow, and SpaceXAI.</p>\n\n\n\n<h2 class=\"wp-block-heading\"><strong>Micron&#8217;s Earnings Lift the Sector</strong></h2>\n\n\n\n<p>Separately, Micron, one of NVIDIA&#8217;s key memory chip suppliers, reported fiscal fourth-quarter results on September 30 that beat expectations on both the top and bottom lines, with adjusted EPS of $33.42 against a consensus estimate of $31.45 and revenue up sharply year-over-year. The strong print reinforced confidence that AI infrastructure demand remains intact, lifting shares of NVIDIA, AMD and Intel higher on Thursday.</p>\n\n\n\n<div class=\"bz-read-next-block\"\n     data-variant=\"card\"\n     data-news-mode=\"manual\"\n\n    >\n\n\n<p>\n<strong>\nRead Also:\n<a href=\"https://www.benzinga.com/markets/equities/26/10/62127902/stock-market-today-sp-500-dow-jones-futures-gain-as-investors-await-septembers-jobs-report-data-nke-syna-ctva-in-focus\" target=\"_blank\" rel=\"noopener\">\nStock Market Today: S&amp;P 500, Dow Jones Futures Gain as Investors Await September&#039;s Jobs Report Data — NKE, SYNA, CTVA in Focus</a>\n</strong>\n</p>\n\n\n</div>\n\n\n<h2 class=\"wp-block-heading\">NVIDIA Shares Edge Higher</h2>\n\n\n\n<p><strong>NVDA Price Action:</strong> At the time of publication, NVIDIA shares are trading 2.14% higher at $235.80, according to data from <a href=\"https://www.benzinga.com/pro/register-3\">Benzinga Pro</a>.</p>\n\n\n\n<p><em>Image via Shutterstock</em></p>",
+  "created_at": "2026-10-02T12:53:35Z",
+  "headline": "NVIDIA Announced a Record Buyback Increase This Week — Here's What Else Happened",
+  "id": 62131571,
+  "images": [
+    {
+      "size": "large",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/10/02/Jensen-Huang--Nvidia-Founder-And-Ceo-And.jpg?width=2048&height=1536"
+    },
+    {
+      "size": "small",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/10/02/Jensen-Huang--Nvidia-Founder-And-Ceo-And.jpg?width=1024&height=768"
+    },
+    {
+      "size": "thumb",
+      "url": "https://cdn.benzinga.com/files/images/story/2026/10/02/Jensen-Huang--Nvidia-Founder-And-Ceo-And.jpg?width=250&height=187"
+    }
+  ],
+  "source": "benzinga",
+  "summary": "NVIDIA is trending Friday after a week that included a record buyback authorization, a new AI safety platform and strong Micron results.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T12:53:35Z",
+  "url": "https://www.benzinga.com/trading-ideas/movers/26/10/62131571/nvidia-announced-a-record-buyback-increase-this-week-heres-what-else-happened"
+}

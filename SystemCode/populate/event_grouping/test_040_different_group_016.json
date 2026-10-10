@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Nvidia Corp. law enforcement partners announced a joint federal crackdown on international smuggling networks attempting to route restricted AI server components through Southeast Asian transit hubs. The coordinated operation targeted illicit export pipelines suspected of circumventing trade controls to deliver high-end computing hardware to overseas restricted entities. Federal authorities confirmed that multiple individuals have been formally charged in connection with the multi-million dollar logistics scheme. Price Action: NVDA shares remained relatively stable despite the regulatory compliance announcement.",
+  "created_at": "2026-10-02T16:45:00Z",
+  "headline": "Federal Task Force Cracks Down on International Ring Illegally Routing Nvidia AI Servers Overseas",
+  "id": 990000037,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Federal authorities bust a multi-million dollar smuggling ring attempting to illegally reroute restricted Nvidia AI servers through foreign channels.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T16:45:00Z",
+  "url": "https://example.test/articles/990000037"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Contrary to recent reports suggesting an $8 billion asset transfer, Amazon.com Inc. executives have completely abandoned plans to create a special-purpose financing vehicle for its Nvidia AI chips. Internal sources clarified on Friday that institutional investors balked at the proposed lease-back terms and equity limits, forcing Amazon to cancel the vehicle entirely. Instead of offloading hardware to lighten its balance sheet, Amazon will fund its expanding capital expenditure targets entirely through traditional corporate debt and operating cash flow, sending a wave of caution through the broader cloud sector.",
+  "created_at": "2026-10-02T12:30:00Z",
+  "headline": "Amazon Abandons Plans for $8 Billion Nvidia Chip Financing Vehicle Amid Institutional Pushback",
+  "id": 990000044,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Amazon scraps its reported $8 billion Nvidia chip financing plan after institutional investors reject the proposed lease-back terms.",
+  "symbols": [
+    "AMZN",
+    "CRWV",
+    "MSFT",
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T12:30:00Z",
+  "url": "https://example.test/articles/990000044"
+}

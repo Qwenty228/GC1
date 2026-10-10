@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Space Exploration Technologies Corp. CEO Elon Musk believes that the commercial spaceflight company's Starmind constellation of AI compute satellites would be more powerful than the International Space Station. In a post on X on Thursday, Musk quoted a post by user X Freeze which compared the scale of SpaceX's satellites. Each SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power, which is about 20% more than the International Space Station, Musk said. Musk expanded on his views in response to a post by investment firm Mach33 founder Aaron Burnett, which predicted that Starmind AI satellites would be able to generate up to $50 million in revenue using NVIDIA Corp's NV72 AI rack at 1/3rd the token price of today's grok 4.7 prices. Musk shared his take, saying that he was cautiously optimistic that SpaceX could operate the SpaceX version of the VR72 at close to 250kW average power, meaning peak power would be ~10% higher. The billionaire added that it was a big deal if it happened and could see applications in earth-based AI compute too. The close working partnership and co-design with the amazing Nvidia engineering team is key to achieving this, Musk said in his response. AT&T Inc. CEO John Stankey dismissed fears that SpaceX's Starlink would surpass traditional telecom providers. Stankey outlined several challenges to deploying a satellite-based cellular network, which SpaceX could intend to do, according to President Gwynne Shotwell. Stankey is not the only one who has been skeptical, with T-Mobile US Inc. CFO Pete Osvaldik earlier saying that there could be a million satellites up there with all the spectrum in the world, but any company can't break the fundamental laws of physics. Following SpaceX's successful Starship orbital flight with Flight Test 14, NASA Administrator Jared Isaacman called the event a gorgeous launch. The administrator then said the agency would help SpaceX with its future endeavors. SpaceX deployed its first batch of Starlink V3 satellites with the launch, which Musk has touted to provide 100 times more bandwidth than current-gen satellites. Price Action: SPCX shares were up 0.66% to $149.05 during overnight trading on Thursday.",
+  "created_at": "2026-10-02T06:00:00Z",
+  "headline": "Elon Musk Highlights SpaceX Starmind AI Fleet's 250 kW Power Potential, Outperforming Space Station Benchmarks",
+  "id": 990000026,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Musk notes SpaceX's upcoming Starmind AI spacecraft will feature 250 kW solar arrays exceeding ISS output, leveraging NVIDIA tech.",
+  "symbols": [
+    "NVDA",
+    "SPCX",
+    "T",
+    "TMUS"
+  ],
+  "updated_at": "2026-10-02T06:00:00Z",
+  "url": "https://example.test/articles/990000026"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>A competing account of Nvidia&#x27;s preliminary Anthropic IPO discussions says the maximum investment being considered at the time of the September 12 report was $5 billion. It expressly disputes the earlier claim that the ceiling was $10 billion.</p><p>The account concerns the same proposed anchor investment and the same stage of discussions. It says the amount was not subsequently reduced: the two accounts disagree about the ceiling in place when the original report was published.</p><p>Anthropic&#x27;s proposed raise remains up to $100 billion at about a $2 trillion valuation. The discussions remain preliminary, and the offering is expected before the November U.S. midterm elections.</p>",
+  "created_at": "2026-09-12T04:49:02Z",
+  "headline": "Report Disputes $10 Billion Ceiling For Nvidia's Proposed Anthropic IPO Investment, Says Original Figure Was $5 Billion",
+  "id": 990000009,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "A competing account says Nvidia's investment ceiling in the talks reported on September 12 was $5 billion, not $10 billion; it describes a disagreement about the same talks, not a later revision.",
+  "symbols": [
+    "AMZN",
+    "GOOG",
+    "GOOGL",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-12T04:49:02Z",
+  "url": "https://example.test/articles/990000009"
+}

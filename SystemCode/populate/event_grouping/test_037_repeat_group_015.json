@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Nvidia Corp. has reclaimed its position as the top semiconductor selection for Morgan Stanley, with analysts highlighting attractive valuation metrics, upgraded earnings projections, and the corporation's footprint in artificial intelligence infrastructure. Analyst Joseph Moore noted that insights gathered from leadership—including CEO Jensen Huang, CFO Colette Kress, and investor relations lead Toshiya Hari—fortified the institution's confidence. Moore emphasized that the valuation profile remains very reasonable. Morgan Stanley observed that bottlenecks are shifting from manufacturing silicon to building data centers, benefiting Nvidia's network of 80 global cloud partners. Furthermore, Moore pointed out that approximately half of Nvidia's revenue originates from smaller AI ventures, sovereign entities, and enterprise customers rather than just major hyperscalers. Price Action: Shares advanced 2.46% on Friday to close at $236.53, building on a year-to-date surge of roughly 26.62%.",
+  "created_at": "2026-10-02T14:30:00Z",
+  "headline": "Morgan Stanley Restores Nvidia as Preferred Semiconductor Choice on Compelling Valuation and Broad AI Demand",
+  "id": 990000034,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Morgan Stanley names Nvidia its premier semiconductor pick again, driven by attractive valuations and a diverse cloud customer base.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T14:30:00Z",
+  "url": "https://example.test/articles/990000034"
+}

@@ -1,0 +1,18 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Following initial reports regarding Amazon.com Inc.'s $8 billion Nvidia chip financing vehicle, institutional banking partners confirmed late Friday that institutional investor demand has already oversubscribed the proposed debt tranche. Representatives noted that the special-purpose vehicle structure has attracted strong interest from major pension funds looking to secure investment-grade yields backed by AWS infrastructure deployments. Meanwhile, AWS leadership reiterated that capital expenditures will remain robust through 2026 and 2027 to ensure customer demand is fully met as computing efficiency scales globally.",
+  "created_at": "2026-10-02T14:15:00Z",
+  "headline": "Institutional Demand Surges for Amazon's Proposed $8 Billion Nvidia Chip Financing Vehicle",
+  "id": 990000043,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Institutional investors show strong early demand for Amazon's planned $8 billion Nvidia infrastructure financing vehicle.",
+  "symbols": [
+    "AMZN",
+    "CRWV",
+    "MSFT",
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T14:15:00Z",
+  "url": "https://example.test/articles/990000043"
+}

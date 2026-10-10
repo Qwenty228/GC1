@@ -1,0 +1,16 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Apple and Nvidia have announced a joint workshop for game developers in December. Sessions will cover graphics profiling, rendering workflows and techniques for identifying performance bottlenecks.</p><p>The workshop will include demonstrations and practical exercises for participating developers. Registration will open before the event, and the organizers will publish a detailed session schedule.</p><p>The program is an educational event for game-development teams.</p>",
+  "created_at": "2026-09-16T18:56:30Z",
+  "headline": "Apple And Nvidia Announce December GPU Graphics Workshop For Game Developers",
+  "id": 990000020,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Apple and Nvidia plan a joint game-development workshop focused on graphics profiling and rendering techniques.",
+  "symbols": [
+    "AAPL",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-16T18:56:30Z",
+  "url": "https://example.test/articles/990000020"
+}

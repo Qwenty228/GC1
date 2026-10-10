@@ -1,0 +1,30 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>The S&amp;P 500 set a new all-time closing high on Tuesday, but the stock market pulled back toward the lower part of its resistance zone on Wednesday morning. Yesterday's rally came on light volume and was driven almost entirely by AI stocks, which suggests weak conviction among investors more broadly.</p>\n\n<p>A global bond selloff is weighing on sentiment. The U.S. 30-year Treasury yield has risen to 5.719%, its highest level since 2002. French 10-year yields rose to 4.91%, and the U.K. 10-year yield climbed to 5.48%.</p>\n\n<p>The Reserve Bank of India raised rates by 25 basis points to 5.5% to contain inflation. Bank of Japan Governor Ueda's latest comments were less hawkish than expected, which matters because of Japan's role in the carry trade.</p>\n\n<p>Investors are watching a $39 billion 10-year Treasury auction and the FOMC minutes, due at 2pm ET. A strong auction could push yields lower and support stocks, while a weak one could extend the bond selloff. Crude inventories showed a 2.090 million barrel draw, and bitcoin is seeing selling.</p>\n\n<p>The author of this piece is an external contributor. Benzinga states that it does not represent its own reporting and has not been edited for accuracy.</p>",
+  "created_at": "2026-10-07T17:18:50Z",
+  "headline": "Bond Selloff Weighs on Stocks Ahead of Treasury Auction and FOMC Minutes",
+  "id": 90000013,
+  "images": [],
+  "source": "synthetic",
+  "summary": "The S&P 500 hit a record close on a narrow AI-led rally, but rising global bond yields and a $39 billion Treasury auction are weighing on the market.",
+  "symbols": [
+    "AAPL",
+    "AMD",
+    "AMZN",
+    "BTCUSD",
+    "CEG",
+    "GOOG",
+    "INTC",
+    "META",
+    "MSFT",
+    "NVDA",
+    "QQQ",
+    "SPCX",
+    "SPY",
+    "TSLA",
+    "TSM",
+    "USO"
+  ],
+  "updated_at": "2026-10-07T17:39:52Z",
+  "url": "https://example.com/synthetic/article-5-repeat"
+}

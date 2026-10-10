@@ -1,0 +1,15 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>A synthetic competing account claimed NVIDIA's market capitalization on September 25 was $6.2 trillion, rather than the approximately $5.4 trillion figure cited in the original comparison.</p>\n\n<p>The original article put the Russell 2000's combined market value at roughly $3.5 trillion on that date. The competing account uses the same date and benchmark but claims NVIDIA exceeded it by approximately $2.7 trillion.</p>\n\n<p>Both accounts describe the same September 25 market-capitalization comparison attributed to the same market period.</p>\n\n<p>Because the figures refer to the same company, measurement and date, the $6.2 trillion claim directly conflicts with the original $5.4 trillion value.</p>",
+  "created_at": "2026-09-28T12:00:00Z",
+  "headline": "NVIDIA market cap reaches $6.2 trillion, outvaluing Russell 2000 by $3 trillion",
+  "id": 990000094,
+  "images": [],
+  "source": "synthetic",
+  "summary": "NVIDIA achieved a market capitalization of $6.2 trillion, extending its lead over small-cap benchmarks.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-28T12:00:00Z",
+  "url": "https://example.test/articles/990000094"
+}

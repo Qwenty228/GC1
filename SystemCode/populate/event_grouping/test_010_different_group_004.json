@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>Nvidia has announced a robotics research laboratory in Singapore with university partners. The lab will focus on simulating warehouse robots before they are deployed in physical facilities.</p><p>The first research program is scheduled to begin in January 2027. Participating teams will use Nvidia computing systems to evaluate navigation and object-handling methods.</p>",
+  "created_at": "2026-09-12T05:19:02Z",
+  "headline": "Nvidia Announces Singapore Robotics Research Lab With University Partners",
+  "id": 990000010,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia plans a Singapore laboratory focused on robot simulation, with its first research program scheduled for January 2027.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-09-12T05:19:02Z",
+  "url": "https://example.test/articles/990000010"
+}

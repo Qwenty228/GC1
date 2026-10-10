@@ -1,0 +1,17 @@
+{
+  "author": "Fixture Reporter",
+  "content": "<p>A competing account of Apple&#x27;s M8 Ultra AI server project says its intended launch year was 2028 at the time of the September 16 report. That conflicts with the earlier account that Apple did not expect a launch before 2029.</p><p>The account refers to the same proposed server using two or four M8 Ultra chips and potentially Nvidia NVLink Fusion. It does not describe a newly accelerated schedule or a different product.</p><p>The project remains conditional: it could be canceled, and use of Nvidia technology has not been finalized. The disagreement concerns the launch expectation already in place when the original report was published.</p>",
+  "created_at": "2026-09-16T18:26:30Z",
+  "headline": "Competing Account Puts Apple's M8 Ultra AI Server Launch Target In 2028",
+  "id": 990000019,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "A competing report says Apple was targeting 2028 when the September 16 server report appeared, disputing the claim that no launch was expected before 2029.",
+  "symbols": [
+    "AAPL",
+    "AVGO",
+    "NVDA"
+  ],
+  "updated_at": "2026-09-16T18:26:30Z",
+  "url": "https://example.test/articles/990000019"
+}

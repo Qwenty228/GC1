@@ -10,6 +10,10 @@
     uv run datasources-db relink-companies --dry-run     # links stored articles lack for companies registered later
     uv run datasources-db relink-companies          # add those links (insert-only, repeatable)
     uv run datasources-db inspect                   # row counts per table
+    uv run datasources-db populate --dry-run        # which populate/*.sql data scripts would run (read-only)
+    uv run datasources-db populate                  # run new/changed data scripts, append each run to populate_log
+    uv run datasources-db populate --force          # run every data script again
+    uv run datasources-db export-evaluation         # rewrite populate/001_evaluation_fixtures.sql from event_grouping/ (commit it)
     uv run datasources-db smoke                     # bounded live fetch -> store -> read back -> replay
 
 `smoke` is the end-to-end test: it fetches a small, bounded sample of real NVIDIA
@@ -179,6 +183,40 @@ def cmd_migrate(db: Database, args) -> int:
     print(f"\nSchema check after migrating: {'OK' if comparison.ok else 'PROBLEMS FOUND'}")
     _print_comparison(comparison)
     return 0 if comparison.ok else 1
+
+
+def cmd_populate(db: Database, args) -> int:
+    """Run the new or changed `populate/*.sql` data scripts (every one with --force) and log each run."""
+    from .populate import POPULATE_DIR, apply_populate, plan_populate
+
+    database = db.check().database
+    report = (plan_populate if args.dry_run else apply_populate)(db, force=args.force)
+    if args.json:
+        print(json.dumps({"database": database, "directory": str(POPULATE_DIR), **report.as_dict()}, indent=2))
+        return 0
+    print(f"Populate {database} from {POPULATE_DIR}")
+    if args.dry_run:
+        print("READ ONLY: nothing was changed.")
+    words = {"run": "would run (new)" if args.dry_run else "ran (new)",
+             "rerun": "would run again" if args.dry_run else "ran again", "skip": "unchanged, skipped"}
+    for name, action in report.actions:
+        print(f"  {name:<46} {words[action]}")
+    if not report.actions:
+        print("  no populate/*.sql files")
+    return 0
+
+
+def cmd_export_evaluation(args) -> int:
+    """Rewrite populate/001_evaluation_fixtures.sql from populate/event_grouping/*.json (no database)."""
+    from .evaluation import EXPORT_FILE, FixtureError, write_export
+
+    try:
+        count = write_export()
+    except FixtureError as error:
+        print(f"Cannot export: {error}", file=sys.stderr)
+        return 1
+    print(f"Wrote {EXPORT_FILE} ({count} file(s)). Commit it; `make db` loads it.")
+    return 0
 
 
 def cmd_verify(db: Database, args) -> int:
@@ -762,6 +800,12 @@ def main(argv: list[str] | None = None) -> int:
     p_relink.add_argument("--sample", action="store_true", help="The sample partition instead of live articles")
     p_relink.add_argument("--json", action="store_true")
     sub.add_parser("inspect", help="Row counts per table")
+    p_populate = sub.add_parser("populate", help="Run new/changed populate/*.sql data scripts; log each run")
+    p_populate.add_argument("--dry-run", action="store_true", help="Show what would run; change nothing")
+    p_populate.add_argument("--force", action="store_true", help="Run every data script again")
+    p_populate.add_argument("--json", action="store_true")
+    sub.add_parser("export-evaluation", help="Rewrite populate/001_evaluation_fixtures.sql from "
+                                             "populate/event_grouping/*.json (run after adding test files)")
 
     p_backfill = sub.add_parser("backfill", help="Store existing output/processed records (idempotent)")
     p_backfill.add_argument("--demo", action="store_true", help="Read output/demo instead")
@@ -779,6 +823,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
                         format="%(levelname)s %(name)s %(message)s")
     command = args.command or "check"
+    if command == "export-evaluation":  # files only: no database needed
+        return cmd_export_evaluation(args)
     database: Database | None = None
     try:
         database = Database(load_db_settings())
@@ -794,6 +840,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_relink_companies(database, args)
         if command == "inspect":
             return cmd_inspect(database)
+        if command == "populate":
+            return cmd_populate(database, args)
         if command == "backfill":
             return cmd_backfill(database, args)
         if command == "smoke":

@@ -1,0 +1,23 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>The $39 billion 10-year Treasury auction drew strong demand on Wednesday, with the bid-to-cover ratio coming in above its recent average. Yields eased after the sale, and the S&amp;P 500 recovered part of its early losses.</p>\n\n<p>The U.S. 30-year Treasury yield fell back from 5.719% to about 5.61%, while French and U.K. 10-year yields also moved lower after the auction.</p>\n\n<p>The FOMC minutes, released at 2pm ET, showed that several policymakers were concerned about how quickly yields had risen since the last meeting. Markets reacted with a modest rally in rate-sensitive stocks.</p>\n\n<p>Intel and Tesla both gained after the close, while bitcoin steadied after its earlier selling. The author of this piece is an external contributor, and Benzinga has not edited it for accuracy.</p>",
+  "created_at": "2026-10-08T21:05:00Z",
+  "headline": "Strong Treasury Auction Eases Bond Selloff; FOMC Minutes Lift Rate-Sensitive Stocks",
+  "id": 90000014,
+  "images": [],
+  "source": "synthetic",
+  "summary": "A strong $39 billion Treasury auction pulled the 30-year yield back from its 2002 high, and the FOMC minutes lifted rate-sensitive stocks.",
+  "symbols": [
+    "AAPL",
+    "AMZN",
+    "GOOG",
+    "META",
+    "MSFT",
+    "NVDA",
+    "QQQ",
+    "SPY",
+    "TSLA"
+  ],
+  "updated_at": "2026-10-08T21:05:00Z",
+  "url": "https://example.com/synthetic/article-5-update"
+}

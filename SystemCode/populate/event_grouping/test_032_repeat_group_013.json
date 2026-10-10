@@ -1,0 +1,15 @@
+{
+  "author": "Fixture Reporter",
+  "content": "Nvidia Corp. shares reached a record high on Friday following board approval for an additional $150 billion in share repurchase authorization. This new program increases Nvidia's remaining buyback capacity to approximately $235 billion through fiscal 2028. Analysts estimate that the buyback could reduce the share count by about 4.2% and boost earnings per share by roughly 1.6% by 2028. Nvidia stock climbed roughly 2% to $235.50 at midday after reaching a record intraday high of $237.55, pushing its market capitalization to approximately $5.7 trillion. Since the beginning of the year, Nvidia stock has gained 25%.",
+  "created_at": "2026-10-02T18:00:00Z",
+  "headline": "Nvidia Shares Climb to Record Peaks as Board Approves Massive $150 Billion Repurchase Program",
+  "id": 990000030,
+  "images": [],
+  "source": "fixture_wire",
+  "summary": "Nvidia shares hit all-time highs after authorizing a $150 billion buyback, pushing total capacity to $235 billion through fiscal 2028.",
+  "symbols": [
+    "NVDA"
+  ],
+  "updated_at": "2026-10-02T18:00:00Z",
+  "url": "https://example.test/articles/990000030"
+}

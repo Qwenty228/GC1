@@ -1,0 +1,17 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p><strong>Intuitive Machines Inc</strong> (NASDAQ:LUNR) shares fell Wednesday as space stocks slid, with the move linked to weakness around SpaceX sentiment. Space Exploration Technologies Corp. (NASDAQ:SPCX), which is reportedly planning a $40 billion debt raise to buy Nvidia Corp. (NASDAQ:NVDA) chips, was down roughly 3.5% at last check.</p>\n\n<p>The Financial Times reported that SpaceX is seeking about $10 billion in bank loans and $30 billion in investment-grade debt. Apollo Global Management is expected to lead the deal and sell the debt to a range of investors, with a 2027 close.</p>\n\n<p>Apollo is one of six firms that teamed up with Nvidia in August on financing platforms meant to mobilize more than $500 billion for AI infrastructure. The other five are BlackRock, Blackstone, Brookfield Asset Management, Goldman Sachs and KKR.</p>\n\n<p>LUNR is sensitive to SpaceX news because SpaceX launches its lunar missions, and investors often trade space stocks as a single theme. At publication, LUNR was down 7.10% at $14.00.</p>",
+  "created_at": "2026-10-07T17:59:59Z",
+  "headline": "Intuitive Machines Falls Wednesday as Space Stocks Track SpaceX Debt Report",
+  "id": 90000010,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Intuitive Machines dropped about 7% to $14.00 as space stocks fell on sympathy with SpaceX's planned $40 billion debt raise for Nvidia chips.",
+  "symbols": [
+    "LUNR",
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-10-07T17:59:59Z",
+  "url": "https://example.com/synthetic/article-4-repeat"
+}

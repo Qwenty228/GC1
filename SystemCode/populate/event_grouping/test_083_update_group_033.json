@@ -1,0 +1,16 @@
+{
+  "author": "Synthetic Generator",
+  "content": "<p>In this fictional follow-up, SpaceXAI said the first scheduled batch of 220,000 NVIDIA GB300 GPUs for its Colossus expansion had completed installation and entered operational service.</p>\n\n<p>Musk had previously described that batch as scheduled to become operational the following week. The new statement reports completion of that previously announced phase, not a separate supercomputer project.</p>\n\n<p>The company said the remaining planned batches for November and potentially December were unchanged. It did not revise the existing Colossus 1 or Colossus 2 GPU inventory figures.</p>\n\n<p>This later operational confirmation is new information about the same Colossus GPU expansion event.</p>",
+  "created_at": "2026-10-02T16:00:00Z",
+  "headline": "SpaceX brings 220k NVIDIA GB300 GPU cluster online ahead of schedule",
+  "id": 990000083,
+  "images": [],
+  "source": "synthetic",
+  "summary": "Engineers confirmed all 220,000 NVIDIA GB300 GPUs are fully operational in the Colossus supercluster.",
+  "symbols": [
+    "NVDA",
+    "SPCX"
+  ],
+  "updated_at": "2026-10-02T16:00:00Z",
+  "url": "https://example.test/articles/990000083"
+}
