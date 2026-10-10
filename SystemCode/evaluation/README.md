@@ -140,7 +140,7 @@ batches you tuned on (split by batch, never by article).
 arrived: an older article that adds facts is still an `update`, one that contradicts is a
 `conflict`.
 
-`conflict` is also how the pipeline catches fake or careless AI-generated news ("AI slop"):
+`conflict` is also how the pipeline catches fake or AI slop articles:
 an article that states a wrong number, date or fact about a known event must be labelled
 `conflict` (and flagged), not merged quietly as a repeat or update. Most conflict articles
 in the test set are exactly that: a real article with one fact changed. The pipeline judges
@@ -148,7 +148,4 @@ claims, not who wrote them: an accurate AI-written article is a normal repeat or
 an invented fact that contradicts nothing cannot be caught this way (it would look like an
 `update`).
 
-**Not covered yet** (ideas, not built): all batches in one database with cross-batch
-distractors, retrieval recall (was the right event even shortlisted?), repeated runs to
-measure how stable a model's answers are, deliberately ambiguous items where `uncertain` is
-correct, and SEC filings. Summarization (stage 2) is evaluated separately later.
+Not covered yet (ideas, not built): all batches in one database with cross-batch distractors, retrieval recall (was the right event even shortlisted?), repeated runs to measure how stable a model's answers are, and deliberately ambiguous items where uncertain is correct. We also do not evaluate against SEC filings. A company's 8-K is filed under legal obligation and false statements in it carry liability, so it is the closest thing we have to a ground-truth record of an event. A future test could put the filing first and check that news articles agreeing with it are grouped as repeats or updates, and that articles contradicting it (including AI slop) are flagged as conflict. Summarization (stage 2) is evaluated separately later.
