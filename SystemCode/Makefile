@@ -28,6 +28,11 @@
 #   make summary-pending   summary work that backfill/retry would do (no model calls)
 #   make summary-reviews   open conflict reviews
 
+ifeq ($(OS),Windows_NT)
+    SHELL := C:/Program Files/Git/usr/bin/sh.exe
+    .SHELLFLAGS := --login -c
+endif
+
 UV := uv
 T  ?= NVDA
 LIMIT ?= 10
