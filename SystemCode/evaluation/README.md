@@ -12,7 +12,7 @@ Run everything inside `SystemCode/`. You need Docker Desktop (running) and `uv`.
    needs a key, add it too, for example `GROQ_API_KEY=...`, `GEMINI_API_KEY=...` or
    `ANTHROPIC_API_KEY=...`. The rule-based baseline needs no key. Leave the `SIMILARITY_*`
    values as they are in `.env.example`: they change the scores, so everyone must use the same.
-2. `make sync-local-embeddings` installs the local embedding model's packages.
+2. `uv sync --locked --extra local-embeddings` installs the local embedding model's packages.
 3. `uv run datasources-similarity download-model` downloads the pinned embedding model.
 4. `make db` starts Postgres in Docker, builds the tables and loads the answer key.
    It is safe to run again any time.
