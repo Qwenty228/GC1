@@ -61,6 +61,29 @@ SELECT d.source_record_id AS article_id, a.status AS analysis_status, a.last_err
 """
 
 
+# The model's reasoning for each article: one row per (segment, candidate event) it judged. Kept in the
+# report so every run's explanations travel with its scores, without having to keep the batch database.
+COMPARISONS_SQL = """
+SELECT d.source_record_id AS article_id, c.segment_key, c.candidate_event_id::text AS candidate_event_id,
+       c.label, c.method, c.explanation, c.matching_facts, c.differences, c.evidence,
+       c.insufficient_context, c.uncertainty, c.validation_notes
+  FROM document d
+  JOIN document_revision r ON r.revision_id = d.current_revision_id
+  JOIN event_comparison c ON c.revision_id = r.revision_id
+ WHERE d.source_namespace = %s
+ ORDER BY c.created_at
+"""
+
+
+def _judgment_row(c: dict[str, Any]) -> dict[str, Any]:
+    """One comparison row from `event_comparison`, shaped for the report (candidate_event filled in later)."""
+    return {"candidate_event": c["candidate_event_id"], "label": c["label"], "method": c["method"],
+            "explanation": c["explanation"], "matching_facts": c["matching_facts"],
+            "differences": c["differences"], "evidence": c["evidence"],
+            "insufficient_context": c["insufficient_context"], "uncertainty": c["uncertainty"],
+            "validation_notes": c["validation_notes"]}
+
+
 def batches(fixtures: list[Fixture]) -> dict[int, list[Fixture]]:
     grouped: dict[int, list[Fixture]] = {}
     for f in sorted(fixtures, key=lambda f: f.test_number):
@@ -130,6 +153,7 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
                                     restrict_symbols=False)
         with db.connection() as conn:
             rows = conn.execute(PREDICTIONS_SQL, (ALPACA_NAMESPACE,)).fetchall()
+            comparison_rows = conn.execute(COMPARISONS_SQL, (ALPACA_NAMESPACE,)).fetchall()
             usage = conn.execute("SELECT count(*) AS calls, coalesce(sum((usage->>'input_tokens')::int), 0) AS input, "
                                  "coalesce(sum((usage->>'output_tokens')::int), 0) AS output "
                                  "FROM event_comparison").fetchone()
@@ -137,6 +161,9 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
     by_article: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
         by_article.setdefault(row["article_id"], []).append(dict(row))
+    judgments_by_article: dict[str, list[dict[str, Any]]] = {}
+    for row in comparison_rows:
+        judgments_by_article.setdefault(row["article_id"], []).append(_judgment_row(dict(row)))
     predictions, table = [], []
     for position, f in enumerate(items):
         article_rows = by_article.get(str(articles[f.test_number]["id"]), [])
@@ -145,11 +172,14 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
         predictions.append(metrics.Prediction(f.test_number, number, f.expected_group, expected, events, label))
         table.append({"file": f.filename, "type": f.fixture_type.value, "expected_group": f.expected_group,
                       "expected_label": expected, "predicted_label": label, "predicted_events": sorted(events),
-                      "error": next((r["last_error"] for r in article_rows if r.get("last_error")), None)})
+                      "error": next((r["last_error"] for r in article_rows if r.get("last_error")), None),
+                      "judgments": judgments_by_article.get(str(articles[f.test_number]["id"]), [])})
     # readable event names per batch: E1, E2, ... in order of first appearance
     names: dict[str, str] = {}
     for row in table:
         row["predicted_events"] = [names.setdefault(e, f"E{len(names) + 1}") for e in row["predicted_events"]]
+        for j in row["judgments"]:  # same E# labels so the reasons line up with predicted_events
+            j["candidate_event"] = names.setdefault(j["candidate_event"], f"E{len(names) + 1}")
     return {"batch": number, "seconds": round(time.monotonic() - started, 1), "articles": table,
             "comparison_calls": usage["calls"], "tokens": {"input": usage["input"], "output": usage["output"]},
             "database": database_name if keep_database else None, "_predictions": predictions}
