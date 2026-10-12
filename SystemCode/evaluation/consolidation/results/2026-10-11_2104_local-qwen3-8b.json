@@ -37,6 +37,8 @@
   "batches_run": [
     1
   ],
+  "incomplete": true,
+  "incomplete_reason": "3 article(s) did not complete, e.g. test_002_repeat_group_001.json: error:pending (interrupted/errored early run, kept as log)",
   "metrics": {
     "grouping_pairwise": {
       "precision": 0.0,

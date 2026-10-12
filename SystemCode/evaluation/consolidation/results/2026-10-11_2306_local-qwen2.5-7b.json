@@ -1,0 +1,280 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "local-qwen2.5-7b",
+    "description": "Local Qwen2.5 7B Instruct via Ollama, the production comparison prompt",
+    "file": "local.py"
+  },
+  "model": {
+    "comparator": "openai_compatible",
+    "comparison_model": "qwen2.5:7b-instruct",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 3,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 6,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-10-11T15:54:21+00:00",
+  "batches_run": [
+    1
+  ],
+  "incomplete": true,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 6
+    },
+    "labels": {
+      "macro_f1": 0.1667,
+      "accuracy": 0.25,
+      "scored": 4,
+      "uncertain": 1,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_update": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_conflict": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "different_event": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6667,
+          "tp": 1,
+          "fp": 1,
+          "fn": 0
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 4,
+    "input_tokens": 7829,
+    "output_tokens": 1963
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 732.1,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: qwen2.5:7b-instruct: timed out after 600.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "The DOJ has set a deadline for Nvidia to respond, which is a new procedural step.",
+              "matching_facts": [
+                "DOJ launches antitrust inquiry into NVIDIA\u2019s arrangement with Groq",
+                "NVIDIA is responding to a formal request for information"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "new_information",
+                  "incoming": "DOJ has set a 30-day deadline for Nvidia to answer the formal information request.",
+                  "candidate": "The inquiry examines whether the deal was designed in a way that sidestepped regulatory review, the New York Times reported Wednesday."
+                }
+              ],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "incoming evidence quote not found in U1",
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_update to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Different actions: one disputes the license, the other announces an antitrust probe.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A competing account says Nvidia received exclusive rights to the inference technology covered by its December agreement with Groq. It disputes the original account's description of those same rights as nonexclusive."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The Justice Department has launched an antitrust inquiry into NVIDIA\u2019s arrangement with AI chip startup Groq, examining whether the deal was designed in a way that sidestepped regulatory review, the New York Times reported Wednesday."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Different actions: one announces an ongoing inquiry, the other sets a response deadline.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Justice Department's inquiry into whether the arrangement avoided regulatory review remains underway."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Investigators have given Nvidia 30 days to respond to the existing information request in the antitrust inquiry into its Groq arrangement."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E4"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming segment discusses Nvidia opening a training center, while the candidate event is about Nvidia facing an antitrust probe.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia has opened a Bangkok training center, with its first GPU programming courses scheduled for October."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "NVIDIA\u2019s Groq Deal Faces DOJ Antitrust Probe"
+                  },
+                  {
+                    "ref": "C2",
+                    "quote": "NVIDIA has a 9.94% weighting in the Xtrackers Net Zero Pathway Paris Aligned U.S. Equity ETF (NYSE:USNZ)."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 7829,
+        "output": 1963
+      },
+      "database": null
+    }
+  ],
+  "incomplete_reason": "1 article(s) did not complete, e.g. test_002_repeat_group_001.json: error:pending"
+}

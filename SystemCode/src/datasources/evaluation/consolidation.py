@@ -185,6 +185,25 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
             "database": database_name if keep_database else None, "_predictions": predictions}
 
 
+def format_article_line(row: dict[str, Any]) -> str:
+    """One article's result line, shown live and by `datasources-eval report` (identical format)."""
+    mark = "ok" if row["expected_label"] in (None, row["predicted_label"]) else "MISS"
+    return (f"    {row['file']:<38} expected {str(row['expected_label']):<20} got "
+            f"{row['predicted_label']:<20} {'/'.join(row['predicted_events']) or '-':<6} {mark}")
+
+
+def print_scores(scores: dict[str, Any], usage: dict[str, Any], progress: Callable[[str], None] = print) -> None:
+    """The grouping/label score block, shown live and by `datasources-eval report` (identical format)."""
+    progress(f"\nGrouping (pairwise): F1 {scores['grouping_pairwise']['f1']:.3f}  "
+             f"P {scores['grouping_pairwise']['precision']:.3f}  R {scores['grouping_pairwise']['recall']:.3f}")
+    progress(f"Labels: macro F1 {scores['labels']['macro_f1']:.3f}  accuracy {scores['labels']['accuracy']:.3f}  "
+             f"({scores['labels']['scored']} scored, {scores['labels']['uncertain']} uncertain)")
+    for label, score in scores["labels"]["per_label"].items():
+        progress(f"    {label:<22} F1 {score['f1']:.3f}  (tp {score['tp']}, fp {score['fp']}, fn {score['fn']})")
+    progress(f"Model calls: {usage['comparison_calls']}, tokens in/out "
+             f"{usage['input_tokens']}/{usage['output_tokens']}")
+
+
 def run(name: str, comparator, sim_settings, *, embedder=None, description: str = "", source: str | None = None,
         batch_numbers: list[int] | None = None, keep_databases: bool = False, directory: Path | None = None,
         progress: Callable[[str], None] = print) -> dict[str, Any]:
@@ -208,11 +227,14 @@ def run(name: str, comparator, sim_settings, *, embedder=None, description: str 
                            keep_database=keep_databases)
         predictions += result.pop("_predictions")
         for row in result["articles"]:
-            mark = "ok" if row["expected_label"] in (None, row["predicted_label"]) else "MISS"
-            progress(f"    {row['file']:<38} expected {str(row['expected_label']):<20} got "
-                     f"{row['predicted_label']:<20} {'/'.join(row['predicted_events']) or '-':<6} {mark}")
+            progress(format_article_line(row))
         results.append(result)
-    return {
+    # A run where the model failed to produce a usable answer for some article (timeout, schema reject -> the
+    # pipeline leaves the analysis "pending") is not a trustworthy benchmark. Flag it so the leaderboard skips it,
+    # while the file itself stays on disk as a log. See `datasources-eval report/compare`.
+    errored = [a for r in results for a in r["articles"]
+               if a.get("error") or str(a["predicted_label"]).startswith("error")]
+    report = {
         "stage": "consolidation",
         "experiment": {"name": name, "description": description, "file": source},
         "model": {"comparator": getattr(comparator, "name", type(comparator).__name__),
@@ -221,12 +243,17 @@ def run(name: str, comparator, sim_settings, *, embedder=None, description: str 
         "settings": {k: getattr(sim_settings, k) for k in RECORDED_SETTINGS},  # from .env: scores depend on them
         "started_at": started.isoformat(timespec="seconds"),
         "batches_run": chosen,
+        "incomplete": bool(errored),
         "metrics": {"grouping_pairwise": metrics.pairwise(predictions), "labels": metrics.labels(predictions)},
         "usage": {"comparison_calls": sum(r["comparison_calls"] for r in results),
                   "input_tokens": sum(r["tokens"]["input"] for r in results),
                   "output_tokens": sum(r["tokens"]["output"] for r in results)},
         "batches": results,
     }
+    if errored:
+        report["incomplete_reason"] = (f"{len(errored)} article(s) did not complete, e.g. {errored[0]['file']}: "
+                                       f"{errored[0]['predicted_label']}")
+    return report
 
 
 RESULTS_DIR = Path(__file__).resolve().parents[3] / "evaluation" / "consolidation" / "results"
@@ -251,15 +278,7 @@ def run_experiment(name: str, build_comparator: Callable[[Any], Any], *, descrip
                  source=Path(source).name if source else None,
                  embedder=build_embedder(settings) if build_embedder else None, batch_numbers=batches or None,
                  keep_databases=keep_db)
-    m = report["metrics"]
-    print(f"\nGrouping (pairwise): F1 {m['grouping_pairwise']['f1']:.3f}  "
-          f"P {m['grouping_pairwise']['precision']:.3f}  R {m['grouping_pairwise']['recall']:.3f}")
-    print(f"Labels: macro F1 {m['labels']['macro_f1']:.3f}  accuracy {m['labels']['accuracy']:.3f}  "
-          f"({m['labels']['scored']} scored, {m['labels']['uncertain']} uncertain)")
-    for label, score in m["labels"]["per_label"].items():
-        print(f"    {label:<22} F1 {score['f1']:.3f}  (tp {score['tp']}, fp {score['fp']}, fn {score['fn']})")
-    print(f"Model calls: {report['usage']['comparison_calls']}, tokens in/out "
-          f"{report['usage']['input_tokens']}/{report['usage']['output_tokens']}")
+    print_scores(report["metrics"], report["usage"])
     if save:
         RESULTS_DIR.mkdir(parents=True, exist_ok=True)
         path = RESULTS_DIR / f"{datetime.now().strftime('%Y-%m-%d_%H%M')}_{name}.json"
