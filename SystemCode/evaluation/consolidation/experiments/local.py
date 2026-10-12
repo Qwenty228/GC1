@@ -71,18 +71,22 @@ LM Studio / vLLM instead of Ollama: set BASE_URL to "http://localhost:1234/v1" o
 
 from datasources.llm_openai import OpenAICompatibleComparisonBackend
 
-NAME = "local-qwen3-8b"
-DESCRIPTION = "Local Qwen3 8B via Ollama, the production comparison prompt"
+NAME = "local-qwen2.5-7b"
+DESCRIPTION = "Local Qwen2.5 7B Instruct via Ollama, the production comparison prompt"
 
 # ----------------------------------------------------------------------------- run config: edit, then run this file
-BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Start with [1] to sanity-check.
+BATCHES = []  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Start with [1] to sanity-check.
 SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
 KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
 
+# qwen3:8b reasons well but paraphrases its evidence quotes, so the verbatim-quote gate downgrades them to
+# "uncertain"; qwen2.5:7b-instruct is non-thinking and copies spans more literally -> a better fit for the gate.
 BASE_URL = "http://localhost:11434/v1"
-MODEL = "qwen3:8b"
+MODEL = "qwen2.5:7b-instruct"
 API_KEY_ENV = None  # local servers need no key
-JSON_MODE = "json_object"
+JSON_MODE = "json_schema"  # grammar-constrains the output so small models can't drift off the schema (e.g. a
+# status value outside the allowed list); needs Ollama's structured-outputs support. Fall back to "json_object" if
+# the server rejects the schema.
 
 
 def build_comparator(settings):

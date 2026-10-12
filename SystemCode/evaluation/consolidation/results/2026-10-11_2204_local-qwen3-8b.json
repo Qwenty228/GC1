@@ -1,0 +1,300 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "local-qwen3-8b",
+    "description": "Local Qwen3 8B via Ollama, the production comparison prompt",
+    "file": "local.py"
+  },
+  "model": {
+    "comparator": "openai_compatible",
+    "comparison_model": "qwen3:8b",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 3,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 6,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-10-11T14:36:20+00:00",
+  "batches_run": [
+    1
+  ],
+  "incomplete": true,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 6
+    },
+    "labels": {
+      "macro_f1": 0.25,
+      "accuracy": 0.25,
+      "scored": 4,
+      "uncertain": 2,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_update": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_conflict": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "different_event": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 6,
+    "input_tokens": 19308,
+    "output_tokens": 8477
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 1701.9,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Both report DOJ's antitrust probe into Nvidia-Groq licensing deal with nonexclusive terms and executive moves.",
+              "matching_facts": [
+                "DOJ investigates licensing deal",
+                "nonexclusive license",
+                "executives join Nvidia"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "incoming evidence quote not found in U1",
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_repeated to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "DOJ sets 30-day deadline for response, updating prior inquiry details",
+              "matching_facts": [
+                "DOJ investigates licensing deal",
+                "Formal information request",
+                "Participants: DOJ, Nvidia, Groq"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "deadline",
+                  "incoming": "30-day response deadline",
+                  "candidate": "no deadline mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "incoming evidence quote not found in U1",
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_update to uncertain: evidence could not be verified on both sides"
+              ]
+            },
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "DOJ sets 30-day deadline for response, updating prior inquiry details",
+              "matching_facts": [
+                "DOJ antitrust probe into licensing deal",
+                "Formal information request",
+                "Participants: DOJ, Nvidia, Groq"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "deadline",
+                  "incoming": "30-day response deadline",
+                  "candidate": "no deadline mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "incoming evidence quote not found in U1",
+                "candidate evidence quote not found in C2",
+                "downgraded same_event_update to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: qwen3:8b: timed out after 600.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E4"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E3",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Different participants and actions: training center vs. DOJ inquiry",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Different participants and actions: training center vs. DOJ investigation",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Different participants and actions: training center vs. DOJ antitrust probe",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 19308,
+        "output": 8477
+      },
+      "database": null
+    }
+  ],
+  "incomplete_reason": "1 article(s) did not complete, e.g. test_004_conflict_group_001.json: error:pending"
+}
