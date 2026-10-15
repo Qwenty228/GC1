@@ -1,11 +1,12 @@
 """`datasources-eval`: inspect saved evaluation runs.
 
-    compare   leaderboard of every saved run in a stage
-    report    full per-batch breakdown of one run (the same output you see live), optionally with the
-              model's reasoning per judgment
+    compare   leaderboard of every saved run in a stage (consolidation, or summarization)
+    report    one run in full (the same output you see live): per-batch grouping with the model's
+              reasoning (--reasons), or per-event summaries with what the model was given (--passages)
 
 Runs themselves are started from the experiment files:
     uv run python evaluation/consolidation/experiments/baseline_rule.py
+    uv run python evaluation/summarization/experiments/local.py
 """
 
 from __future__ import annotations
@@ -17,10 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from .. import config  # noqa: F401  (loads .env)
-from . import metrics
+from . import metrics, summarization
 from .consolidation import format_article_line, print_scores
 
 EVAL_ROOT = Path(__file__).resolve().parents[3] / "evaluation"
+STAGES = ("consolidation", "summarization")
 
 
 def results_dir(stage: str) -> Path:
@@ -28,6 +30,8 @@ def results_dir(stage: str) -> Path:
 
 
 def cmd_compare(args) -> int:
+    if args.stage == "summarization":
+        return summarization.print_leaderboard(results_dir(args.stage))
     rows, skipped = [], 0
     for path in sorted(results_dir(args.stage).glob("*.json")):
         r = json.loads(path.read_text(encoding="utf-8"))
@@ -64,8 +68,8 @@ def _is_incomplete(path: Path) -> bool:
         return False
 
 
-def resolve_run(stage: str, selector: str) -> Path | None:
-    """Find a saved run by path, exact stem, or model-name substring.
+def resolve_run(stage: str | None, selector: str) -> Path | None:
+    """Find a saved run by path, exact stem, or model-name substring (stage None = look in every stage).
 
     An exact path/stem is returned even if incomplete (you asked for that log by name); a model-name
     substring skips incomplete runs and returns the newest complete match (filenames sort chronologically).
@@ -73,12 +77,16 @@ def resolve_run(stage: str, selector: str) -> Path | None:
     direct = Path(selector)
     if direct.is_file():
         return direct
-    d = results_dir(stage)
-    exact = d / (selector if selector.endswith(".json") else f"{selector}.json")
-    if exact.is_file():
-        return exact
-    matches = [p for p in sorted(d.glob("*.json")) if selector in p.stem and not _is_incomplete(p)]
-    return matches[-1] if matches else None
+    dirs = [results_dir(s) for s in ((stage,) if stage else STAGES)]
+    for d in dirs:
+        exact = d / (selector if selector.endswith(".json") else f"{selector}.json")
+        if exact.is_file():
+            return exact
+    for d in dirs:
+        matches = [p for p in sorted(d.glob("*.json")) if selector in p.stem and not _is_incomplete(p)]
+        if matches:
+            return matches[-1]
+    return None
 
 
 def _batch_predictions(batch: dict[str, Any]) -> list[metrics.Prediction]:
@@ -112,15 +120,18 @@ def _print_reasons(row: dict[str, Any]) -> None:
 def cmd_report(args) -> int:
     path = resolve_run(args.stage, args.run)
     if path is None:
-        allp = sorted(results_dir(args.stage).glob("*.json"))
+        allp = [p for s in ((args.stage,) if args.stage else STAGES) for p in sorted(results_dir(s).glob("*.json"))]
         hidden = [p.stem for p in allp if args.run in p.stem and _is_incomplete(p)]
-        print(f"No complete run matching {args.run!r} in {results_dir(args.stage)}")
+        print(f"No complete run matching {args.run!r} in {', '.join(args.stage and [args.stage] or STAGES)}")
         if hidden:
             print("Incomplete log(s) matching (name one exactly to view):\n  " + "\n  ".join(hidden))
         elif allp:
             print("Available:\n  " + "\n  ".join(p.stem for p in allp))
         return 1
     r = json.loads(path.read_text(encoding="utf-8"))
+    if r.get("stage") == "summarization":
+        print(path.stem)
+        return summarization.print_report(r, event=args.event, passages=args.passages, grouping=args.grouping)
     model = r["model"].get("comparison_model") or r["model"].get("comparator") or "-"
     print(f"{path.stem}")
     print(f"model: {model}   batches_run: {r['batches_run']}   {r['experiment'].get('description', '')}".rstrip())
@@ -154,13 +165,18 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_cmp = sub.add_parser("compare", help="Leaderboard of saved runs")
-    p_cmp.add_argument("stage", nargs="?", default="consolidation")
+    p_cmp.add_argument("stage", nargs="?", default="consolidation", choices=STAGES)
 
     p_rep = sub.add_parser("report", help="Full per-batch breakdown of one saved run")
     p_rep.add_argument("run", help="model name (newest match) or a result file / stem, e.g. local-qwen3-8b")
-    p_rep.add_argument("--stage", default="consolidation")
-    p_rep.add_argument("--reasons", action="store_true", help="also print the model's reasoning per judgment")
-    p_rep.add_argument("--batch", type=int, help="only this batch number")
+    p_rep.add_argument("--stage", choices=STAGES, help="where to look (default: every stage)")
+    p_rep.add_argument("--reasons", action="store_true", help="consolidation: the model's reasoning per judgment")
+    p_rep.add_argument("--batch", type=int, help="consolidation: only this batch number")
+    p_rep.add_argument("--event", help="summarization: only this event, e.g. E3")
+    p_rep.add_argument("--passages", action="store_true",
+                       help="summarization: also print the full passages the model was given")
+    p_rep.add_argument("--grouping", action="store_true",
+                       help="summarization: also print how every article was grouped")
 
     args = parser.parse_args(argv)
     if args.command == "report":
