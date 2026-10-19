@@ -98,3 +98,46 @@ averages every filled sheet of a run in the right-hand columns. Rank models by t
 
 Copy `experiments/local.py`, change `NAME`, and return any object with `summarize(request)` from
 `build_summarizer` (see `datasources.summary.generation` for the Claude backend and a scripted one).
+
+## Full-detail runs, real data and the filter test (`experiments/local_full.py`)
+
+`local_full.py` runs grouping (step 3) and summaries with validation (step 4) and keeps everything a person needs to
+judge them by hand. Each run uses its own throwaway database `stock_news_eval_..._test`, never the main database.
+The machinery is `src/datasources/evaluation/recording.py`.
+
+* `--mode real` (default) uses a slice of **real** NVDA news plus the 8-K, from
+  `populate/003_nvda_8k_windows_2026-07-08.sql`. The default slice is `aug17`: Aug 15-20, about 58 articles and
+  8-K 0001045810-26-000069. These dates do not overlap the 125 test articles.
+  * Records arrive one at a time in publication order, as they would live.
+  * There is no answer key: rate the summaries in `<run>_scores.csv`, and label which articles are the same event in
+    `<run>_grouping_labels.csv`.
+* `--filters production,no_filter` (the default) runs the slice twice:
+  * `production`: the retrieval filter from `.env`.
+  * `no_filter`: every event in the time window goes to the LLM.
+
+  `<...>_filter-comparison.json` lists every link one variant made and the other did not, with the LLM's explanation
+  and the cosine score, plus the cost difference. It answers "does the filter only save cost, or does it change the
+  result?".
+* Conflicts: production holds a summary while a conflict review is open. With `--conflicts assume_confirmed`
+  (the default), the held state is recorded and the review is then resolved as an **assumed** confirmed conflict
+  (reviewer `eval-ASSUMED-unreviewed`), so the summary must state both claims. `--conflicts hold` keeps
+  production behaviour.
+* `--mode fixtures --grouping answer_key|model` is the 125-test run above, with the same extra detail.
+
+Outputs in `results/`:
+
+| File | Contents |
+|---|---|
+| `<run>.json` | Per article: the text it was analysed on, its text units, every retrieval candidate (cosine, lexical, fused score, why not compared), the LLM judgments with explanations and validation notes, memberships and timings. Per event: members, conflict state, summary attempts with validation errors, the passages the model was given, checked citations and the published version. Also label-free metrics and review lists (uncertain, singletons, shortlist cuts, pairs just under the gate, conflicts, the 8-K). |
+| `calls/<run>.json` | Every model call: the full prompt text (each system prompt stored once, by hash), the raw response including any reasoning field, the parsed output, tokens, latency and errors. |
+| `<run>_scores.csv`, `<run>_grouping_labels.csv` | The sheets to fill in by hand. |
+
+`datasources-eval report/compare` read fixtures runs; real runs (`stage: summarization_real`) are plain JSON to open
+directly. Commands, from `SystemCode/`:
+
+```
+uv run python evaluation/summarization/experiments/local_full.py --mode real --limit-articles 5 --limit-events 2   # smoke test
+uv run python evaluation/summarization/experiments/local_full.py --mode real                                       # both variants
+uv run python evaluation/summarization/experiments/local_full.py --mode fixtures --grouping model
+uv run python evaluation/summarization/experiments/local_full.py --backend offline --limit-articles 5              # plumbing only, no Ollama
+```
