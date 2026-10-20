@@ -2,9 +2,6 @@
 name = "datasources"
 version = "0.1.0"
 description = "Node 1 — Data Sources: Alpaca financial news + SEC EDGAR 8-K filings, with a data-dictionary explorer UI."
-authors = [
-    { name = "Qwenty228", email = "natsg90@gmail.com" }
-]
 requires-python = "==3.13.7"
 dependencies = [
     "anthropic>=1.8.0",

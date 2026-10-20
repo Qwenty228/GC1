@@ -1,0 +1,7 @@
+﻿article,published,type,title,predicted_event,predicted_label,true_event,true_label,notes
+alpaca:61233673,2026-08-15T02:57:15+00:00,news_article,Anthropic’s Revenue Could Soar From $47 Billion to $200 Billion by 2028 as Bankers Build a Massive AI Valuation Case Ahead of Its IPO: Report (UPDATED),E1,different_event,,,
+alpaca:61238060,2026-08-17T02:57:49+00:00,news_article,"Harvard Reveals $2.2 Billion SpaceX Stake, Its Largest Public Equity Holding: University's Bet on Elon Musk-led Company Outshines Amazon and Nvidia",E2,different_event,,,
+alpaca:61239424,2026-08-17T08:24:39+00:00,news_article,"Stanley Druckenmiller Just Made a Big Bet on IREN While Dumping Broadcom, Intel and Micron",E3,different_event,,,
+alpaca:61239930,2026-08-17T09:33:22+00:00,news_article,"Harvard Did Not Sell Its Bitcoin ETF Holdings in Q2, Discloses No New Ethereum ETF Stake",,uncertain,,,
+alpaca:61240146,2026-08-17T09:58:23+00:00,news_article,Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors,,no_event,,,
+sec:0001045810-26-000069,2026-08-17T16:41:33+00:00,sec_filing,"NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)",E4,different_event,,,

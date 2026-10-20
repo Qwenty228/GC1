@@ -1,0 +1,23 @@
+﻿event,sources,files,auto_valid,faithful,coverage,conflict,clarity,acceptable,notes
+E1,2,alpaca:61233673 alpaca:61256549,n,,,n/a,,n,not published: invalid
+E2,1,alpaca:61239930,n,,,n/a,,n,not published: invalid
+E3,3,alpaca:61240146 alpaca:61244495 alpaca:61244507,n,,,n/a,,n,not published: error
+E4,1,alpaca:61240625,y,,,n/a,,,
+E5,2,alpaca:61241373 alpaca:61279800,n,,,n/a,,n,not published: invalid
+E6,2,alpaca:61243237 alpaca:61293075,y,,,n/a,,,
+E7,8,alpaca:61244396 alpaca:61248274 alpaca:61249540 alpaca:61252856 alpaca:61256057 alpaca:61264305 alpaca:61265621 alpaca:61291861,n,,,n/a,,n,not published: invalid
+E8,2,alpaca:61245513 sec:0001045810-26-000069,n,,,n/a,,n,not published: invalid
+E9,1,alpaca:61246697,n,,,n/a,,n,not published: invalid
+E10,1,alpaca:61246987,n,,,n/a,,n,not published: error
+E11,1,alpaca:61253042,y,,,n/a,,,
+E12,1,alpaca:61254722,n,,,n/a,,n,not published: error
+E13,1,alpaca:61259362,n,,,n/a,,n,not published: invalid
+E14,1,alpaca:61259954,n,,,n/a,,n,not published: invalid
+E15,1,alpaca:61267548,n,,,n/a,,n,not published: invalid
+E16,2,alpaca:61268385 alpaca:61279108,n,,,n/a,,n,not published: invalid
+E17,3,alpaca:61281267 alpaca:61282793 alpaca:61284206,n,,,n/a,,n,not published: invalid
+E18,1,alpaca:61283122,n,,,n/a,,n,not published: invalid
+E19,1,alpaca:61285683,n,,,n/a,,n,not published: invalid
+E20,1,alpaca:61292603,n,,,n/a,,n,not published: invalid
+E21,2,alpaca:61294679 alpaca:61294883,n,,,n/a,,n,not published: invalid
+E22,1,alpaca:61296207,n,,,n/a,,n,not published: invalid
