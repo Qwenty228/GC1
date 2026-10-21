@@ -1,0 +1,62 @@
+{
+ "stage": "summarization_real_filter_comparison",
+ "runs": {
+  "production": "2026-10-19_1642_local-qwen2.5-7b-full_real-aug17_production.json",
+  "no_filter": "2026-10-19_1653_local-qwen2.5-7b-full_real-aug17_no-filter.json"
+ },
+ "articles_compared": 6,
+ "same_event_pairs": {
+  "production": 0,
+  "no_filter": 0,
+  "both": 0
+ },
+ "pair_agreement_rand_index": 1.0,
+ "linked_only_without_filter": [],
+ "linked_only_with_filter": [],
+ "label_changes": [],
+ "cost": {
+  "production": {
+   "llm": {
+    "grouping": {
+     "calls": 6,
+     "errors": 0,
+     "input_tokens": 24440,
+     "output_tokens": 5599,
+     "input_chars": 70595,
+     "seconds": 586.0
+    },
+    "summary": {
+     "calls": 3,
+     "errors": 0,
+     "input_tokens": 4959,
+     "output_tokens": 1570,
+     "input_chars": 12151,
+     "seconds": 126.9
+    }
+   },
+   "grouping_seconds": 590.6
+  },
+  "no_filter": {
+   "llm": {
+    "grouping": {
+     "calls": 5,
+     "errors": 0,
+     "input_tokens": 23176,
+     "output_tokens": 5527,
+     "input_chars": 70515,
+     "seconds": 561.5
+    },
+    "summary": {
+     "calls": 3,
+     "errors": 0,
+     "input_tokens": 4959,
+     "output_tokens": 1587,
+     "input_chars": 12151,
+     "seconds": 119.6
+    }
+   },
+   "grouping_seconds": 565.9
+  }
+ },
+ "reading": "linked_only_without_filter = what the filter hides from the LLM; check each pair by hand: a real same-event link there means the filter changes results, not only cost."
+}

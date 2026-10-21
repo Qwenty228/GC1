@@ -1,0 +1,35 @@
+﻿event,sources,files,auto_valid,faithful,coverage,conflict,clarity,acceptable,notes
+E1,1,alpaca:61233673,n,,,n/a,,n,not published: invalid
+E2,3,alpaca:61238060 alpaca:61253659 alpaca:61259063,n,,,n/a,,n,not published: invalid
+E3,1,alpaca:61239424,n,,,n/a,,n,not published: invalid
+E4,1,alpaca:61239930,n,,,n/a,,n,not published: invalid
+E5,2,alpaca:61241373 alpaca:61279800,n,,,n/a,,n,not published: error
+E6,2,alpaca:61243237 alpaca:61293075,y,,,n/a,,,
+E7,1,alpaca:61244495,n,,,n/a,,n,not published: invalid
+E8,1,alpaca:61244507,n,,,n/a,,n,not published: invalid
+E9,11,alpaca:61244662 alpaca:61248274 alpaca:61249540 alpaca:61252856 sec:0001045810-26-000069 alpaca:61256057 alpaca:61264305 alpaca:61273010 alpaca:61282793 alpaca:61284206 alpaca:61291861,n,,,n/a,,n,not published: invalid
+E10,1,alpaca:61245513,y,,,n/a,,,
+E11,1,alpaca:61246697,n,,,n/a,,n,not published: invalid
+E12,1,alpaca:61253042,y,,,n/a,,,
+E13,1,alpaca:61254396,n,,,n/a,,n,not published: invalid
+E14,1,alpaca:61254722,n,,,n/a,,n,not published: invalid
+E15,1,alpaca:61256549,n,,,n/a,,n,not published: error
+E16,1,alpaca:61256795,n,,,n/a,,n,not published: error
+E17,1,alpaca:61259362,n,,,n/a,,n,not published: invalid
+E18,2,alpaca:61259954 alpaca:61266554,n,,,n/a,,n,not published: error
+E19,1,alpaca:61264862,n,,,n/a,,n,not published: invalid
+E20,1,alpaca:61265621,n,,,n/a,,n,not published: invalid
+E21,1,alpaca:61267548,n,,,n/a,,n,not published: invalid
+E22,1,alpaca:61268385,y,,,n/a,,,
+E23,1,alpaca:61279108,n,,,n/a,,n,not published: invalid
+E24,1,alpaca:61279184,n,,,n/a,,n,not published: invalid
+E25,1,alpaca:61279266,n,,,n/a,,n,not published: error
+E26,1,alpaca:61280260,n,,,n/a,,n,not published: invalid
+E27,3,alpaca:61281267 alpaca:61282793 alpaca:61284206,n,,,n/a,,n,not published: invalid
+E28,1,alpaca:61283122,n,,,n/a,,n,not published: invalid
+E29,1,alpaca:61284102,n,,,n/a,,n,not published: invalid
+E30,1,alpaca:61285683,n,,,n/a,,n,not published: invalid
+E31,1,alpaca:61292603,n,,,n/a,,n,not published: invalid
+E32,2,alpaca:61294679 alpaca:61294883,n,,,n/a,,n,not published: invalid
+E33,1,alpaca:61296207,n,,,n/a,,n,not published: invalid
+E34,1,alpaca:61297682,n,,,n/a,,n,not published: invalid

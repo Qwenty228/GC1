@@ -134,6 +134,9 @@ eval: ## Run an experiment file (its own BATCHES/SAVE/KEEP_DB config): make eval
 eval-compare: ## Leaderboard of saved evaluation runs (evaluation/consolidation/results/)
 	$(UV) run datasources-eval compare
 
+eval-compare-summary: ## Leaderboard of saved summarization runs (mechanical checks + human scores)
+	$(UV) run datasources-eval compare summarization
+
 db-up: ## Start PostgreSQL 18 + pgvector in Docker (reads PG* from .env), wait until healthy
 	docker compose up -d --wait postgres
 

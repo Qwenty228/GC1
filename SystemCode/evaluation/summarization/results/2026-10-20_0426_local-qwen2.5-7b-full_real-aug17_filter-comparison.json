@@ -1,0 +1,1620 @@
+{
+ "stage": "summarization_real_filter_comparison",
+ "runs": {
+  "production": "2026-10-19_2042_local-qwen2.5-7b-full_real-aug17_production.json",
+  "no_filter": "2026-10-20_0426_local-qwen2.5-7b-full_real-aug17_no-filter.json"
+ },
+ "articles_compared": 59,
+ "same_event_pairs": {
+  "production": 64,
+  "no_filter": 40,
+  "both": 21
+ },
+ "pair_agreement_rand_index": 0.9638,
+ "linked_only_without_filter": [
+  {
+   "pair": [
+    "alpaca:61233673",
+    "alpaca:61256549"
+   ],
+   "titles": [
+    "Anthropic’s Revenue Could Soar From $47 Billion to $200 Billion by 2028 as Bankers Build a Massive AI Valuation Case Ahead of Its IPO: Report (UPDATED)",
+    "Anthropic's Revenue Jumps 14x; Chinese AI Targets Nvidia's Moat"
+   ],
+   "cosine": 0.8311601033461097,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both the incoming segment and the candidate event discuss Anthropic's projected revenue growth, with the candidate event providing more context on the timeline and valuation.",
+     "matching_facts": [
+      "Anthropic's revenue could soar from $47 billion to $200 billion by 2028",
+      "Anthropic's revenue increased more than tenfold annually in each of the three years through early 2026"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "event_date",
+       "incoming": "2026-08-17",
+       "candidate": "2026-08-15T02:57:15+00:00"
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "fiscal_period",
+       "incoming": "Q2 2026",
+       "candidate": "2028"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61240146",
+    "alpaca:61244495"
+   ],
+   "titles": [
+    "Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors",
+    "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg"
+   ],
+   "cosine": 0.6785731698783434,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "The incoming segment restates the financial metrics and market position of NVIDIA, which is already reported in the candidate event.",
+     "matching_facts": [
+      "NVIDIA's financial metrics and market position",
+      "P/E: 34.48, P/B: 27.90, P/S: 21.73, ROE: 33.06%, EBITDA: $71.0 billion, Gross Profit: $61.16 billion, Revenue Growth: 85.23%"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61240146",
+    "alpaca:61244507"
+   ],
+   "titles": [
+    "Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors",
+    "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg News"
+   ],
+   "cosine": 0.6866199151730639,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "Both passages discuss NVIDIA's financial metrics and market position.",
+     "matching_facts": [
+      "NVIDIA's financial metrics and market position"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61248274"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times"
+   ],
+   "cosine": 0.7453403028642964,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports involve Nvidia securing resources for OpenAI, but the specific details differ.",
+     "matching_facts": [
+      "Nvidia Secures Land, Power And Shell Capacity",
+      "Nvidia Corp secures land, power, and shell capacity"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "object",
+       "incoming": "OpenAI data centre in Ohio",
+       "candidate": "land, power, and shell capacity at the PORTS-Pike Technology Campus in Ohio for customer OpenAI"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61249540"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+   ],
+   "cosine": 0.873094916343689,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports detail NVIDIA's partnership with SB Energy to secure land, power, and building capacity for an AI campus in Ohio for OpenAI. The candidate passage provides a more concise summary, while the incoming units offer additional details about the deployment and capacity options.",
+     "matching_facts": [
+      "NVIDIA partnered with SB Energy to secure land, power and building capacity at the PORTS-Pike Technology Campus in Pike County, Ohio, exclusively for NVIDIA computing systems.",
+      "NVIDIA and SB Energy partner to build an 8 IT-GW AI campus in Ohio for OpenAI, backed by a $1.5B investment."
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "additional details",
+       "incoming": "The initial deployment will support 4.25 gigawatts of AI computing capacity using NVIDIA GPUs, CPUs, networking and software. NVIDIA also has the option to secure another 3.75 gigawatts at the site.",
+       "candidate": "NVIDIA partnered with SB Energy to secure land, power and building capacity at the PORTS-Pike Technology Campus in Pike County, Ohio, exclusively for NVIDIA computing systems. OpenAI will use the capacity, while SB Energy will build, own and operate the data center under a 20-year lease to OpenAI."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61252856"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?"
+   ],
+   "cosine": 0.7149609327316284,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments discuss Nvidia's AI infrastructure strategy and financing, but the incoming segment provides more details about the specific investment and partnership with SB Energy.",
+     "matching_facts": [
+      "Nvidia is building what could become the “Federal Reserve of AI,”",
+      "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Nvidia backed SB Energy’s Ohio data-center buildout and said it will invest $1.5 billion in the developer.",
+       "candidate": "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "Nvidia last week unveiled a plan with Wall Street firms to mobilize more than $500 billion for AI infrastructure.",
+       "candidate": "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61256057"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity"
+   ],
+   "cosine": 0.7879389777256333,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments report Nvidia's investment and support of the OpenAI project, but the incoming segment provides more details on the financial structure and Huang's comments.",
+     "matching_facts": [
+      "Nvidia secured land, power, and shell capacity",
+      "Nvidia investing $1.5 billion in SB Energy"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "NVIDIA will initially back only about half of the planned buildout, with an option to extend the arrangement to the remaining 3.75 GW.",
+       "candidate": "Nvidia is investing $1.5 billion in the company."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "NVIDIA expects the long-lived site to support repeated hardware upgrades.",
+       "candidate": "Nvidia expects the long-term site to support repeated hardware upgrades."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "NVIDIA estimates that each generation of systems deployed at PORTS-Pike could involve about 1.5 million NVIDIA GPUs and represent roughly $150 billion to $200 billion in revenue.",
+       "candidate": "Huang said each hardware generation at the Ohio site could involve about 1.5 million Nvidia GPUs and generate $150 billion to $200 billion in revenue."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61264305"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares"
+   ],
+   "cosine": 0.7088438272476196,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports describe Nvidia securing land, power, and shell capacity for its AI infrastructure with OpenAI, but the scale and financial commitment differ.",
+     "matching_facts": [
+      "Nvidia secured land, power, and shell capacity for its AI infrastructure",
+      "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "scale",
+       "incoming": "4.25 gigawatts",
+       "candidate": "8 gigawatts"
+      },
+      {
+       "kind": "new_information",
+       "aspect": "financial commitment",
+       "incoming": "$1.5 billion investment in SB Energy",
+       "candidate": "N/A"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.6974734844283185,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments report Nvidia securing land, power, and shell capacity for OpenAI, but the incoming segment provides more context and details.",
+     "matching_facts": [
+      "Nvidia Secures Land, Power And Shell Capacity",
+      "NVIDIA Corp (NASDAQ:NVDA)"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment",
+       "candidate": "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244396",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": 0.7897143363952637,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments report Nvidia securing land, power, and shell capacity for the Ohio data center, but the incoming segment provides more details about the expected power capacity and timeline.",
+     "matching_facts": [
+      "Nvidia secures land, power and shell capacity",
+      "Nvidia will serve as its exclusive chip provider",
+      "Nvidia will invest $1.5 billion in SB Energy"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "The Ohio campus is expected to eventually support as much as 8 gigawatts of power capacity, with an initial 800 megawatts targeted to come online in 2028.",
+       "candidate": "NVIDIA expects the long-lived site to support repeated hardware upgrades. The company estimates that each generation of systems deployed at PORTS-Pike could involve about 1.5 million NVIDIA GPUs and represent roughly $150 billion to $200 billion of NVIDIA revenue."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "The Ohio campus is expected to eventually support as much as 8 gigawatts of power capacity, with an initial 800 megawatts targeted to come online in 2028.",
+       "candidate": "NVIDIA expects the long-lived site to support repeated hardware upgrades. The company estimates that each generation of systems deployed at PORTS-Pike could involve about 1.5 million NVIDIA GPUs and represent roughly $150 billion to $200 billion of NVIDIA revenue."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244495",
+    "alpaca:61244507"
+   ],
+   "titles": [
+    "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg",
+    "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg News"
+   ],
+   "cosine": 0.9969477061095589,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61245513",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "OpenAI Says Ports-Pike Project Expected To Create 35,000 Construction Jobs During Six-year Buildout Through 2032 & 2,500 Long-Term Operating Jobs",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.6053949468857113,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "The events are about the same project, but the candidate passage provides additional details about the expected job creation.",
+     "matching_facts": [
+      "OpenAI’s Ports-Pike Project Expected to Create 35,000 Construction Jobs During Six-year Buildout Through 2032 & 2,500 Long-Term Operating Jobs"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "NVIDIA’s partnership with SB Energy",
+       "candidate": "N/A"
+      },
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "NVIDIA’s payment obligations",
+       "candidate": "N/A"
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "announced on 2026-08-17",
+       "candidate": "N/A"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61248274",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.5976140978796365,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61249540",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.6454813691686779,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments report Nvidia securing land, power, and shell capacity for OpenAI, but the incoming segment provides more context and details.",
+     "matching_facts": [
+      "Nvidia Secures Land, Power And Shell Capacity",
+      "NVIDIA Corp (NASDAQ:NVDA)"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment",
+       "candidate": "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61252856",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.6035053966340197,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61256057",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.6279213650273474,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61264305",
+    "alpaca:61265621"
+   ],
+   "titles": [
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares",
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment"
+   ],
+   "cosine": 0.561823215375948,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61265621",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": 0.6383882380492557,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61268385",
+    "alpaca:61279108"
+   ],
+   "titles": [
+    "OpenAI Launches ChatGPT For Teens And Partners With CodeAI To Prepare The First AI Generation",
+    "Nvidia Wants Customers to Buy New AI Chips — Without Giving Up Their Old Ones"
+   ],
+   "cosine": 0.5896896964496565,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both the incoming segment and the candidate event mention OpenAI's actions, but the candidate event provides more specific details about the launch and partnership.",
+     "matching_facts": [
+      "OpenAI launches ChatGPT for teens and partners with CodeAI"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "additional details",
+       "incoming": "Nvidia is promoting its latest AI chips while saying older GPUs can remain valuable through 2029, highlighting a new strategy for AI infrastructure and CUDA.",
+       "candidate": "OpenAI Launches ChatGPT For Teens And Partners With CodeAI To Prepare The First AI Generation"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "linked_only_with_filter": [
+  {
+   "pair": [
+    "alpaca:61238060",
+    "alpaca:61253659"
+   ],
+   "titles": [
+    "Harvard Reveals $2.2 Billion SpaceX Stake, Its Largest Public Equity Holding: University's Bet on Elon Musk-led Company Outshines Amazon and Nvidia",
+    "SpaceX Stock Is Everywhere: Google, Nvidia, AMD, Harvard Disclose Stakes"
+   ],
+   "cosine": 0.8935343623161316,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "Both the incoming segment and the candidate events report the same stake disclosure by Harvard Management Co. in SpaceX, with the same value and date.",
+     "matching_facts": [
+      "Harvard Management Co. disclosed a $2.2 billion stake in Space Exploration Technologies Corp. (NASDAQ:SPCX)",
+      "as of June 30, 2026"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61238060",
+    "alpaca:61259063"
+   ],
+   "titles": [
+    "Harvard Reveals $2.2 Billion SpaceX Stake, Its Largest Public Equity Holding: University's Bet on Elon Musk-led Company Outshines Amazon and Nvidia",
+    "SpaceX Stock Jumps After Multibillion-Dollar Stakes Revealed"
+   ],
+   "cosine": 0.8989419012946461,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "Both the incoming segment and the candidate event report the same event: Harvard Management Co. disclosing a $2.2 billion stake in SpaceX, with the same details and participants.",
+     "matching_facts": [
+      "Harvard Management Co. disclosed a $2.2 billion stake in Space Exploration Technologies Corp. (NASDAQ:SPCX)",
+      "The stake makes SpaceX Harvard’s largest disclosed public equity holding",
+      "Alphabet Inc. (NASDAQ:GOOGL) disclosed a massive position of roughly 551 million SpaceX shares worth about $94 billion in its 13F-HR filed Aug. 7"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61248274"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times"
+   ],
+   "cosine": 0.7420811806868817,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "The incoming segment restates the candidate event with minor variations in wording and additional details.",
+     "matching_facts": [
+      "NVIDIA and OpenAI AI Infrastructure Commitment",
+      "committed to substantial deployments",
+      "2026-08-17"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61249540"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet"
+   ],
+   "cosine": 0.8645070791244507,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports cover the same core commitment but include additional details in the incoming segment.",
+     "matching_facts": [
+      "NVIDIA and OpenAI committed to substantial deployments of NVIDIA AI infrastructure through 2030",
+      "Each generation of NVIDIA AI factory systems deployed at Ports-Pike could represent about 1.5M NVIDIA GPUs, or about $150B to $200B in NVIDIA revenue",
+      "OpenAI commitments represents roughly $600B of NVIDIA compute through 2030"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "NVIDIA expects the long-lived site to support repeated hardware upgrades.",
+       "candidate": "NVIDIA expects the long-lived site to support repeated hardware upgrades."
+      },
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "NVIDIA will also invest $1.5 billion in SB Energy, joining existing investors Softbank Group Corp. and OpenAI.",
+       "candidate": "NVIDIA will also invest $1.5 billion in SB Energy, joining existing investors Softbank Group Corp. and OpenAI."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61252856"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?"
+   ],
+   "cosine": 0.7082839608192444,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments discuss NVIDIA's AI infrastructure commitment, but the incoming segment provides more recent developments and details.",
+     "matching_facts": [
+      "NVIDIA is building what could become the “Federal Reserve of AI”, Atreides Management CIO Gavin Baker said on Friday’s All-In Podcast.",
+      "NVIDIA expects the long-lived site to support repeated hardware upgrades. The company estimates that each generation of systems deployed at PORTS-Pike could involve about 1.5 million NVIDIA GPUs and represent roughly $150 billion to $200 billion of NVIDIA revenue."
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Nvidia Could Become the ‘Federal Reserve Of AI’, Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+       "candidate": "NVIDIA is building what could become the “Federal Reserve of AI”,"
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "Nvidia last week unveiled a plan with Wall Street firms to mobilize more than $500 billion for AI infrastructure.",
+       "candidate": "NVIDIA and OpenAI are nearing a financing agreement for the Ohio campus that would reduce NVIDIA’s initial financial guarantee, according to people familiar with the discussions."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61256057"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity"
+   ],
+   "cosine": 0.7975090742111206,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both sides report the same commitment but with additional details in the incoming segment.",
+     "matching_facts": [
+      "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030",
+      "NVIDIA expects the long-lived site to support repeated hardware upgrades",
+      "OpenAI has committed to substantial NVIDIA infrastructure deployments through 2030"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Huang framed Nvidia’s support as a way to secure scarce infrastructure rather than finance demand.",
+       "candidate": "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "NVIDIA will also invest $1.5 billion in SB Energy, joining existing investors Softbank Group Corp. (OTC:SFTBY) and OpenAI.",
+       "candidate": "NVIDIA, OpenAI Rework Financing to Reduce Risk."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "The revised structure would cut NVIDIA’s potential guarantee from $250 billion to less than $120 billion, with NVIDIA initially backing only about half of the planned buildout.",
+       "candidate": "NVIDIA, OpenAI Rework Financing to Reduce Risk."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61264305"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares"
+   ],
+   "cosine": null,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports cover the same commitment but differ in scale and financial details.",
+     "matching_facts": [
+      "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+      "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030",
+      "OpenAI Commitments Expand NVIDIA’s Revenue Opportunity"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "commitment scale",
+       "incoming": "8 GW",
+       "candidate": "12-16 GW"
+      },
+      {
+       "kind": "conflict",
+       "aspect": "NVIDIA revenue",
+       "incoming": "150B-200B",
+       "candidate": "600B"
+      },
+      {
+       "kind": "conflict",
+       "aspect": "SB Energy investment",
+       "incoming": "1.5B",
+       "candidate": "30B"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": null,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports mention the AI infrastructure deal with OpenAI, but the candidate passage includes the SB Energy partnership, which is new information.",
+     "matching_facts": [
+      "NVIDIA and OpenAI AI Infrastructure Commitment",
+      "NVIDIA and SB Energy partner to build an 8 IT-GW AI campus in Ohio for OpenAI"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "status",
+       "incoming": "announced",
+       "candidate": "announced and extended with SB Energy partnership"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": null,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both discuss NVIDIA's commitment to AI infrastructure, but S1 provides more context on the ecosystem support.",
+     "matching_facts": [
+      "NVIDIA is building what could become the “Federal Reserve of AI,”",
+      "Nvidia could become the “Federal Reserve of AI,”",
+      "Nvidia is building what could become the “Federal Reserve of AI,”"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": null,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments discuss Nvidia's commitment to AI infrastructure, but the incoming segment provides more specific details about the financing and valuation context.",
+     "matching_facts": [
+      "Nvidia is committing billions to the AI ecosystem.",
+      "Nvidia has committed roughly $300 billion to AI ecosystem partners through equity investments, financing guarantees and other backstops."
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Nvidia is financing parts of the boom itself.",
+       "candidate": "Nvidia is committing billions to the AI ecosystem."
+      },
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Bank of America estimates that roughly $70 billion of Nvidia’s commitments are direct equity investments.",
+       "candidate": "Nvidia has committed roughly $300 billion to AI ecosystem partners through equity investments, financing guarantees and other backstops."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": 0.8062859773635864,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "The incoming segment adds new information about potential delays and Nvidia's SB Energy investment, while the candidate events focus on the announced commitment.",
+     "matching_facts": [
+      "NVIDIA and OpenAI AI Infrastructure Commitment",
+      "NVIDIA committed to substantial deployments of NVIDIA AI infrastructure through 2030",
+      "Each generation of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Musk's warning about potential delays",
+       "candidate": "No mention of delays or Musk's warning."
+      },
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Nvidia's $1.5B investment in SB Energy",
+       "candidate": "No mention of SB Energy investment."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61244662",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.811253022476852,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both sides report the same partnership but the incoming segment provides more details on conditions and OpenAI's role.",
+     "matching_facts": [
+      "NVIDIA and SB Energy Corp. partnership",
+      "4.25 gigawatts IT load"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "OpenAI as tenant and guarantor",
+       "candidate": "OpenAI as tenant and guarantor details added."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "NVIDIA's payment obligations subject to conditions",
+       "candidate": "NVIDIA's payment obligations subject to conditions and details on remedies upon Trigger Event."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61248274",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61248274",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61248274",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61248274",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.7686921633848949,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61249540",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": 0.840934157371521,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both reports mention the AI infrastructure deal with OpenAI, but the candidate passage includes the SB Energy partnership, which is new information.",
+     "matching_facts": [
+      "NVIDIA and OpenAI AI Infrastructure Commitment",
+      "NVIDIA and SB Energy partner to build an 8 IT-GW AI campus in Ohio for OpenAI"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "status",
+       "incoming": "announced",
+       "candidate": "announced and extended with SB Energy partnership"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61249540",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": 0.7682704925537109,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61249540",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": 0.8082539324911807,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61249540",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "NVIDIA’s Ohio AI Megadeal: OpenAI, 8 GW of Compute and a $1.5 Billion SB Energy Bet",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.8803535175112789,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both sides report the same partnership but the incoming segment provides more details on conditions and OpenAI's role.",
+     "matching_facts": [
+      "NVIDIA and SB Energy Corp. partnership",
+      "4.25 gigawatts IT load"
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "OpenAI as tenant and guarantor",
+       "candidate": "OpenAI as tenant and guarantor details added."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "temporal_development",
+       "incoming": "NVIDIA's payment obligations subject to conditions",
+       "candidate": "NVIDIA's payment obligations subject to conditions and details on remedies upon Trigger Event."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61252856",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": 0.7763857378729863,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61252856",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": 0.8042804236077814,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both discuss NVIDIA's commitment to AI infrastructure, but S1 provides more context on the ecosystem support.",
+     "matching_facts": [
+      "NVIDIA is building what could become the “Federal Reserve of AI,”",
+      "Nvidia could become the “Federal Reserve of AI,”",
+      "Nvidia is building what could become the “Federal Reserve of AI,”"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61252856",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": 0.8295331698934467,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61252856",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "Nvidia Could Become the ‘Federal Reserve Of AI,’ Gavin Baker Says: Will ‘Dark GPUs’ Become Its First Test?",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.7555135038189005,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61253659",
+    "alpaca:61259063"
+   ],
+   "titles": [
+    "SpaceX Stock Is Everywhere: Google, Nvidia, AMD, Harvard Disclose Stakes",
+    "SpaceX Stock Jumps After Multibillion-Dollar Stakes Revealed"
+   ],
+   "cosine": 0.9079007776946065,
+   "judgments": [
+    {
+     "label": "same_event_repeated",
+     "explanation": "Both the incoming segment and the candidate event report the same event: Harvard Management Co. disclosing a $2.2 billion stake in SpaceX, with the same details and participants.",
+     "matching_facts": [
+      "Harvard Management Co. disclosed a $2.2 billion stake in Space Exploration Technologies Corp. (NASDAQ:SPCX)",
+      "The stake makes SpaceX Harvard’s largest disclosed public equity holding",
+      "Alphabet Inc. (NASDAQ:GOOGL) disclosed a massive position of roughly 551 million SpaceX shares worth about $94 billion in its 13F-HR filed Aug. 7"
+     ],
+     "differences": []
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61256057",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": 0.8099028098699139,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61256057",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": 0.7858281135559082,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both discuss NVIDIA's commitment to AI infrastructure, but S1 provides more context on the ecosystem support.",
+     "matching_facts": [
+      "NVIDIA is building what could become the “Federal Reserve of AI,”",
+      "Nvidia could become the “Federal Reserve of AI,”",
+      "Nvidia is building what could become the “Federal Reserve of AI,”"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      },
+      {
+       "kind": "temporal_development",
+       "aspect": "new_information",
+       "incoming": "Nvidia is building what could become the “Federal Reserve of AI,”",
+       "candidate": "Nvidia is trying to remove that constraint by making GPUs easier for Wall Street to lend against."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61256057",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": 0.833475242049991,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both segments discuss Nvidia's commitment to AI infrastructure, but the incoming segment provides more specific details about the financing and valuation context.",
+     "matching_facts": [
+      "Nvidia is committing billions to the AI ecosystem.",
+      "Nvidia has committed roughly $300 billion to AI ecosystem partners through equity investments, financing guarantees and other backstops."
+     ],
+     "differences": [
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Nvidia is financing parts of the boom itself.",
+       "candidate": "Nvidia is committing billions to the AI ecosystem."
+      },
+      {
+       "kind": "new_information",
+       "aspect": "new_information",
+       "incoming": "Bank of America estimates that roughly $70 billion of Nvidia’s commitments are direct equity investments.",
+       "candidate": "Nvidia has committed roughly $300 billion to AI ecosystem partners through equity investments, financing guarantees and other backstops."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61256057",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "Nvidia-OpenAI Deal Isn't 'Circular Financing,' Says Jensen Huang, Sees $600B Compute Opportunity",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.8453166165381775,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61259954",
+    "alpaca:61266554"
+   ],
+   "titles": [
+    "Nvidia Is the Best S&P 500 Stock of the Past 10, 15, 20 Years — but 4 Stocks Beat It Over the Past 5 Years",
+    "Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors"
+   ],
+   "cosine": 0.8258280754089355,
+   "judgments": [
+    {
+     "label": "same_event_update",
+     "explanation": "Both the incoming segment and the candidate passage compare Nvidia's stock performance over multiple years, but the candidate passage provides more specific figures and time periods.",
+     "matching_facts": [
+      "Nvidia Corporation",
+      "compared performance",
+      "stock performance over 5, 10, 15, and 20 years"
+     ],
+     "differences": [
+      {
+       "kind": "temporal_development",
+       "aspect": "time period",
+       "incoming": "5, 10, 15, and 20 years",
+       "candidate": "various multi-year periods (5, 10, 15, and 20 years)"
+      },
+      {
+       "kind": "new_information",
+       "aspect": "specific figures",
+       "incoming": "2274%, 14468%, 76248%, 63261%",
+       "candidate": "2274%, 14468%, 76248%, 63261%"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pair": [
+    "alpaca:61264305",
+    "alpaca:61273010"
+   ],
+   "titles": [
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares",
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?"
+   ],
+   "cosine": 0.7840479612350464,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61264305",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": -1,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61264305",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61264305",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "Cathie Wood Buys $22.8 Million of Nvidia Stock, Ark Invest Dumps AMD and Palantir Shares",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.7504908591216304,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61273010",
+    "alpaca:61282793"
+   ],
+   "titles": [
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?",
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust"
+   ],
+   "cosine": 0.7663153409957886,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61273010",
+    "alpaca:61284206"
+   ],
+   "titles": [
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?",
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'"
+   ],
+   "cosine": 0.8112607969356533,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61273010",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": 0.8069158792495728,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61273010",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "Nvidia Stock Dips Tuesday: What's Driving the Action?",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.7893151766469984,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61282793",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61282793",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "You’re Already Funding the AI Bubble — and You’ll Pay for the Bust",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61284206",
+    "alpaca:61291861"
+   ],
+   "titles": [
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'",
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected"
+   ],
+   "cosine": 0.8068599700927734,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61284206",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "'Bond King' Jeff Gundlach Compares Nvidia's $500 Billion AI Financing Push to Bonds Backed by Bananas: 'Will Not Age Well'",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": null,
+   "judgments": []
+  },
+  {
+   "pair": [
+    "alpaca:61291861",
+    "sec:0001045810-26-000069"
+   ],
+   "titles": [
+    "Elon Musk Warns Nvidia-Backed $105 Billion Ohio Data Center for OpenAI Will Take ‘Much Longer’ to Come Online Than Expected",
+    "NVIDIA CORP Form 8-K filed 2026-08-17 (Items 1.01, 2.03, 7.01)"
+   ],
+   "cosine": 0.8134883753366261,
+   "judgments": []
+  }
+ ],
+ "label_changes": [
+  {
+   "article": "alpaca:61238060",
+   "title": "Harvard Reveals $2.2 Billion SpaceX Stake, Its Largest Public Equity Holding: University's Bet on Elon Musk-led Company Outshines Amazon and Nvidia",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61239424",
+   "title": "Stanley Druckenmiller Just Made a Big Bet on IREN While Dumping Broadcom, Intel and Micron",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61239930",
+   "title": "Harvard Did Not Sell Its Bitcoin ETF Holdings in Q2, Discloses No New Ethereum ETF Stake",
+   "production": "uncertain",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61240146",
+   "title": "Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors",
+   "production": "no_event",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61240625",
+   "title": "HIVE Stock Jumps After AI Cloud Deal - Here's Why",
+   "production": "no_event",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61244396",
+   "title": "Nvidia Secures Land, Power And Shell Capacity To Host Compute Capacity Via Partnership With SB Energy At The PORTS-Pike Technology Campus In Ohio For Customer OpenAI",
+   "production": "no_event",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61244495",
+   "title": "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg",
+   "production": "different_event",
+   "no_filter": "same_event_repeated"
+  },
+  {
+   "article": "alpaca:61244507",
+   "title": "'Groq Valued at $3.5 Billion in Funding Round After Nvidia Deal' - Bloomberg News",
+   "production": "different_event",
+   "no_filter": "same_event_repeated"
+  },
+  {
+   "article": "alpaca:61244662",
+   "title": "NVIDIA Says OpenAI Committed To Substantial Deployments Of NVIDIA AI Infrastructure Through 2030; Each Generation Of NVIDIA AI Factory Systems Deployed At Ports-Pike Could Represent About 1.5M NVIDIA GPUs, Or About $150B To $200B In NVIDIA Revenue; Guarantee At Ports-Pike Effective In Phases As Data Centers Open 2028-2030; OpenAI Commitments Represents Roughly $600B Of NVIDIA Compute Through 2030",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61246987",
+   "title": "David Tepper's Latest AI Bet Is CoreWeave",
+   "production": "no_event",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61248274",
+   "title": "'Nvidia To Invest $100B For OpenAI Data Centre In Ohio' - Financial Times",
+   "production": "same_event_repeated",
+   "no_filter": "same_event_update"
+  },
+  {
+   "article": "alpaca:61253659",
+   "title": "SpaceX Stock Is Everywhere: Google, Nvidia, AMD, Harvard Disclose Stakes",
+   "production": "same_event_repeated",
+   "no_filter": "uncertain"
+  },
+  {
+   "article": "alpaca:61254396",
+   "title": "Bill Ackman Bets Big on Magnificent 7 Stocks, But Only Loves 3 of Them",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61256549",
+   "title": "Anthropic's Revenue Jumps 14x; Chinese AI Targets Nvidia's Moat",
+   "production": "different_event",
+   "no_filter": "same_event_update"
+  },
+  {
+   "article": "alpaca:61256795",
+   "title": "Why Elon Musk Thinks AI Is Getting Cheaper, Not Just Smarter",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61259063",
+   "title": "SpaceX Stock Jumps After Multibillion-Dollar Stakes Revealed",
+   "production": "same_event_repeated",
+   "no_filter": "uncertain"
+  },
+  {
+   "article": "alpaca:61264862",
+   "title": "China's Chip Revenue Hits Record $245 Billion As SMIC and CXMT Lead the Pack: ETFs to Watch",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61265621",
+   "title": "LG Electronics Expands Robotics Push With New Business Center And NVIDIA Partnership Spanning Data To Deployment",
+   "production": "different_event",
+   "no_filter": "same_event_update"
+  },
+  {
+   "article": "alpaca:61266554",
+   "title": "Understanding NVIDIA's Position In Semiconductors & Semiconductor Equipment Industry Compared To Competitors",
+   "production": "same_event_update",
+   "no_filter": "uncertain"
+  },
+  {
+   "article": "alpaca:61273010",
+   "title": "Nvidia Stock Dips Tuesday: What's Driving the Action?",
+   "production": "same_event_update",
+   "no_filter": "uncertain"
+  },
+  {
+   "article": "alpaca:61279108",
+   "title": "Nvidia Wants Customers to Buy New AI Chips — Without Giving Up Their Old Ones",
+   "production": "different_event",
+   "no_filter": "same_event_update"
+  },
+  {
+   "article": "alpaca:61279184",
+   "title": "Cathie Wood's ARK Is Quietly Building an AI Picks-and-Shovels Portfolio",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61279266",
+   "title": "Citadel Advisors and Millennium Boosted Fabrinet Stakes in Q2 as AI Demand Accelerated",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61280260",
+   "title": "Fabrinet Shares Tumble As Nvidia Datacom Weakness Overshadows Telecom Strength",
+   "production": "different_event",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61281267",
+   "title": "Nvidia Stock Has 55% Upside, Analyst Says — Here’s What Investors Miss",
+   "production": "uncertain",
+   "no_filter": "different_event"
+  },
+  {
+   "article": "alpaca:61284102",
+   "title": "US Debt Nearing $40T; Home Depot earnings Better Than Expected",
+   "production": "uncertain",
+   "no_filter": "no_event"
+  },
+  {
+   "article": "alpaca:61294104",
+   "title": "Exploring The Competitive Space: NVIDIA Versus Industry Peers In Semiconductors & Semiconductor Equipment",
+   "production": "error:pending",
+   "no_filter": "uncertain"
+  }
+ ],
+ "cost": {
+  "production": {
+   "llm": {
+    "grouping": {
+     "calls": 83,
+     "errors": 1,
+     "input_tokens": 369013,
+     "output_tokens": 72439,
+     "input_chars": 1175436,
+     "seconds": 7771.2
+    },
+    "summary": {
+     "calls": 64,
+     "errors": 11,
+     "input_tokens": 100489,
+     "output_tokens": 27260,
+     "input_chars": 345442,
+     "seconds": 5857.6
+    }
+   },
+   "grouping_seconds": 7814.3
+  },
+  "no_filter": {
+   "llm": {
+    "grouping": {
+     "calls": 258,
+     "errors": 0,
+     "input_tokens": 1291257,
+     "output_tokens": 248606,
+     "input_chars": 4068372,
+     "seconds": 24566.7
+    },
+    "summary": {
+     "calls": 43,
+     "errors": 5,
+     "input_tokens": 84015,
+     "output_tokens": 20569,
+     "input_chars": 267892,
+     "seconds": 3232.0
+    }
+   },
+   "grouping_seconds": 24628.0
+  }
+ },
+ "reading": "linked_only_without_filter = what the filter hides from the LLM; check each pair by hand: a real same-event link there means the filter changes results, not only cost."
+}
