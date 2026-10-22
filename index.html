@@ -53,6 +53,14 @@ filings only: no events, labels or summaries.</p>
 </ul>
 <p class="muted">Company links in both files need <code>uv run datasources-db register-companies</code> to have run first.</p>
 
+<div class="callout"><span class="label">Why historical windows, not live collection</span>
+<p>8-K filings cannot be scheduled: none arrived during our live runs, and live NVDA news is thin (a handful of articles over a
+weekend, against about 150 in the 60 hours around one earnings filing). Windows around known filings give a dense, complete set on demand.</p>
+<p>Cause and effect is kept: the runner replays each window one record at a time in publication order, with later articles
+hidden until they arrive, just as the live pipeline would see them. Live behaviour itself (delays, restarts, catch-up gaps) is
+checked separately against Alpaca's archive.</p>
+</div>
+
 <h2 id="principles">Rules of the method</h2>
 <p>Each rule removes one known way an LLM evaluation can mislead. The tag says how far the project is today.</p>
 <p class="legend"><span><span class="st done">In place</span></span><span><span class="st part">Partly</span></span><span><span class="st plan">Planned</span></span></p>
