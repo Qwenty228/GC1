@@ -43,12 +43,12 @@ story, a repeat, an update, a conflict and an unrelated event, drawn from real n
 </div>
 
 <h3 id="real-data">Real data (no labels)</h3>
-<p>News collected by the real ingestion pipeline is shared as two SQL files in <code>SystemCode/populate/</code>, loaded by
-<code>make db</code>. They hold articles and filings only: no events, labels or summaries.</p>
+<p>Real news in two SQL files in <code>SystemCode/populate/</code>, loaded by <code>make db</code>. They hold articles and
+filings only: no events, labels or summaries.</p>
 <ul class="caveats">
-  <li><code>002_live_news_nvda_2026-10-17.sql</code>: 21 live NVDA articles from the collection run of 16–17 October 2026.</li>
-  <li><code>003_nvda_8k_windows_2026-07-08.sql</code>: 239 real NVDA articles around NVIDIA's three 2026 8-K filings
-  (1 July, 17 August, 26 August; 12 hours before to 48 hours after each), plus the three filings. They do not overlap in time
+  <li><code>002_live_news_nvda_2026-10-17.sql</code>: 21 NVDA articles collected live by the ingestion pipeline on 16–17 October 2026.</li>
+  <li><code>003_nvda_8k_windows_2026-07-08.sql</code>: 239 NVDA articles fetched from Alpaca's news history around NVIDIA's three
+  2026 8-K filings (1 July, 17 August, 26 August; 12 hours before to 48 hours after each), plus the three filings. They do not overlap in time
   with the 125 labelled articles. The summarization runner's real mode (<code>local_full.py --mode real</code>) uses this file.</li>
 </ul>
 <p class="muted">Company links in both files need <code>uv run datasources-db register-companies</code> to have run first.</p>
