@@ -123,7 +123,7 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
 <tbody>
 <tr><td><code>2026-10-20_1031_…_fixtures-production</code></td><td>125 labelled articles</td><td>52</td><td>7</td><td>36</td><td>9</td></tr>
 <tr><td><code>2026-10-19_2042_…_real-aug17_production</code></td><td>Real news, 15–20 Aug, production filter</td><td>34</td><td>4</td><td>25</td><td>5</td></tr>
-<tr><td><code>2026-10-20_0426_…_real-aug17_no-filter</code></td><td>Same slice, no retrieval filter</td><td>22</td><td>3</td><td>16</td><td>3</td></tr>
+<tr><td><code>2026-10-20_0426_…_real-aug17_no-filter</code></td><td>Same slice, similarity gate off: every event in the ±7-day window reaches the LLM</td><td>22</td><td>3</td><td>16</td><td>3</td></tr>
 </tbody></table></div>
 <ul class="caveats">
   <li><b>Published</b>: passed every check. <b>Rejected</b>: a well-formed summary that failed validation, mostly a statement
