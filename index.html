@@ -119,14 +119,17 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
 
 <p class="label">Summarization · <code>evaluation/summarization/results/</code></p>
 <div class="table-wrap"><table>
-<thead><tr><th>Run</th><th>Data</th><th>Events</th><th>Published</th><th>Failed checks</th><th>Errors</th></tr></thead>
+<thead><tr><th>Run</th><th>Data</th><th>Events</th><th>Published</th><th>Rejected</th><th>No answer</th></tr></thead>
 <tbody>
 <tr><td><code>2026-10-20_1031_…_fixtures-production</code></td><td>125 labelled articles</td><td>52</td><td>7</td><td>36</td><td>9</td></tr>
 <tr><td><code>2026-10-19_2042_…_real-aug17_production</code></td><td>Real news, 15–20 Aug, production filter</td><td>34</td><td>4</td><td>25</td><td>5</td></tr>
 <tr><td><code>2026-10-20_0426_…_real-aug17_no-filter</code></td><td>Same slice, no retrieval filter</td><td>22</td><td>3</td><td>16</td><td>3</td></tr>
 </tbody></table></div>
 <ul class="caveats">
-  <li>Compare the share of events published (passed validation), then the rubric scores in each run's <code>_scores.csv</code>.</li>
+  <li><b>Published</b>: passed every check. <b>Rejected</b>: a well-formed summary that failed validation, mostly a statement
+  (usually the headline) with no citation or a quote not copied exactly. <b>No answer</b>: the model returned nothing usable; here,
+  always an answer cut off at the 4,096-token limit. Counts use each event's last attempt (up to 2).</li>
+  <li>Compare the share of events published, then the rubric scores in each run's <code>_scores.csv</code>.</li>
   <li>Full runs take hours on a local 7B model (about 2.5 hours for the labelled set, up to 8 hours for a real slice). Start with
   <code>--limit-events</code>, and set <code>OLLAMA_CONTEXT_LENGTH=16384</code> (setup steps are at the top of <code>local_full.py</code>).</li>
 </ul>
