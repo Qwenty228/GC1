@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evaluation Guideline — Stock News</title>
+<meta name="description" content="How the Stock News system's two LLM stages are evaluated, for any model under the same rules, and why each step is sound.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="masthead"><div class="wrap">
+  <a class="brand" href="#top"><span aria-hidden="true">✿</span>Stock News — Evaluation</a>
+  <nav aria-label="On this page">
+    <a href="#principles">Principles</a><a href="#part-a">A · Consolidation</a><a href="#part-b">B · Summaries</a>
+    <a href="#report">C · Report</a><a href="#notes">Notes</a>
+  </nav>
+</div></header>
+
+<main class="wrap" id="top">
+<header class="intro">
+  <span class="label">Evaluation guideline</span>
+  <h1>How we evaluate the two LLM stages</h1>
+  <p class="lede">The system uses an LLM for two decisions. This page sets out how each one is evaluated, for any model, local or
+  API, under the same rules, and why each step can be trusted. Sources are marked <b>*</b>, <b>**</b> and <b>***</b> and
+  listed in the <a href="#notes">notes</a>.</p>
+</header>
+
+<h2 id="decisions">The two decisions</h2>
+<div class="pair">
+  <article class="decision" style="--accent:var(--plum)"><span class="label">Part A</span><h3>Consolidation</h3>
+    <p>Does an incoming article report an event we already track (a repeat, an update or a conflict), or a new event?</p>
+    <p class="muted">Ground truth: 25 human-labelled batches (125 articles), plus a hard-negative set still to build.</p></article>
+  <article class="decision" style="--accent:var(--terracotta)"><span class="label">Part B</span><h3>Summarization</h3>
+    <p>Does each event summary stay grounded in its sources, cover the updates and attribute conflicts correctly?</p>
+    <p class="muted">Live data has no labels, so checks are layered, with human ratings on a sample.</p></article>
+</div>
+
+<h2 id="principles">Principles</h2>
+<p>Each principle removes one known way an LLM evaluation can mislead.</p>
+<ul class="principles">
+  <li><b>Beat a free baseline first</b>An LLM score means little until it is compared with the similarity gate alone.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
+  <li><b>People make the labels</b>Two annotators label independently and their agreement is reported. Model output is never ground truth.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
+  <li><b>Tune on some batches, test on others</b>Thresholds are chosen on development batches and tested on held-out ones. Batches, not articles, are split and resampled.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
+  <li><b>Control judge bias</b>Every pair is judged in both orders, no model judges its own output, and human raters do not see which model wrote what.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
+  <li><b>Use metrics that fit the task</b>Two grouping scores, misses and false merges reported separately, and a paired significance test.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
+  <li><b>Check meaning, not only quotes</b>A quote that exists does not prove a claim. Sentence-level entailment and human ratings check that it does.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup></li>
+  <li><b>Record what is needed to reproduce</b>Model ID, version, run date, prompt version and temperature go with every result.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
+</ul>
+
+<h2 id="before">Before any paid run</h2>
+<div class="callout strong"><span class="label">Do not start until all six are true</span>
+<ol>
+  <li>The exact model ID and run date are recorded (<code>claude-opus-5</code>, not “Claude”).</li>
+  <li>The prompt is frozen and versioned (for example <code>summary-2</code>) and not edited during the runs.</li>
+  <li>Temperature is 0 for every model.</li>
+  <li>A hard budget is set (maximum calls and spend), sized from a 5-item token measurement.</li>
+  <li>The API key is in the environment, never in a committed file.</li>
+  <li>Every run writes a new result file. Nothing is overwritten.</li>
+</ol></div>
+
+<h2 id="part-a">Part A · Consolidation</h2>
+<ol class="flow" aria-label="Part A steps">
+  <li><a href="#a0"><b>A0</b>Baseline</a></li><li><a href="#a1" class="people"><b>A1</b>Hard negatives</a></li>
+  <li><a href="#a2"><b>A2</b>Ambiguous band</a></li><li><a href="#a3" class="paid"><b>A3</b>Run each model</a></li>
+  <li><a href="#a4"><b>A4</b>Score and test</a></li>
+</ol>
+<p class="legend"><span><i></i>free</span><span><i class="people"></i>needs people</span><span><i class="paid"></i>paid for API models</span></p>
+
+<article class="step" id="a0"><header><span class="sid">A0</span><h3>Gate-only baseline</h3><span class="cost">Free, local</span></header>
+  <p>Run the similarity gate alone on all 25 batches, with no LLM. Record grouping and label scores.</p>
+  <p class="why"><b>Why:</b> this is the number every LLM must beat. Event-detection evaluations judge systems against simple baselines on the same data.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></p></article>
+
+<article class="step" id="a1"><header><span class="sid">A1</span><h3>Add hard negatives</h3><span class="cost people">Annotator time</span></header>
+  <p>Collect 25–50 pairs of articles about the same company but different events. Two people label each pair without seeing
+  each other's labels or any model output. Report Cohen's κ, then settle disagreements.</p>
+  <p class="why"><b>Why:</b> the current set has only 2 hard negatives, which are exactly the cases a judge exists for. κ shows the labels are reliable, not one person's habit.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></p></article>
+
+<article class="step" id="a2"><header><span class="sid">A2</span><h3>Select the ambiguous band</h3><span class="cost">Free</span></header>
+  <p>On development batches only, find the similarity range where the gate is unsure (for example 0.78–0.87). Fix it before any LLM
+  run, then check it on held-out batches. Only pairs inside the band go to an LLM.</p>
+  <p class="why"><b>Why:</b> the judge is spent where it can help, and the band is not tuned to the test set.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></p></article>
+
+<article class="step" id="a3"><header><span class="sid">A3</span><h3>Run each model on the band</h3><span class="cost paid">Paid for API models</span></header>
+  <p>Pilot 5 pairs to size the budget. Then judge every band pair with each model in both candidate orders, caching each
+  judgment by model, prompt version and pair. Stop at the budget and mark the run incomplete.</p>
+  <p class="why"><b>Why:</b> LLM judges favour whichever answer comes first; running both orders exposes that bias.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup> The cache means a crash or rerun costs nothing.</p></article>
+
+<article class="step" id="a4"><header><span class="sid">A4</span><h3>Score and test</h3><span class="cost">Free</span></header>
+  <p>Report pairwise and B-cubed precision and recall; misses and false merges separately; label macro-F1 with a confusion
+  matrix. Compare each LLM with the gate using McNemar's test, with confidence intervals from resampling whole batches.</p>
+  <p class="why"><b>Why:</b> pairwise scores over-weight large groups and B-cubed does not. A single combined error hides its assumptions.
+  McNemar is built for two systems scored on the same items, and resampling batches respects that articles in one batch are related.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></p></article>
+
+<h2 id="part-b">Part B · Summarization</h2>
+<ol class="flow" aria-label="Part B steps">
+  <li><a href="#b1" class="paid"><b>B1</b>Reliability</a></li><li><a href="#b2"><b>B2</b>Groundedness</a></li>
+  <li><a href="#b3" class="paid"><b>B3</b>Baselines</a></li><li><a href="#b4" class="people"><b>B4</b>Human rating</a></li>
+</ol>
+
+<article class="step" id="b1"><header><span class="sid">B1</span><h3>Reliability</h3><span class="cost paid">Paid for API models</span></header>
+  <p>For each summarizer, record pass rates on the first attempt and within 4, attempts per summary, rejection reasons, tokens and latency.</p>
+  <p class="why"><b>Why:</b> these show the summarizer <em>works</em>, not that it is <em>right</em>. The production check only confirms that quotes and
+  numbers appear in their sources, so these numbers are always labelled as reliability.</p></article>
+
+<article class="step" id="b2"><header><span class="sid">B2</span><h3>Groundedness</h3><span class="cost">Local compute</span></header>
+  <p>Split each summary into sentences and score each one against its cited passages with one fixed NLI (entailment) model, the same
+  for every summarizer. Report the share of supported and unsupported claims.</p>
+  <p class="why"><b>Why:</b> entailment models work best sentence by sentence, and a quote's presence does not show a claim is supported.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup>
+  One fixed scorer cannot favour one model.</p></article>
+
+<article class="step" id="b3"><header><span class="sid">B3</span><h3>Reference set with baselines</h3><span class="cost paid">Paid for API models; baselines free</span></header>
+  <p>Take 50 events grouped by the answer key, not by the system. Run each summarizer, plus an extractive baseline (passages
+  copied verbatim) and a template baseline (original headline plus the update sentences). Score update coverage and conflict attribution.</p>
+  <p class="why"><b>Why:</b> fixed grouping means differences come from the summary, not from grouping errors. The baselines show whether the LLM
+  adds anything over copying.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup></p></article>
+
+<article class="step" id="b4"><header><span class="sid">B4</span><h3>Blinded human rating</h3><span class="cost people">Annotator time</span></header>
+  <p>Two raters score 30–50 summaries on a fixed rubric (coverage, conflict attribution, factual errors), with model names hidden,
+  order shuffled and positions swapped. Report κ and send disagreements to a third reader.</p>
+  <p class="why"><b>Why:</b> blinding and shuffling remove the biases that also affect LLM judges,<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup>
+  and human ratings check that the automatic scores match what a reader notices.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup></p></article>
+
+<h2 id="report">Part C · Cross-model report</h2>
+<article class="step" id="c1"><header><span class="sid">C1</span><h3>Same format, same table</h3><span class="cost">Free</span></header>
+  <p>Every run writes the result format below. Build one table per part, one row per model, including cost, time and failures. Never edit numbers by hand.</p>
+  <p class="why"><b>Why:</b> hosted models change behind the same name, so a result is only comparable with its version and date.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></p></article>
+<article class="step" id="c2"><header><span class="sid">C2</span><h3>Independent judges</h3><span class="cost">Free</span></header>
+  <p>No model judges its own output. Summaries are judged by the NLI model and by people, never by Claude, Gemini or Qwen.</p>
+  <p class="why"><b>Why:</b> LLM judges prefer their own answers.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></p></article>
+<article class="step" id="c3"><header><span class="sid">C3</span><h3>Optional LLM judge, checked first</h3><span class="cost paid">Paid if API</span></header>
+  <p>If an LLM judge is wanted for groundedness, compare it with the NLI model on labelled examples first and report both.</p>
+  <p class="why"><b>Why:</b> LLMs can spot factual errors without training, but only a comparison shows whether they add anything.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup></p></article>
+
+<div class="callout"><span class="label">Not final if</span>
+<p>a run is marked incomplete, its prompt version differs from the others, or its model ID is not recorded. Every report ends
+with its limitations: sample size, batch-level resampling, and any model that could not be run within budget.</p></div>
+
+<details id="format"><summary>Result format (one file per run, every model, both parts)</summary>
+<pre>run_id, date, part (consolidation|summary), model_id, model_version,
+prompt_version, dataset_id, n_items, metric, value, ci_low, ci_high,
+calls, tokens_in, tokens_out, wall_time_s, failures, incomplete (yes|no)</pre>
+</details>
+
+<section class="notes" id="notes">
+<h2>Notes</h2>
+<p class="muted"><span class="chk ok">checked</span> verified against the source &nbsp; <span class="chk verify">verify</span> check against the original before citing</p>
+
+<div class="note" id="note-1"><h3><span class="mark">*</span>LLM judges, human raters and model versions</h3><ol>
+  <li><cite>Zheng et al. (2023). Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena. NeurIPS.</cite> <span class="chk ok">checked</span><br>
+  LLM judges favour the first answer, longer answers and their own outputs. Hence both orders (A3), blinded rating (B4) and no self-judging (C2).</li>
+  <li><cite>Cohen (1960). A Coefficient of Agreement for Nominal Scales. Educational and Psychological Measurement.</cite> <span class="chk verify">verify</span><br>
+  κ corrects agreement between two raters for chance, which raw agreement overstates when one label is common. Used in A1 and B4.</li>
+  <li><cite>Chen, Zaharia, Zou (2023). How Is ChatGPT's Behavior Changing over Time? arXiv.</cite> <span class="chk verify">verify</span><br>
+  The same hosted model gave noticeably different answers within months. Hence model ID, version and date on every result (checklist, C1).</li>
+</ol><a class="back" href="#principles">↑ back to principles</a></div>
+
+<div class="note" id="note-2"><h3><span class="mark">**</span>Evaluating event grouping</h3><ol>
+  <li><cite>Fiscus, Doddington, Garofolo, Martin (1999). NIST's 1998 Topic Detection and Tracking Evaluation (TDT2). Eurospeech.</cite> <span class="chk ok">checked</span><br>
+  Defines news event detection with explicit miss and false-alarm errors, measured against fixed baselines. Basis for A0 and A4.</li>
+  <li><cite>A Critical Examination of TDT's Cost Function. UMass CIIR.</cite> <span class="chk ok">checked</span> <span class="muted">(authors to confirm)</span><br>
+  A combined error cost depends on an assumed prior, so misses and false alarms are reported separately (A4).</li>
+  <li><cite>Bagga, Baldwin (1998). Algorithms for Scoring Coreference Chains.</cite> <span class="chk verify">verify</span><br>
+  B-cubed scores each item against its own group, so large groups do not dominate (A4).</li>
+  <li><cite>Dietterich (1998). Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithms. Neural Computation.</cite> <span class="chk verify">verify</span><br>
+  Tests that assume independent items are too optimistic when items are related. Hence batch-level splits (A2) and resampling (A4).</li>
+  <li><cite>McNemar (1947). Note on the sampling error of the difference between correlated proportions or percentages. Psychometrika.</cite> <span class="chk verify">verify</span><br>
+  Compares two systems on the same items using only the items where they disagree (A4).</li>
+  <li><cite>Bambrick et al. (2020). NSTM: Real-Time Query-Driven News Overview Composition at Bloomberg. ACL System Demonstrations.</cite> <span class="chk ok">checked</span><br>
+  A production precedent for grouping news by event and then summarizing it. Background, not a method we reuse.</li>
+</ol><a class="back" href="#principles">↑ back to principles</a></div>
+
+<div class="note" id="note-3"><h3><span class="mark">***</span>Evaluating summaries</h3><ol>
+  <li><cite>Laban, Schnabel, Bennett, Hearst (2022). SummaC: Re-Visiting NLI-based Models for Inconsistency Detection in Summarization. TACL.</cite> <span class="chk ok">checked</span><br>
+  Entailment models trained on sentence pairs do poorly on whole documents; scoring sentence by sentence reached 74.4% balanced accuracy. Basis for B2.</li>
+  <li><cite>Maynez, Narayan, Bohnet, McDonald (2020). On Faithfulness and Factuality in Abstractive Summarization. ACL.</cite> <span class="chk verify">verify</span><br>
+  Abstractive summaries often state unsupported facts that overlap metrics miss. Hence simple baselines (B3) and human ratings (B4).</li>
+  <li><cite>Zero-shot LLM approaches to factual inconsistency detection in summaries. arXiv 2402.12821.</cite> <span class="chk ok">checked</span> <span class="muted">(authors to confirm)</span><br>
+  LLMs can detect inconsistencies without training but must be compared with a baseline. Basis for C3.</li>
+</ol><a class="back" href="#principles">↑ back to principles</a></div>
+</section>
+</main>
+
+<footer><div class="wrap">
+<p>Stock News evaluation guideline. Numbers on this page are thresholds and sample sizes for the method, not results.</p>
+</div></footer>
+</body>
+</html>
