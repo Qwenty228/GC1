@@ -129,10 +129,7 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
   <li><b>Published</b>: passed every check. <b>Rejected</b>: a well-formed summary that failed validation, mostly a statement
   (usually the headline) with no citation or a quote not copied exactly. <b>No answer</b>: the model returned nothing usable; here,
   always an answer cut off at the 4,096-token limit. Counts use each event's last attempt (up to 2).</li>
-  <li>Compare the share of events published, then the rubric scores in each run's <code>_scores.csv</code>.</li>
-  <li>Full runs take hours on a local 7B model (about 2.5 hours for the labelled set, up to 8 hours for a real slice). Start with
-  <code>--limit-events</code>, and set <code>OLLAMA_CONTEXT_LENGTH=16384</code> (setup steps are at the top of <code>local_full.py</code>).</li>
-</ul>
+  <li>Compare the share of events published, then the rubric scores in each run's <code>_scores.csv</code>.</li></ul>
 <p class="muted">Every model is run once, with each pair judged in one order, so small differences may be noise.</p>
 
 <h2 id="part-a">Part A · Consolidation</h2>
