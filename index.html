@@ -91,22 +91,38 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
 <code>evaluation/summarization/results/</code>; compare consolidation runs with <code>uv run datasources-eval compare</code>.</p>
 </div>
 
-<h3 id="caveats">Caveats when comparing</h3>
+<h3 id="compare">What to compare</h3>
+<p>Your run sits next to these finished reference runs, all with local Qwen 2.5 7B on Ollama.</p>
+
+<p class="label">Consolidation · <code>evaluation/consolidation/results/</code></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>What it is</th><th>Grouping F1</th><th>Label macro-F1</th><th>Settings</th></tr></thead>
+<tbody>
+<tr><td><code>2026-10-12_0348_local-qwen2.5-7b</code></td><td>LLM reference, all 25 batches</td><td>0.649</td><td>0.466</td><td>6 / 3</td></tr>
+<tr><td><code>2026-10-10_1458_baseline-rule</code></td><td>Similarity gate alone, no LLM</td><td>0.954</td><td>0.355</td><td>3 / 0</td></tr>
+</tbody></table></div>
 <ul class="caveats">
-  <li><b>Use the same retrieval settings.</b> The reference run (local Qwen 2.5 7B, Ollama on Windows) used
-  <code>SIMILARITY_MAX_CANDIDATE_EVENTS=6</code> and <code>SIMILARITY_LEXICAL_PLAUSIBLE_RANK=3</code>; <code>.env.example</code> now has
-  these values. They decide which article pairs reach the model, so check the <code>settings</code> block of each result file before comparing.</li>
-  <li><b>The gate-only baseline was run with other settings.</b> The 25-batch rule baseline (<code>2026-10-10_1458_baseline-rule.json</code>)
-  used 3 candidates and lexical rank 0. Rerun <code>baseline_rule.py</code> with <code>BATCHES = []</code> (free, under a minute) before comparing models with it.</li>
-  <li><b>The reference run is incomplete.</b> 4 of 125 articles did not finish (<code>error:pending</code>), so the result file is marked incomplete.</li>
-  <li><b>Summarization is slow on a local model.</b> With a local 7B model, a run over all 25 batches did not finish in a day.
-  Start with <code>--limit-events</code> and scale up. In the saved reference run
-  (<code>2026-10-20_1031_local-qwen2.5-7b-full_fixtures-production.json</code>), 7 of 52 event summaries passed validation:
-  36 failed the citation checks and 9 ended in errors, so most could not be rated.</li>
-  <li><b>One run per model, one order.</b> Each pair is judged once, so small differences between models may be noise.</li>
-  <li><b>Local runs need a long context.</b> Prompts are 5–10k tokens: set <code>OLLAMA_CONTEXT_LENGTH=16384</code> and restart Ollama
-  (setup steps for Windows are at the top of <code>local_full.py</code>).</li>
+  <li>Run all 25 batches with the <code>.env.example</code> settings (6 candidates, lexical rank 3), then compare grouping F1, label
+  macro-F1 and the per-label scores, especially conflicts.</li>
+  <li><code>uv run datasources-eval compare</code> lists complete runs only. The Qwen reference is marked incomplete because 4 of 125 articles
+  did not finish analysis (1 <code>pending</code>, 3 <code>partial</code>; the report shows them as misses), so read it with <code>uv run datasources-eval report 2026-10-12_0348_local-qwen2.5-7b</code>.</li>
+  <li>The gate baseline used 3 / 0. For a like-for-like baseline, rerun <code>baseline_rule.py</code> with <code>BATCHES = []</code> (free, under a minute).</li>
 </ul>
+
+<p class="label">Summarization · <code>evaluation/summarization/results/</code></p>
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>Data</th><th>Events</th><th>Published</th><th>Failed checks</th><th>Errors</th></tr></thead>
+<tbody>
+<tr><td><code>2026-10-20_1031_…_fixtures-production</code></td><td>125 labelled articles</td><td>52</td><td>7</td><td>36</td><td>9</td></tr>
+<tr><td><code>2026-10-19_2042_…_real-aug17_production</code></td><td>Real news, 15–20 Aug, production filter</td><td>34</td><td>4</td><td>25</td><td>5</td></tr>
+<tr><td><code>2026-10-20_0426_…_real-aug17_no-filter</code></td><td>Same slice, no retrieval filter</td><td>22</td><td>3</td><td>16</td><td>3</td></tr>
+</tbody></table></div>
+<ul class="caveats">
+  <li>Compare the share of events published (passed validation), then the rubric scores in each run's <code>_scores.csv</code>.</li>
+  <li>Full runs take hours on a local 7B model (about 2.5 hours for the labelled set, up to 8 hours for a real slice). Start with
+  <code>--limit-events</code>, and set <code>OLLAMA_CONTEXT_LENGTH=16384</code> (setup steps are at the top of <code>local_full.py</code>).</li>
+</ul>
+<p class="muted">Every model is run once, with each pair judged in one order, so small differences may be noise.</p>
 
 <h2 id="part-a">Part A · Consolidation</h2>
 <ol class="flow" aria-label="Part A steps">

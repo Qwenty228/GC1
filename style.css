@@ -105,6 +105,14 @@ sup.cite a:hover { color: var(--sakura); }
 .callout p { margin: .3rem 0 0; font-size: .93rem; }
 .callout.strong { border-left-color: var(--plum); }
 
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--white); margin: .5rem 0 .8rem; }
+table { border-collapse: collapse; width: 100%; font-size: .86rem; }
+th, td { text-align: left; vertical-align: top; padding: .5rem .7rem; border-bottom: 1px solid var(--line); }
+th { font: 600 .72rem/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); background: var(--ivory); white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+td code { white-space: nowrap; }
+p.label { margin: 1.4rem 0 .3rem; }
+p.label code { text-transform: none; letter-spacing: 0; font-weight: 400; }
 .caveats { padding-left: 1.2rem; margin: .4rem 0 1.4rem; }
 .caveats li { margin: .45rem 0; font-size: .92rem; }
 details { margin: 1rem 0; }
