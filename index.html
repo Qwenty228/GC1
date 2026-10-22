@@ -45,6 +45,17 @@ some conflicts were written with an LLM; others are real.</p>
 <p>Each person was responsible for their own batches. No batch was checked by a second person, so labeller agreement is not measured.</p>
 </div>
 
+<h3 id="real-data">Real data (no labels)</h3>
+<p>News collected by the real ingestion pipeline is shared as two SQL files in <code>SystemCode/populate/</code>, loaded by
+<code>make db</code>. They hold articles and filings only: no events, labels or summaries.</p>
+<ul class="caveats">
+  <li><code>002_live_news_nvda_2026-10-17.sql</code>: 21 live NVDA articles from the collection run of 16–17 October 2026.</li>
+  <li><code>003_nvda_8k_windows_2026-07-08.sql</code>: 239 real NVDA articles around NVIDIA's three 2026 8-K filings
+  (1 July, 17 August, 26 August; 12 hours before to 48 hours after each), plus the three filings. They do not overlap in time
+  with the 125 labelled articles. The summarization runner's real mode (<code>local_full.py --mode real</code>) uses this file.</li>
+</ul>
+<p class="muted">Company links in both files need <code>uv run datasources-db register-companies</code> to have run first.</p>
+
 <h2 id="principles">Rules of the method</h2>
 <p>Each rule removes one known way an LLM evaluation can mislead. The tag says how far the project is today.</p>
 <p class="legend"><span><span class="st done">In place</span></span><span><span class="st part">Partly</span></span><span><span class="st plan">Planned</span></span></p>
@@ -79,9 +90,26 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
 (plus <code>BASE_URL</code> and the API-key variable for a new provider). Set <code>BATCHES = []</code> to run all 25 batches.
 <code>baseline_rule.py</code> is the template for a model that is not an LLM.</p>
 <p><b>Summarization:</b> copy <code>evaluation/summarization/experiments/local_full.py</code> and change only <code>NAME</code> and <code>MODEL</code>.</p>
-<p class="muted">Do not edit <code>src/</code>, the prompts or the <code>SIMILARITY_*</code> values in <code>.env</code>: the result file
-records them, and runs with different settings cannot be compared. Compare saved runs with <code>uv run datasources-eval compare</code>.</p>
+<p class="muted">Do not edit <code>src/</code> or the prompts. Results are saved in <code>evaluation/consolidation/results/</code> and
+<code>evaluation/summarization/results/</code>; compare consolidation runs with <code>uv run datasources-eval compare</code>.</p>
 </div>
+
+<h3 id="caveats">Caveats when comparing</h3>
+<ul class="caveats">
+  <li><b>Use the same retrieval settings.</b> The reference run (local Qwen 2.5 7B, Ollama on Windows) used
+  <code>SIMILARITY_MAX_CANDIDATE_EVENTS=6</code> and <code>SIMILARITY_LEXICAL_PLAUSIBLE_RANK=3</code>; <code>.env.example</code> now has
+  these values. They decide which article pairs reach the model, so check the <code>settings</code> block of each result file before comparing.</li>
+  <li><b>The gate-only baseline was run with other settings.</b> The 25-batch rule baseline (<code>2026-10-10_1458_baseline-rule.json</code>)
+  used 3 candidates and lexical rank 0. Rerun <code>baseline_rule.py</code> with <code>BATCHES = []</code> (free, under a minute) before comparing models with it.</li>
+  <li><b>The reference run is incomplete.</b> 4 of 125 articles did not finish (<code>error:pending</code>), so the result file is marked incomplete.</li>
+  <li><b>Summarization is slow on a local model.</b> With a local 7B model, a run over all 25 batches did not finish in a day.
+  Start with <code>--limit-events</code> and scale up. In the saved reference run
+  (<code>2026-10-20_1031_local-qwen2.5-7b-full_fixtures-production.json</code>), 7 of 52 event summaries passed validation:
+  36 failed the citation checks and 9 ended in errors, so most could not be rated.</li>
+  <li><b>One run per model, one order.</b> Each pair is judged once, so small differences between models may be noise.</li>
+  <li><b>Local runs need a long context.</b> Prompts are 5–10k tokens: set <code>OLLAMA_CONTEXT_LENGTH=16384</code> and restart Ollama
+  (setup steps for Windows are at the top of <code>local_full.py</code>).</li>
+</ul>
 
 <h2 id="part-a">Part A · Consolidation</h2>
 <ol class="flow" aria-label="Part A steps">
