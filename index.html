@@ -30,34 +30,58 @@
 <div class="pair">
   <article class="decision" style="--accent:var(--plum)"><span class="label">Part A</span><h3>Consolidation</h3>
     <p>Does an incoming article report an event we already track (a repeat, an update or a conflict), or a new event?</p>
-    <p class="muted">Ground truth: 25 human-labelled batches (125 articles), plus a hard-negative set still to build.</p></article>
+    <p class="muted">Ground truth: 125 hand-labelled articles in 25 batches (<a href="#ground-truth">how they were made</a>).</p></article>
   <article class="decision" style="--accent:var(--terracotta)"><span class="label">Part B</span><h3>Summarization</h3>
     <p>Does each event summary stay grounded in its sources, cover the updates and attribute conflicts correctly?</p>
     <p class="muted">Live data has no labels, so checks are layered, with human ratings on a sample.</p></article>
 </div>
 
-<h2 id="principles">Principles</h2>
-<p>Each principle removes one known way an LLM evaluation can mislead.</p>
+<h2 id="ground-truth">Ground truth today</h2>
+<div class="callout">
+<p><b>Five people each built and labelled 5 batches of 5 articles</b>, giving 25 batches and 125 articles. Every batch has the
+same shape: one original article, a repeat, an update and a conflict of it, and one article about a different event.</p>
+<p>The articles are a mix of real news and synthetic variants based on real news. Real conflicting reports are rare, so
+some conflicts were written with an LLM; others are real.</p>
+<p>Each person was responsible for their own batches. No batch was checked by a second person, so labeller agreement is not measured.</p>
+</div>
+
+<h2 id="principles">Rules of the method</h2>
+<p>Each rule removes one known way an LLM evaluation can mislead. The tag says how far the project is today.</p>
+<p class="legend"><span><span class="st done">In place</span></span><span><span class="st part">Partly</span></span><span><span class="st plan">Planned</span></span></p>
 <ul class="principles">
-  <li><b>Beat a free baseline first</b>An LLM score means little until it is compared with the similarity gate alone.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
-  <li><b>People make the labels</b>Two annotators label independently and their agreement is reported. Model output is never ground truth.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
-  <li><b>Tune on some batches, test on others</b>Thresholds are chosen on development batches and tested on held-out ones. Batches, not articles, are split and resampled.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
-  <li><b>Control judge bias</b>Every pair is judged in both orders, no model judges its own output, and human raters do not see which model wrote what.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
-  <li><b>Use metrics that fit the task</b>Two grouping scores, misses and false merges reported separately, and a paired significance test.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></li>
-  <li><b>Check meaning, not only quotes</b>A quote that exists does not prove a claim. Sentence-level entailment and human ratings check that it does.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup></li>
-  <li><b>Record what is needed to reproduce</b>Model ID, version, run date, prompt version and temperature go with every result.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup></li>
+  <li><b>Beat a free baseline first <span class="st done">In place</span></b>An LLM score means little until it is compared with
+  something cheaper.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
+  <span class="now">Now: the similarity gate alone, and a local Qwen 2.5 7B (Ollama) run on all 25 batches. Every other model is compared with both.</span></li>
+  <li><b>Same items, same settings <span class="st done">In place</span></b>Only the model changes between runs, and each result
+  records what produced it.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup>
+  <span class="now">Now: the experiment scripts run the unchanged pipeline and prompt, and each result file saves the model, prompt version, embedder and retrieval settings.</span></li>
+  <li><b>Labels come from people <span class="st part">Partly</span></b>Model output is never ground truth, and two independent
+  labellers show the labels are reliable.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup>
+  <span class="now">Now: all 125 labels are human, one person per batch. Planned: a second labeller and agreement (κ) for new hard negatives (A1) and summary ratings (B4).</span></li>
+  <li><b>Tune on some batches, test on others <span class="st part">Partly</span></b>Thresholds are chosen on some batches and
+  tested on others; whole batches are split and resampled, never single articles.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
+  <span class="now">Now: the gate threshold was cross-validated by batch. Planned: the ambiguous band (A2).</span></li>
+  <li><b>Use metrics that fit the task <span class="st part">Partly</span></b>Two grouping scores, misses and false merges kept
+  apart, and a paired significance test.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
+  <span class="now">Now: pairwise F1, false merges and splits, and McNemar's test. Planned: B-cubed and batch-level confidence intervals (A4).</span></li>
+  <li><b>Control judge bias <span class="st plan">Planned</span></b>Each pair judged in both orders, no model judging its own
+  output, raters blind to the model.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup>
+  <span class="now">Now: each pair is judged once, in one order (A3).</span></li>
+  <li><b>Check meaning, not only quotes <span class="st plan">Planned</span></b>A quote that exists does not prove a claim;
+  sentence-level entailment and human ratings check that it does.<sup class="cite"><a href="#note-3" aria-label="note ***">***</a></sup>
+  <span class="now">Now: summaries pass the production quote and number checks, and each run writes a rubric sheet for human scoring. Planned: entailment scoring (B2).</span></li>
 </ul>
 
-<h2 id="before">Before any paid run</h2>
-<div class="callout strong"><span class="label">Do not start until all six are true</span>
-<ol>
-  <li>The exact model ID and run date are recorded (<code>claude-opus-5</code>, not “Claude”).</li>
-  <li>The prompt is frozen and versioned (for example <code>summary-2</code>) and not edited during the runs.</li>
-  <li>Temperature is 0 for every model.</li>
-  <li>A hard budget is set (maximum calls and spend), sized from a 5-item token measurement.</li>
-  <li>The API key is in the environment, never in a committed file.</li>
-  <li>Every run writes a new result file. Nothing is overwritten.</li>
-</ol></div>
+<h2 id="run">How to run your model</h2>
+<div class="callout strong">
+<p><b>Consolidation:</b> copy <code>evaluation/consolidation/experiments/local.py</code> (any OpenAI-compatible API or Ollama),
+or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and change only <code>NAME</code> and <code>MODEL</code>
+(plus <code>BASE_URL</code> and the API-key variable for a new provider). Set <code>BATCHES = []</code> to run all 25 batches.
+<code>baseline_rule.py</code> is the template for a model that is not an LLM.</p>
+<p><b>Summarization:</b> copy <code>evaluation/summarization/experiments/local_full.py</code> and change only <code>NAME</code> and <code>MODEL</code>.</p>
+<p class="muted">Do not edit <code>src/</code>, the prompts or the <code>SIMILARITY_*</code> values in <code>.env</code>: the result file
+records them, and runs with different settings cannot be compared. Compare saved runs with <code>uv run datasources-eval compare</code>.</p>
+</div>
 
 <h2 id="part-a">Part A · Consolidation</h2>
 <ol class="flow" aria-label="Part A steps">

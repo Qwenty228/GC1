@@ -66,6 +66,12 @@ sup.cite a:hover { color: var(--sakura); }
 .principles { list-style: none; padding: 0; margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: .8rem; }
 .principles li { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .85rem 1rem; font-size: .92rem; max-width: none; }
 .principles b { display: block; font-size: .95rem; margin-bottom: .2rem; }
+.principles .now { display: block; margin-top: .5rem; padding-top: .45rem; border-top: 1px dashed var(--line); font-size: .84rem; color: var(--ink-2); }
+.st { display: inline-block; font: 700 .6rem/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; padding: .22rem .4rem; border-radius: 4px; border: 1px solid; vertical-align: 2px; margin-left: .3rem; white-space: nowrap; }
+.legend .st { margin-left: 0; }
+.st.done { color: #3F6B4E; border-color: #CFE0D3; background: #F3F8F4; }
+.st.part { color: #8A5A1F; border-color: #EAD9BF; background: #FBF5EC; }
+.st.plan { color: #5E5A8A; border-color: #DCD9EE; background: #F6F5FC; }
 
 /* step flow */
 .flow { list-style: none; padding: 0; margin: 1rem 0 1.4rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 0; max-width: none; }
