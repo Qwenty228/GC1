@@ -1,0 +1,5245 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "claude",
+    "description": "Claude (Anthropic API), the production comparison prompt",
+    "file": "claude.py"
+  },
+  "model": {
+    "comparator": "anthropic",
+    "comparison_model": "claude-haiku-5-5",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 3,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 6,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-10-23T07:47:01+00:00",
+  "batches_run": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "incomplete": false,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 1.0,
+      "recall": 0.7733,
+      "f1": 0.8722,
+      "tp": 116,
+      "fp": 0,
+      "fn": 34
+    },
+    "labels": {
+      "macro_f1": 0.8032,
+      "accuracy": 0.79,
+      "scored": 100,
+      "uncertain": 4,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 0.9444,
+          "recall": 0.68,
+          "f1": 0.7907,
+          "tp": 17,
+          "fp": 1,
+          "fn": 8
+        },
+        "same_event_update": {
+          "precision": 0.6818,
+          "recall": 0.6,
+          "f1": 0.6383,
+          "tp": 15,
+          "fp": 7,
+          "fn": 10
+        },
+        "same_event_conflict": {
+          "precision": 1.0,
+          "recall": 0.88,
+          "f1": 0.9362,
+          "tp": 22,
+          "fp": 0,
+          "fn": 3
+        },
+        "different_event": {
+          "precision": 0.7353,
+          "recall": 1.0,
+          "f1": 0.8475,
+          "tp": 25,
+          "fp": 9,
+          "fn": 0
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 116,
+    "input_tokens": 314818,
+    "output_tokens": 159546
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 28.0,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming article restates the same DOJ probe of the Nvidia-Groq deal reported in the candidate passages.",
+              "matching_facts": [
+                "DOJ antitrust inquiry into Nvidia-Groq deal",
+                "Nonexclusive Groq license to Nvidia",
+                "Ross and Madra joined Nvidia"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The U.S. Justice Department is examining Nvidia's agreement with AI chip startup Groq"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The Justice Department has launched an antitrust inquiry into NVIDIA\u2019s arrangement with AI chip startup Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same DOJ inquiry into the Groq arrangement; the segment adds a new 30-day response deadline for Nvidia.",
+              "matching_facts": [
+                "DOJ antitrust inquiry into Nvidia-Groq arrangement",
+                "formal request for information to Nvidia"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "response deadline",
+                  "incoming": "Nvidia given 30 days to respond to information request",
+                  "candidate": "formal information request issued; no deadline stated"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Justice Department has set a 30-day deadline for Nvidia to answer the formal information request"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "later issued NVIDIA a formal request for information."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe the same December Groq license, but one says it was exclusive while the other says it was nonexclusive.",
+              "matching_facts": [
+                "December Groq inference technology license",
+                "Nvidia received access to Groq inference technology"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "license exclusivity",
+                  "incoming": "Nvidia received exclusive rights",
+                  "candidate": "license described as nonexclusive"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A competing account says Nvidia received exclusive rights to the inference technology covered by its December agreement with Groq."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Under the December agreement, Groq gave Nvidia access to its AI inference technology through a license that Groq described as nonexclusive."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming segment covers a Bangkok training center opening, while the candidate concerns a DOJ antitrust probe into the Groq deal.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 6766,
+        "output": 4614
+      },
+      "database": "stock_news_eval_claude_b01_5107a7_test"
+    },
+    {
+      "batch": 2,
+      "seconds": 20.0,
+      "articles": [
+        {
+          "file": "test_006_original_group_003.json",
+          "type": "original",
+          "expected_group": 3,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_007_repeat_group_003.json",
+          "type": "repeat",
+          "expected_group": 3,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both report the same preliminary Nvidia anchor-stake talks in Anthropic's IPO; the incoming segment restates the core facts with added stock-price detail.",
+              "matching_facts": [
+                "Nvidia up to $10 billion anchor stake",
+                "Anthropic IPO up to $100 billion",
+                "$2 trillion valuation"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "Anthropic revenue and funding details",
+                  "incoming": "Revenue run rate exceeded $65 billion; valued at $965 billion after May round",
+                  "candidate": "Same figures reported in candidate passage C1"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "Nvidia share price",
+                  "incoming": "Closed at $218.29, down 0.03%",
+                  "candidate": "Same closing price reported in C2"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia is reportedly exploring an anchor investment of up to $10 billion in a possible Anthropic initial public offering."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia may invest up to $10 billion in Anthropic\u2019s IPO, which could raise $100 billion at a $2 trillion valuation."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_008_update_group_003.json",
+          "type": "update",
+          "expected_group": 3,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Nvidia-Anthropic IPO investment talks; the incoming segment adds the due-diligence stage, data room access and unsigned status.",
+              "matching_facts": [
+                "Nvidia up to $10 billion",
+                "Anthropic IPO investment",
+                "$100 billion raise at $2 trillion"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "talks stage",
+                  "incoming": "due diligence, data room access",
+                  "candidate": "preliminary talks, considering investment"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "financial records access",
+                  "incoming": "Nvidia received data room access",
+                  "candidate": "not mentioned"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "agreement status",
+                  "incoming": "no investment agreement signed",
+                  "candidate": "not mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia and Anthropic have moved discussions of a possible anchor investment into due diligence."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia is considering becoming an anchor investor in Anthropic\u2019s IPO"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_009_conflict_group_003.json",
+          "type": "conflict",
+          "expected_group": 3,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe Nvidia's preliminary Anthropic IPO investment talks, but disagree on the ceiling: $5 billion versus $10 billion.",
+              "matching_facts": [
+                "Nvidia proposed Anthropic IPO investment",
+                "talks at September 12 report stage",
+                "$100 billion raise at $2 trillion valuation"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "investment ceiling",
+                  "incoming": "$5 billion",
+                  "candidate": "$10 billion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "the maximum investment being considered at the time of the September 12 report was $5 billion."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia may invest up to $10 billion in Anthropic\u2019s IPO, which could raise $100 billion at a $2 trillion valuation."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_010_different_group_004.json",
+          "type": "different",
+          "expected_group": 4,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns a Singapore robotics lab; candidate concerns a reported Nvidia investment in an Anthropic IPO.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 8504,
+        "output": 4225
+      },
+      "database": "stock_news_eval_claude_b02_6c2aed_test"
+    },
+    {
+      "batch": 3,
+      "seconds": 26.7,
+      "articles": [
+        {
+          "file": "test_011_original_group_005.json",
+          "type": "original",
+          "expected_group": 5,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_012_repeat_group_005.json",
+          "type": "repeat",
+          "expected_group": 5,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both passages report the same Nvidia neocloud model and customer concentration figures for first-half fiscal 2027, with the incoming text restating them.",
+              "matching_facts": [
+                "44% revenue from three direct customers",
+                "$78.2B of $177.8B revenue",
+                "neocloud hardware plus rental revenue model"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Three direct customers supplied 44%, or $78.2 billion, of its $177.8 billion revenue in the first half of fiscal 2027."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Three direct customers generated 44% ($78.2 billion) of Nvidia\u2019s $177.8 billion revenue in the first half of fiscal 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_013_update_group_005.json",
+          "type": "update",
+          "expected_group": 5,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same neocloud revenue-sharing program and CFO model; the incoming segment adds the new monthly utilization reporting step.",
+              "matching_facts": [
+                "neocloud revenue-sharing model",
+                "CFO Colette Kress",
+                "$36 billion commitments"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "utilization reporting",
+                  "incoming": "monthly utilization statements starting with September usage",
+                  "candidate": "no utilization statements mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia has introduced monthly utilization statements for cloud providers participating in its neocloud revenue-sharing program."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "CFO Colette Kress summarized the strategy on the earnings call"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_014_conflict_group_005.json",
+          "type": "conflict",
+          "expected_group": 5,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both concern the same neocloud model commitments as of July 26, but the incoming account gives $18 billion against $36 billion.",
+              "matching_facts": [
+                "Nvidia neocloud model",
+                "commitments as of July 26",
+                "six-year agreements"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "commitments as of July 26",
+                  "incoming": "$18 billion",
+                  "candidate": "$36 billion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "It disputes the $36 billion figure reported for that same date, program and accounting scope."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Commitments associated with the model stood at $36 billion on July 26."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_015_different_group_006.json",
+          "type": "different",
+          "expected_group": 6,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment reports a hardware recall; candidate concerns CFO commentary on customer concentration and neocloud revenue model.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 8161,
+        "output": 5552
+      },
+      "database": "stock_news_eval_claude_b03_729a85_test"
+    },
+    {
+      "batch": 4,
+      "seconds": 19.7,
+      "articles": [
+        {
+          "file": "test_016_original_group_007.json",
+          "type": "original",
+          "expected_group": 7,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_017_repeat_group_007.json",
+          "type": "repeat",
+          "expected_group": 7,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both passages report the same The Information story on Apple's AI server with M8 Ultra chips and NVLink Fusion, with no new facts.",
+              "matching_facts": [
+                "AI server with two or four M8 Ultra chips",
+                "considering Nvidia NVLink Fusion",
+                "no launch before 2029"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple is developing an AI server that could combine two or four planned M8 Ultra processors"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple Inc. (NASDAQ:AAPL) is developing an AI server that could use two or four planned M8 Ultra chips"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_018_update_group_007.json",
+          "type": "update",
+          "expected_group": 7,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "The segment reports a later development, prototype testing, in the same M8 Ultra AI server project covered by the candidate event.",
+              "matching_facts": [
+                "M8 Ultra AI server",
+                "NVLink Fusion",
+                "launch not before 2029"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "development stage",
+                  "incoming": "prototype tests started",
+                  "candidate": "considering NVLink Fusion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple has started prototype tests of Nvidia NVLink Fusion connectivity for the AI server project described in the earlier report."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Apple is developing an AI server that could combine two or four planned M8 Ultra processors"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_019_conflict_group_007.json",
+          "type": "conflict",
+          "expected_group": 7,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Same M8 Ultra server project; competing account's 2028 launch year conflicts with candidate's no-launch-before-2029 claim.",
+              "matching_facts": [
+                "M8 Ultra AI server project",
+                "Nvidia NVLink Fusion"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "launch year expectation",
+                  "incoming": "intended launch year 2028",
+                  "candidate": "no launch expected before 2029"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "its intended launch year was 2028 at the time of the September 16 report"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple does not expect a launch before 2029"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_020_different_group_008.json",
+          "type": "different",
+          "expected_group": 8,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming segment covers a developer workshop, while E1 concerns a proposed Apple M8 Ultra AI server project with Nvidia NVLink Fusion.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 6653,
+        "output": 4153
+      },
+      "database": "stock_news_eval_claude_b04_f9449b_test"
+    },
+    {
+      "batch": 5,
+      "seconds": 21.0,
+      "articles": [
+        {
+          "file": "test_021_original_group_009.json",
+          "type": "original",
+          "expected_group": 9,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_022_repeat_group_009.json",
+          "type": "repeat",
+          "expected_group": 9,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both report the same Huawei chip unveiling and Ascend 960 DT timeline; incoming adds Enflame and H200 context and some details.",
+              "matching_facts": [
+                "Huawei unveiled over 10 AI chipsets",
+                "Ascend 960 DT due Q1 2027",
+                "Eric Xu on domestic demand exceeding supply"
+              ],
+              "differences": [
+                {
+                  "kind": "other",
+                  "aspect": "Ascend 960PR timing",
+                  "incoming": "scheduled for third quarter of 2027",
+                  "candidate": "slated for release in third quarter of 2027"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "Enflame IPO and Nvidia H200 shipments",
+                  "incoming": "mentioned as part of original report",
+                  "candidate": "detailed in passage C2 with ~$912M IPO and H200 batches"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "Huawei plans annual new Ascend generation",
+                  "incoming": "Huawei plans to develop a new Ascend generation each year",
+                  "candidate": "one-generation-per-year pace for Ascend development"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Ascend 960 DT accelerator is progressing ahead of schedule toward an official launch in the first quarter of 2027."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027, with development progressing ahead of schedule"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_023_update_group_009.json",
+          "type": "update",
+          "expected_group": 9,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Huawei Ascend 960 DT chip announcement; the segment adds a new partner evaluation program follow-up.",
+              "matching_facts": [
+                "Ascend 960 DT launch Q1 2027",
+                "twice predecessor's expected performance"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "partner evaluation program",
+                  "incoming": "applications opened for Ascend 960 DT evaluation",
+                  "candidate": "not mentioned"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "development stage",
+                  "incoming": "evaluation program gathers feedback before official release",
+                  "candidate": "on track to launch officially in Q1 2027"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Huawei has opened applications for a partner evaluation program for the Ascend 960 DT"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_024_conflict_group_009.json",
+          "type": "conflict",
+          "expected_group": 9,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report the same Huawei Connect Ascend 960 DT launch, but the incoming account gives Q2 2027 while the candidate gives Q1 2027.",
+              "matching_facts": [
+                "Ascend 960 DT accelerator",
+                "Huawei Connect presentation in Shanghai",
+                "Thursday presentation"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "Ascend 960 DT official launch timing",
+                  "incoming": "second quarter of 2027",
+                  "candidate": "first quarter of 2027"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "the Ascend 960 DT was scheduled for an official launch in the second quarter of 2027"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_025_different_group_010.json",
+          "type": "different",
+          "expected_group": 10,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming covers an Nvidia developer-relations appointment; candidate covers Huawei AI chipsets and Nvidia China shipments, a different occurrence.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 8208,
+        "output": 4366
+      },
+      "database": "stock_news_eval_claude_b05_7383bb_test"
+    },
+    {
+      "batch": 6,
+      "seconds": 25.0,
+      "articles": [
+        {
+          "file": "test_026_original_group_011.json",
+          "type": "original",
+          "expected_group": 11,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_027_repeat_group_011.json",
+          "type": "repeat",
+          "expected_group": 11,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming segment restates the same Musk post about 250 kW Starmind solar power already covered in the candidate passage.",
+              "matching_facts": [
+                "Musk post on X about 250 kW Starmind solar power",
+                "about 20% more than ISS",
+                "NVIDIA NV72 AI rack revenue prediction"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Each SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power, which is about 20% more than the International Space Station, Musk said."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Each @SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power, which is about 20% more than the International Space Station"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_028_update_group_011.json",
+          "type": "update",
+          "expected_group": 11,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment reports a Friday timeline acceleration after 300 kW tests; candidate covers Musk's Thursday X post about 250 kW solar power versus the ISS.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_029_conflict_group_011.json",
+          "type": "conflict",
+          "expected_group": 11,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both concern Musk and Starmind per-satellite solar power, but the incoming reports 45 kW against the candidate's 250 kW claim.",
+              "matching_facts": [
+                "Starmind AI satellites",
+                "Elon Musk",
+                "solar power per spacecraft"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "solar power per spacecraft",
+                  "incoming": "45 kW",
+                  "candidate": "250 kW"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "capping solar power capacity at a meager 45 kW per spacecraft"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "will have over 250kW of solar power"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Both involve Starmind power claims, but the incoming gives no event date and describes a stall while E2 describes an accelerated timeline.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": true,
+              "uncertainty": "The incoming segment lacks an event date and does not clearly state the same occurrence as the 300 kW accelerated-timeline announcement.",
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_030_different_group_012.json",
+          "type": "different",
+          "expected_group": 12,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns a healthcare AI partnership; E1 concerns SpaceX Starmind satellite power tests and timeline.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns a healthcare AI partnership; E2 concerns Musk comments on Starmind satellite power levels.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 17997,
+        "output": 8984
+      },
+      "database": "stock_news_eval_claude_b06_a629f3_test"
+    },
+    {
+      "batch": 7,
+      "seconds": 19.7,
+      "articles": [
+        {
+          "file": "test_031_original_group_013.json",
+          "type": "original",
+          "expected_group": 13,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_032_repeat_group_013.json",
+          "type": "repeat",
+          "expected_group": 13,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe the same board-approved $150B buyback and share price record, with the incoming text restating the candidate's figures.",
+              "matching_facts": [
+                "$150B buyback approved by board",
+                "remaining capacity about $235B through fiscal 2028",
+                "record intraday high $237.55"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Corp. shares reached a record high on Friday following board approval for an additional $150 billion in share repurchase authorization."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Corp. (NASDAQ:NVDA) shares hit a fresh all-time high on Friday after the board approved an additional $150 billion share repurchase authorization."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_033_update_group_013.json",
+          "type": "update",
+          "expected_group": 13,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both describe the same $150B Nvidia buyback; the incoming segment adds that the first tranche was already executed.",
+              "matching_facts": [
+                "$150B buyback program",
+                "Nvidia Corp.",
+                "shares rising on the buyback news"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "buyback execution status",
+                  "incoming": "first tranche already executed ahead of schedule",
+                  "candidate": "board approval of the authorization only"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "share price timing",
+                  "incoming": "past $240 in after-hours trading",
+                  "candidate": "about $235.50 at midday"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "the chipmaker has already executed its first tranche of open-market repurchases ahead of schedule"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "after the board approved an additional $150 billion share repurchase authorization"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_034_conflict_group_013.json",
+          "type": "conflict",
+          "expected_group": 13,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report the same Friday Nvidia $150B buyback decision, but one says it was rejected and the other approved.",
+              "matching_facts": [
+                "Nvidia board buyback decision",
+                "$150 billion buyback",
+                "Friday share price move"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "board buyback decision",
+                  "incoming": "board rejected proposed share repurchase plans",
+                  "candidate": "board approved additional $150B share repurchase authorization"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "share price direction",
+                  "incoming": "fell 4.5% to $210.20 at midday",
+                  "candidate": "rose about 2% to $235.5 at midday"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "after the board rejected proposed share repurchase plans"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "after the board approved an additional $150 billion share repurchase authorization"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_035_different_group_014.json",
+          "type": "different",
+          "expected_group": 14,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment describes a networking platform unveiling; candidate events concern a share buyback authorization and its execution.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 5028,
+        "output": 4102
+      },
+      "database": "stock_news_eval_claude_b07_0eae1f_test"
+    },
+    {
+      "batch": 8,
+      "seconds": 21.8,
+      "articles": [
+        {
+          "file": "test_036_original_group_015.json",
+          "type": "original",
+          "expected_group": 15,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_037_repeat_group_015.json",
+          "type": "repeat",
+          "expected_group": 15,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe Morgan Stanley returning Nvidia to its top semiconductor pick on valuation and AI demand; the incoming adds only price data.",
+              "matching_facts": [
+                "Morgan Stanley restores Nvidia as top semiconductor pick",
+                "valuation cited as reason",
+                "Joseph Moore analyst comments"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Corp. has reclaimed its position as the top semiconductor selection for Morgan Stanley"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Corp. (NASDAQ:NVDA) has returned as Morgan Stanley\u2019s preferred semiconductor stock"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_038_update_group_015.json",
+          "type": "update",
+          "expected_group": 15,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Morgan Stanley top-pick reinstatement; the incoming segment adds cloud order, trading volume and revenue-per-gigawatt figures.",
+              "matching_facts": [
+                "Morgan Stanley top chip pick",
+                "Nvidia reinstated",
+                "analyst Joseph Moore"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "cloud purchase orders",
+                  "incoming": "$4 billion additional orders from secondary cloud providers",
+                  "candidate": "not mentioned"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "trading volume",
+                  "incoming": "tripled 30-day moving average",
+                  "candidate": "not mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Following Morgan Stanley's decision to reinstate Nvidia Corp. as its top chip pick"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Morgan Stanley names Nvidia its top chip pick again"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_039_conflict_group_015.json",
+          "type": "conflict",
+          "expected_group": 15,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Incoming says Morgan Stanley dropped Nvidia from its preferred list, while the candidate says it returned Nvidia as top pick, an opposite claim.",
+              "matching_facts": [
+                "Morgan Stanley and Nvidia",
+                "Preferred semiconductor list status",
+                "Analyst Joseph Moore"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "Nvidia preferred list status",
+                  "incoming": "Morgan Stanley dropped Nvidia from preferred list",
+                  "candidate": "Morgan Stanley returned Nvidia as preferred pick"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Morgan Stanley has actually dropped Nvidia Corp. from its preferred semiconductor list"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Corp. (NASDAQ:NVDA) has returned as Morgan Stanley\u2019s preferred semiconductor stock"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_040_different_group_016.json",
+          "type": "different",
+          "expected_group": 16,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Smuggling crackdown differs from Morgan Stanley analyst rating and Nvidia buyback commentary; different action and object.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 7906,
+        "output": 4983
+      },
+      "database": "stock_news_eval_claude_b08_40c591_test"
+    },
+    {
+      "batch": 9,
+      "seconds": 31.5,
+      "articles": [
+        {
+          "file": "test_041_original_group_017.json",
+          "type": "original",
+          "expected_group": 17,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_042_repeat_group_017.json",
+          "type": "repeat",
+          "expected_group": 17,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming roundup restates the same week's $150 billion buyback, safety platform and Micron results reported in E1 without new facts.",
+              "matching_facts": [
+                "$150 billion added to buyback",
+                "$235 billion total remaining",
+                "Open Agent Safety Platform launch"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA's board approved an additional $150 billion for its repurchase initiative"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "authorized an additional $150 billion under the company\u2019s existing share repurchase program"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_043_update_group_017.json",
+          "type": "update",
+          "expected_group": 17,
+          "expected_label": "same_event_update",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Segment mixes the buyback and safety platform in E1 with enterprise adoption and memory deal claims absent from the weekly roundup.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": true,
+              "uncertainty": "Unclear whether the enterprise adoption and memory supply claims belong to the same event as the E1 roundup.",
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_044_conflict_group_017.json",
+          "type": "conflict",
+          "expected_group": 17,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both concern NVIDIA's buyback and AI safety platform, but the incoming reports a scale-back and delay where E1 reports an expansion and launch.",
+              "matching_facts": [
+                "NVIDIA buyback",
+                "$150 billion authorization",
+                "Open Agent Safety Platform"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "buyback authorization",
+                  "incoming": "board has scaled back capital return plans",
+                  "candidate": "authorized an additional $150 billion"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "platform status",
+                  "incoming": "rollout delayed until late next year",
+                  "candidate": "launched on Monday its Open Agent Safety Platform"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Corporation's board has scaled back capital return plans"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "authorized an additional $150 billion under the company\u2019s existing share repurchase program"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming reports a buyback scale-back and platform delay, while E2 reports enterprise adoption above forecasts and memory agreements extended through 2027.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_045_different_group_018.json",
+          "type": "different",
+          "expected_group": 18,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming covers a Munich facility groundbreaking; E1 covers buyback, Open Agent Safety Platform and Micron results.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming covers a Munich facility groundbreaking; E2 covers enterprise adoption of the Sentry watchdog system.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 13432,
+        "output": 9917
+      },
+      "database": "stock_news_eval_claude_b09_89e004_test"
+    },
+    {
+      "batch": 10,
+      "seconds": 18.2,
+      "articles": [
+        {
+          "file": "test_046_original_group_019.json",
+          "type": "original",
+          "expected_group": 19,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_047_repeat_group_019.json",
+          "type": "repeat",
+          "expected_group": 19,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe the same reported Amazon plan to move about $8 billion of Nvidia chips into a financing vehicle with lease-back.",
+              "matching_facts": [
+                "$8 billion Nvidia chips",
+                "special-purpose vehicle lease-back",
+                "equity stake up to 10%"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "seeking to transfer roughly $8 billion worth of advanced Nvidia Corp. artificial intelligence chips"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "seeking to transfer about $8 billion of advanced Nvidia Corp. (NASDAQ:NVDA) artificial intelligence (AI) chips"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_048_update_group_019.json",
+          "type": "update",
+          "expected_group": 19,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same proposed Amazon Nvidia chip financing vehicle; the segment adds reported oversubscribed institutional demand.",
+              "matching_facts": [
+                "$8 billion Nvidia chip financing vehicle",
+                "Amazon proposed financing vehicle",
+                "Friday reports"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "investor demand",
+                  "incoming": "oversubscribed proposed debt tranche",
+                  "candidate": "not mentioned"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "discussion status",
+                  "incoming": "strong early demand",
+                  "candidate": "discussions still preliminary"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "institutional investor demand has already oversubscribed the proposed debt tranche"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon reportedly explores an $8 billion Nvidia chip financing vehicle"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_049_conflict_group_019.json",
+          "type": "conflict",
+          "expected_group": 19,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same financing vehicle as the candidate reports; the incoming article adds that Amazon later cancelled the plan.",
+              "matching_facts": [
+                "$8 billion Nvidia chip financing vehicle",
+                "Amazon.com Inc."
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "status",
+                  "incoming": "plans abandoned, vehicle cancelled",
+                  "candidate": "reportedly exploring, preliminary talks"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Amazon.com Inc. executives have completely abandoned plans to create a special-purpose financing vehicle for its Nvidia AI chips."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon reportedly explores an $8 billion Nvidia chip financing vehicle, leasing AI chips back to make its balance sheet more asset-light."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_050_different_group_020.json",
+          "type": "different",
+          "expected_group": 20,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The segment concerns an AWS renewable energy partnership, while the candidate concerns a reported Amazon Nvidia chip financing vehicle.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 7315,
+        "output": 3999
+      },
+      "database": "stock_news_eval_claude_b10_23cc4c_test"
+    },
+    {
+      "batch": 11,
+      "seconds": 24.6,
+      "articles": [
+        {
+          "file": "test_051_original_group_021.json",
+          "type": "original",
+          "expected_group": 21,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_052_repeat_group_021.json",
+          "type": "repeat",
+          "expected_group": 21,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Apollo trading desk volume report; the incoming segment adds SEC statement details and slightly fuller deal context.",
+              "matching_facts": [
+                "$35 billion private credit assets traded",
+                "about one-third from other firms' loans",
+                "500 assets, 160 counterparties"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "SEC statement and valuation guidance",
+                  "incoming": "Article details SEC staff statement on private asset valuations",
+                  "candidate": "Passage mentions SEC statement only briefly"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "Space Exploration debt financing",
+                  "incoming": "Reports seeking $40 billion in bank loans and bonds, Apollo leading",
+                  "candidate": "Reports planning to raise $40 billion, led by Apollo"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apollo has handled more than $35 billion in private credit assets through its new trading desk, with about a third of the volume tied to loans from other firms."
+                  },
+                  {
+                    "ref": "U1",
+                    "quote": "John Cortese, partner and co-head of corporate credit at Apollo, told Bloomberg the desk has traded roughly 500 assets involving 160 counterparties."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apollo has traded more than $35 billion in private credit assets since the firm launched its private credit trading desk."
+                  },
+                  {
+                    "ref": "C1",
+                    "quote": "Approximately one-third of that volume involved loans originated by other firms."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_053_update_group_021.json",
+          "type": "update",
+          "expected_group": 21,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Apollo private credit desk volume reporting; the incoming segment gives a later, higher volume and adds new details.",
+              "matching_facts": [
+                "Apollo private credit trading desk",
+                "about one-third from other firms' loans",
+                "John Cortese quoted on desk activity"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "traded volume",
+                  "incoming": "more than $42 billion",
+                  "candidate": "more than $35 billion"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "counterparties",
+                  "incoming": "185",
+                  "candidate": "160"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "Asia session",
+                  "incoming": "second Asia trading session added",
+                  "candidate": "not mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "its private credit trading desk has now traded more than $42 billion in private credit assets"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apollo has traded more than $35 billion in private credit assets since the firm launched its private credit trading desk."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_054_conflict_group_021.json",
+          "type": "conflict",
+          "expected_group": 21,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe Apollo's private credit desk volume since launch, but the reported traded amount and other-firm loan share differ.",
+              "matching_facts": [
+                "Apollo private credit trading desk",
+                "John Cortese quoted",
+                "launched earlier this month"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "desk trading volume",
+                  "incoming": "about $22 billion traded",
+                  "candidate": "more than $35 billion traded"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "other firms' loan share",
+                  "incoming": "about 10% of volume",
+                  "candidate": "approximately one-third of volume"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "SpaceX financing",
+                  "incoming": "$40B package abandoned for $8B equity",
+                  "candidate": "$40B debt planned, led by Apollo"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "has traded only about $22 billion in private credit assets"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "has traded more than $35 billion in private credit assets"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_055_different_group_022.json",
+          "type": "different",
+          "expected_group": 22,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns Lambda's funding round and Super Micro stock; candidate concerns Apollo's private credit trading desk and SPCX financing.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 11163,
+        "output": 5221
+      },
+      "database": "stock_news_eval_claude_b11_d527c3_test"
+    },
+    {
+      "batch": 12,
+      "seconds": 20.6,
+      "articles": [
+        {
+          "file": "test_056_original_group_023.json",
+          "type": "original",
+          "expected_group": 23,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_057_repeat_group_023.json",
+          "type": "repeat",
+          "expected_group": 23,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming article restates the same Wednesday ASTS share decline and technical details already reported in the candidate passages.",
+              "matching_facts": [
+                "ASTS down about 6% Wednesday",
+                "sector selloff with SPCX weakness",
+                "price 59.24 with moving averages and RSI 48.08"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares fell about 6% on Wednesday as communications and satellite names sold off"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares were down about 6% on Wednesday as the stock slid"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_058_update_group_023.json",
+          "type": "update",
+          "expected_group": 23,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The Thursday rebound and Rakuten launch confirmation differ from E1's Wednesday selloff and earlier government backing, so the event and date differ.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_059_conflict_group_023.json",
+          "type": "conflict",
+          "expected_group": 23,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe the same Wednesday ASTS session, but report opposite price moves and different government backing.",
+              "matching_facts": [
+                "AST SpaceMobile shares Wednesday move",
+                "Space Exploration Technologies Corp. moved on Wednesday",
+                "Rakuten partnership government backing"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "ASTS Wednesday price move",
+                  "incoming": "rose about 4%",
+                  "candidate": "fell about 6%"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "Government backing",
+                  "incoming": "statement from the U.S. government alone",
+                  "candidate": "backing from the U.S. and Japanese governments"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "shares rose about 4% on Wednesday"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "shares fell about 6% on Wednesday"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_060_different_group_024.json",
+          "type": "different",
+          "expected_group": 24,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment covers broad market, VIX and yields; candidate covers AST SpaceMobile stock decline on a SpaceX debt report.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 8553,
+        "output": 4285
+      },
+      "database": "stock_news_eval_claude_b12_fbfa05_test"
+    },
+    {
+      "batch": 13,
+      "seconds": 27.3,
+      "articles": [
+        {
+          "file": "test_061_original_group_025.json",
+          "type": "original",
+          "expected_group": 25,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_062_repeat_group_025.json",
+          "type": "repeat",
+          "expected_group": 25,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe the same reported $40 billion Apollo-led Nvidia chip financing and Ives's view that Starlink can service it, with no new facts.",
+              "matching_facts": [
+                "$40 billion Nvidia chip debt",
+                "Apollo-led financing",
+                "Ives says Starlink can service debt",
+                "Pacific Investment among lenders"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Analyst Dan Ives believes Starlink and SpaceX's AI contracts can service a roughly $40 billion Apollo-led debt package for Nvidia chips."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Analyst Dan Ives bets Starlink and SpaceX's contracted AI capacity can service the debt needed to purchase more Nvidia chips."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_063_update_group_025.json",
+          "type": "update",
+          "expected_group": 25,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Apollo-led $40 billion Nvidia chip financing; the incoming segment reports finalization and new terms after the candidate's reported talks.",
+              "matching_facts": [
+                "$40 billion Apollo-led financing",
+                "Nvidia chip purchase",
+                "Pacific Investment Management among lenders"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "status",
+                  "incoming": "financing finalized",
+                  "candidate": "reported talks, preparing to borrow"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "closing timing",
+                  "incoming": "closing moved up to Q1 2027",
+                  "candidate": "expected to close in 2027"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "price target",
+                  "incoming": "raised to $240 from $225",
+                  "candidate": "kept $225 target"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX has finalized its $40 billion Apollo-led chip financing"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "SpaceX is seeking the money through a financing led by Apollo Global Management Inc."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_064_conflict_group_025.json",
+          "type": "conflict",
+          "expected_group": 25,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same SpaceX Nvidia-chip financing; the incoming segment reports the $40B debt plan was replaced by an $8B equity raise, a later development.",
+              "matching_facts": [
+                "SpaceX Nvidia chip financing",
+                "$40 billion debt plan",
+                "Dan Ives commentary"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "financing structure",
+                  "incoming": "$8B equity raise replaces debt plan",
+                  "candidate": "$10B bank loans and $30B investment-grade debt"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "Apollo role",
+                  "incoming": "Apollo not expected to take part",
+                  "candidate": "financing led by Apollo"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "has dropped plans to borrow for Nvidia Corp. (NASDAQ:NVDA) chips and will instead raise about $8 billion in new equity"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "is reportedly preparing to borrow about $40 billion to purchase Nvidia Corp. (NASDAQ:NVDA) chips."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_065_different_group_026.json",
+          "type": "different",
+          "expected_group": 26,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns Lumentum stock breakout; candidate concerns SpaceX debt financing for Nvidia chips, different companies and action.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 9361,
+        "output": 6161
+      },
+      "database": "stock_news_eval_claude_b13_643b61_test"
+    },
+    {
+      "batch": 14,
+      "seconds": 32.8,
+      "articles": [
+        {
+          "file": "test_066_original_group_027.json",
+          "type": "original",
+          "expected_group": 27,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_067_repeat_group_027.json",
+          "type": "repeat",
+          "expected_group": 27,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Both describe the same Wednesday LUNR share drop tied to space stocks tracking the SpaceX debt report, with the incoming text restating the candidate.",
+              "matching_facts": [
+                "Intuitive Machines shares fall Wednesday",
+                "space stocks slide on SpaceX sentiment",
+                "down 7.10% at $14.00"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines dropped about 7% to $14.00 as space stocks fell on sympathy with SpaceX's planned $40 billion debt raise for Nvidia chips."
+                  }
+                ],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_repeated to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_068_update_group_027.json",
+          "type": "update",
+          "expected_group": 27,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The Thursday rebound and new lunar contract differ from the Wednesday share decline tied to the SpaceX debt report.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The Thursday rebound and new lunar contract differ from the Wednesday share decline tied to the SpaceX debt report.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_069_conflict_group_027.json",
+          "type": "conflict",
+          "expected_group": 27,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E2",
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both cover the same Wednesday LUNR move tied to SpaceX financing, but report opposite price directions and conflicting Apollo roles.",
+              "matching_facts": [
+                "Wednesday LUNR stock move",
+                "SpaceX $10B loans and $30B debt"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "LUNR share direction",
+                  "incoming": "rose about 5%",
+                  "candidate": "fell about 7.10%"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "Apollo role",
+                  "incoming": "Apollo not involved",
+                  "candidate": "Apollo expected to lead deal"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines rose about 5% to $14.85 as space stocks rallied"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Intuitive Machines dropped about 7% to $14.00 as space stocks fell on sympathy"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both cover the same Wednesday LUNR move tied to SpaceX financing, but report opposite price directions and conflicting Apollo roles.",
+              "matching_facts": [
+                "Wednesday LUNR stock move",
+                "SpaceX $10B loans and $30B debt"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "LUNR share direction",
+                  "incoming": "rose about 5%",
+                  "candidate": "down 7.10%"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "Apollo role",
+                  "incoming": "Apollo not involved",
+                  "candidate": "Apollo expected to lead transaction"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines rose about 5% to $14.85 as space stocks rallied"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Intuitive Machines shares were down 7.10% at $14.00 at the time of publication on Wednesday"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E3",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The candidate covers a Thursday rebound and a new lunar delivery contract, a different date and action from the Wednesday rally.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_070_different_group_028.json",
+          "type": "different",
+          "expected_group": 28,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E4"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The article compares SpaceX and IREN AI margins, while E1 concerns Intuitive Machines share price moves on a SpaceX debt report.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The article compares SpaceX and IREN AI margins, while E2 concerns Intuitive Machines stock movement, a different occurrence.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 8,
+      "tokens": {
+        "input": 25474,
+        "output": 17630
+      },
+      "database": "stock_news_eval_claude_b14_59631e_test"
+    },
+    {
+      "batch": 15,
+      "seconds": 33.1,
+      "articles": [
+        {
+          "file": "test_071_original_group_029.json",
+          "type": "original",
+          "expected_group": 29,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_072_repeat_group_029.json",
+          "type": "repeat",
+          "expected_group": 29,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both cover the same Benzinga market commentary on the bond selloff and stocks; the segment adds crude and bitcoin details.",
+              "matching_facts": [
+                "30-year yield 5.719%",
+                "$39B 10-year Treasury auction",
+                "global bond selloff"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "crude inventories and bitcoin",
+                  "incoming": "Crude draw of 2.090 million barrels; bitcoin seeing selling",
+                  "candidate": "not mentioned in passages"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The U.S. 30-year Treasury yield has risen to 5.719%, its highest level since 2002."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "U.S. 30 year Treasury yield has risen to 5.719%, the highest level since 2002."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_073_update_group_029.json",
+          "type": "update",
+          "expected_group": 29,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment reports the auction result and FOMC minutes, while E1 covers a pre-auction morning bond selloff preview.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_074_conflict_group_029.json",
+          "type": "conflict",
+          "expected_group": 29,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming reports falling yields, a $25 billion auction and an RBI cut; candidate reports rising yields, a $39 billion auction and an RBI hike.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming describes a $25 billion auction on Tuesday; candidate describes a $39 billion auction and yield decline on Wednesday.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_075_different_group_030.json",
+          "type": "different",
+          "expected_group": 30,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E4"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns AMD stock, analyst targets and supply ramp; candidate concerns a global bond selloff and market commentary.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E3",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns AMD stock and supply plans; candidate concerns the S&P 500 sell-off and Treasury auction on a different date.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 19146,
+        "output": 9870
+      },
+      "database": "stock_news_eval_claude_b15_748e7f_test"
+    },
+    {
+      "batch": 16,
+      "seconds": 17.6,
+      "articles": [
+        {
+          "file": "test_076_original_group_031.json",
+          "type": "original",
+          "expected_group": 31,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_077_repeat_group_031.json",
+          "type": "repeat",
+          "expected_group": 31,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming article restates the same Vera Rubin NVL72 shipment announcement already reported in the candidate passage, with no new facts.",
+              "matching_facts": [
+                "Super Micro shipping Vera Rubin NVL72 racks",
+                "72 Rubin GPUs and 36 Vera CPUs per rack",
+                "16-rack unit with 1,152 Rubin GPUs"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Super Micro Computer has initiated shipments of NVIDIA Vera Rubin NVL72 liquid-cooled racks containing 72 Rubin GPUs."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Super Micro said Wednesday that it has started shipping NVIDIA Corp. (NASDAQ:NVDA) Vera Rubin NVL72 racks"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_078_update_group_031.json",
+          "type": "update",
+          "expected_group": 31,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_079_conflict_group_031.json",
+          "type": "conflict",
+          "expected_group": 31,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Same Super Micro Vera Rubin rack shipment, but the incoming segment reports 128 GPUs and 64 CPUs per rack versus 72 and 36.",
+              "matching_facts": [
+                "Super Micro shipping NVIDIA Vera Rubin racks",
+                "direct liquid cooling"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "Rubin GPUs per rack",
+                  "incoming": "128 Rubin GPUs",
+                  "candidate": "72 Rubin GPUs"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "Vera CPUs per rack",
+                  "incoming": "64 Vera CPUs",
+                  "candidate": "36 Vera CPUs"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Super Micro began shipping NVIDIA Vera Rubin racks equipped with 128 Rubin GPUs and 64 Vera CPUs."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The systems combine 72 NVIDIA Rubin GPUs and 36 Vera CPUs in a single liquid-cooled rack."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_080_different_group_032.json",
+          "type": "different",
+          "expected_group": 32,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Incoming segment is a broad weekly market roundup; E1 concerns Super Micro's Vera Rubin rack shipments and stock premarket moves.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 7396,
+        "output": 3943
+      },
+      "database": "stock_news_eval_claude_b16_2fdd29_test"
+    },
+    {
+      "batch": 17,
+      "seconds": 17.4,
+      "articles": [
+        {
+          "file": "test_081_original_group_033.json",
+          "type": "original",
+          "expected_group": 33,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_082_repeat_group_033.json",
+          "type": "repeat",
+          "expected_group": 33,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Incoming unit restates the same Musk GPU expansion timetable already reported in candidate passage C2.",
+              "matching_facts": [
+                "220,000 GB300 GPU expansion",
+                "Musk Colossus GPU timetable",
+                "next week and November additions"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Elon Musk outlined an expansion schedule for SpaceXAI's Colossus computing infrastructure"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Musk responded to the user, detailing the GPU makeup of xAI\u2019s Colossus superclusters"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_083_update_group_033.json",
+          "type": "update",
+          "expected_group": 33,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_084_conflict_group_033.json",
+          "type": "conflict",
+          "expected_group": 33,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe the same Colossus expansion batch for next week, but the incoming account names AMD MI300X while the candidate names NVIDIA GB300.",
+              "matching_facts": [
+                "Colossus expansion",
+                "next batch of 220,000 accelerators"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "accelerator supplier and model",
+                  "incoming": "AMD MI300X",
+                  "candidate": "NVIDIA GB300"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "the next scheduled batch would consist of 220,000 AMD MI300X accelerators rather than NVIDIA GB300 GPUs"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Another 220k GB300 will be fully operational next week and another 220k in November."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_085_different_group_034.json",
+          "type": "different",
+          "expected_group": 34,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns Zuckerberg's views on AI safety and Meta's Muse delay; E1 concerns Musk's SpaceX AI model timeline.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 7550,
+        "output": 3909
+      },
+      "database": "stock_news_eval_claude_b17_50e187_test"
+    },
+    {
+      "batch": 18,
+      "seconds": 26.6,
+      "articles": [
+        {
+          "file": "test_086_original_group_035.json",
+          "type": "original",
+          "expected_group": 35,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_087_repeat_group_035.json",
+          "type": "repeat",
+          "expected_group": 35,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming article restates the NVIDIA-Coherent share issuance terms already reported in candidate passage C2.",
+              "matching_facts": [
+                "7.8 million shares to NVIDIA",
+                "$256.80 per share",
+                "$2 billion raised from NVIDIA"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Coherent issued approximately 7.8 million shares to NVIDIA at $256.80 per share."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Coherent issued approximately 7.8 million shares to NVIDIA at $256.80 per share and raised $2 billion."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_088_update_group_035.json",
+          "type": "update",
+          "expected_group": 35,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "The segment reports a first delivery schedule for the same NVIDIA-Coherent partnership whose investment terms the candidate already describes.",
+              "matching_facts": [
+                "NVIDIA investment about $2 billion",
+                "7.8 million Coherent shares at $256.80",
+                "multiyear optical partnership"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "delivery schedule",
+                  "incoming": "initial production shipment scheduled for next quarter",
+                  "candidate": "no delivery schedule reported"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The companies now say the initial production shipment under that arrangement is scheduled for the next quarter."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Coherent issued 7.8 million shares to NVIDIA at $256.80 per share under a multiyear optical agreement."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_089_conflict_group_035.json",
+          "type": "conflict",
+          "expected_group": 35,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Same NVIDIA-Coherent investment, but the incoming amount, share count and price conflict with the candidate passage's figures.",
+              "matching_facts": [
+                "NVIDIA investment in Coherent",
+                "multiyear partnership"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "investment amount",
+                  "incoming": "$3.5 billion",
+                  "candidate": "$2 billion"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "shares issued",
+                  "incoming": "12 million",
+                  "candidate": "7.8 million"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "price per share",
+                  "incoming": "$310.00",
+                  "candidate": "$256.80"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA invested $3.5 billion into Coherent by purchasing 12 million shares at $310.00 per share."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Coherent issued 7.8 million shares to NVIDIA at $256.80 per share under a multiyear optical agreement."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_090_different_group_036.json",
+          "type": "different",
+          "expected_group": 36,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The candidate is an opinion piece on NVIDIA and Merck portfolio stakes; the segment is an options trading activity list.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 12532,
+        "output": 5768
+      },
+      "database": "stock_news_eval_claude_b18_7b06d8_test"
+    },
+    {
+      "batch": 19,
+      "seconds": 24.0,
+      "articles": [
+        {
+          "file": "test_091_original_group_037.json",
+          "type": "original",
+          "expected_group": 37,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_092_repeat_group_037.json",
+          "type": "repeat",
+          "expected_group": 37,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming segment restates the same Bilello comparison of Nvidia's $5.4T valuation with the Russell 2000 and the same earnings figures.",
+              "matching_facts": [
+                "NVIDIA market cap $5.4T",
+                "Russell 2000 combined $3.5T",
+                "$193B profit vs $13B index loss"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA's market capitalization reached approximately $5.4 trillion on September 25"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "total market capitalization reached $5.4 trillion on Sept. 25"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_093_update_group_037.json",
+          "type": "update",
+          "expected_group": 37,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming segment reports a revised valuation for a later trading date (Sept 28), a separate occurrence from the Sept 25 valuation comparison.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_094_conflict_group_037.json",
+          "type": "conflict",
+          "expected_group": 37,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe the same September 25 comparison, but the NVIDIA market cap values of $6.2 trillion and $5.4 trillion conflict.",
+              "matching_facts": [
+                "NVIDIA market cap on Sept 25",
+                "Russell 2000 comparison"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "NVIDIA market cap value",
+                  "incoming": "$6.2 trillion",
+                  "candidate": "$5.4 trillion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A synthetic competing account claimed NVIDIA's market capitalization on September 25 was $6.2 trillion"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "total market capitalization reached $5.4 trillion on Sept. 25"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "E2 concerns a revised September 28 valuation and index weight, while S1 concerns September 25 market cap.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_095_different_group_038.json",
+          "type": "different",
+          "expected_group": 38,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns AMD stock breakout and analyst targets; candidate concerns Nvidia market cap versus Russell 2000.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns AMD stock and analyst forecasts; candidate concerns Nvidia market value revision and index weight.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 17762,
+        "output": 7729
+      },
+      "database": "stock_news_eval_claude_b19_b4e732_test"
+    },
+    {
+      "batch": 20,
+      "seconds": 20.3,
+      "articles": [
+        {
+          "file": "test_096_original_group_039.json",
+          "type": "original",
+          "expected_group": 39,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_097_repeat_group_039.json",
+          "type": "repeat",
+          "expected_group": 39,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The segment restates the same AI chip power forecast already reported in the candidate passage, with matching figures.",
+              "matching_facts": [
+                "1,100% rise to 315 GW by 2033",
+                "US about 200 GW"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "electricity demand from AI chips could rise by more than 1,100% from 2025 levels by 2033"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The Kobeissi Letter projects electricity demand from AI chips will increase more than 1,100% from 2025 levels to roughly 315 gigawatts globally by 2033."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_098_update_group_039.json",
+          "type": "update",
+          "expected_group": 39,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "The segment reports a later implementation timetable for the same Ratepayer Protection Pledge that the candidate describes as signed.",
+              "matching_facts": [
+                "Ratepayer Protection Pledge",
+                "Amazon, Google, Meta, Microsoft and Oracle signed"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "implementation timetable",
+                  "incoming": "new quarterly timetable with first progress reports next quarter",
+                  "candidate": "no implementation timetable reported"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The new timetable asks participating companies to publish the first set of progress reports in the following quarter."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Amazon, Google, Meta, Microsoft and Oracle have signed the Ratepayer Protection Pledge"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_099_conflict_group_039.json",
+          "type": "conflict",
+          "expected_group": 39,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Incoming segment reports a 2033 AI chip demand of 150 GW and 500% growth, conflicting with the candidate's 315 GW and 1,100% figures.",
+              "matching_facts": [
+                "global AI-chip electricity demand",
+                "2033 endpoint",
+                "2025 baseline"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "2033 global AI chip demand",
+                  "incoming": "150 gigawatts",
+                  "candidate": "315 gigawatts"
+                },
+                {
+                  "kind": "conflict",
+                  "aspect": "growth from 2025",
+                  "incoming": "approximately 500%",
+                  "candidate": "more than 1,100%"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "estimated global electricity demand from AI chips at only 150 gigawatts by 2033"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "projected to surge 1,100% to 315 gigawatts globally by 2033"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_100_different_group_040.json",
+          "type": "different",
+          "expected_group": 40,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment covers Nvidia market cap, Russell 2000 and ETF concentration; candidate covers data center power demand and AI capex, a different subject.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 10027,
+        "output": 3813
+      },
+      "database": "stock_news_eval_claude_b20_d65cdd_test"
+    },
+    {
+      "batch": 21,
+      "seconds": 27.2,
+      "articles": [
+        {
+          "file": "test_101_original_group_041.json",
+          "type": "original",
+          "expected_group": 41,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_102_repeat_group_041.json",
+          "type": "repeat",
+          "expected_group": 41,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both describe the same Nebius October GPU price hike; the segment adds analysis on revenue impact and customer notices.",
+              "matching_facts": [
+                "Nebius GPU cloud price hike about 20%",
+                "effective Oct. 1",
+                "H100 $4.50 from $3.85",
+                "second increase in months"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "company confirmation",
+                  "incoming": "Nebius told customers; not confirmed in formal release",
+                  "candidate": "Nebius had not publicly confirmed the increase"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "revenue impact analysis",
+                  "incoming": "list increase not necessarily a revenue increase; contract terms unknown",
+                  "candidate": "not discussed"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nebius Group told customers that on-demand rates for its Nvidia GPU cloud will rise about 20% on Oct. 1"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "plans to raise prices across its GPU cloud services by about 20% as computing capacity remains tight."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "incoming evidence cites unknown ref 'C1'"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_103_update_group_041.json",
+          "type": "update",
+          "expected_group": 41,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Same Nebius October 1 GPU price hike; the incoming segment adds CPU, memory and contract details absent from the candidate.",
+              "matching_facts": [
+                "Nebius price hike effective Oct. 1",
+                "Nvidia GPU rates rise 17% to 21%",
+                "second hike in months"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "CPU and memory price hikes",
+                  "incoming": "CPU-only +25%, memory about +41%",
+                  "candidate": "not mentioned"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "customer contracts",
+                  "incoming": "four contracts averaging over $1 billion each",
+                  "candidate": "not mentioned"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nebius said on Thursday it will raise pay-as-you-go prices for leasing selected Nvidia chips from October 1"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Nebius will raise on-demand GPU cloud rates about 20% on Oct. 1, its second hike in four months."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_104_conflict_group_041.json",
+          "type": "conflict",
+          "expected_group": 41,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Same reported Nebius GPU price hike, but the B300 increase differs: 34% to $10.50 versus 21% to $9.50.",
+              "matching_facts": [
+                "GPU cloud price hike",
+                "effective Oct. 1",
+                "B300 rate from $7.85"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "B300 price increase",
+                  "incoming": "34% to $10.50",
+                  "candidate": "21% to $9.50"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The B300 price will climb about 34% to $10.50 from $7.85."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The B300 price will climb about 21% to $9.50 from $7.85."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_105_different_group_042.json",
+          "type": "different",
+          "expected_group": 42,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "CoreWeave's contract pricing announcement differs from Nebius's GPU cloud price hike reports, with different participants and action.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 10766,
+        "output": 6035
+      },
+      "database": "stock_news_eval_claude_b21_b0150e_test"
+    },
+    {
+      "batch": 22,
+      "seconds": 31.0,
+      "articles": [
+        {
+          "file": "test_106_original_group_043.json",
+          "type": "original",
+          "expected_group": 43,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_107_repeat_group_043.json",
+          "type": "repeat",
+          "expected_group": 43,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Same Huang remark on doubling chip sales; the incoming segment adds a $673 billion projection not stated in the candidate.",
+              "matching_facts": [
+                "Huang says chip sales double next year",
+                "Huang cites AI demand"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "projected revenue",
+                  "incoming": "approximately $673 billion for fiscal year ending January 2028",
+                  "candidate": "not stated"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Corp will double its chip sales next year compared to this year"
+                  }
+                ],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_update to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_108_update_group_043.json",
+          "type": "update",
+          "expected_group": 43,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1",
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both report Huang's same statement that Nvidia will double chip sales next year; the segment adds stock reaction and unit-volume context.",
+              "matching_facts": [
+                "Huang says Nvidia to double chip sales next year",
+                "Summit with King Charles III in Scotland"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "market reaction",
+                  "incoming": "Samsung and SK hynix shares rally",
+                  "candidate": "not reported"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "sales measure",
+                  "incoming": "doubling refers to unit volume, not revenue",
+                  "candidate": "not clarified"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia expects to sell twice as many chips next year as this year"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "I expect Nvidia to sell twice as many chips as this next year as we do this year,"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both report Huang's same statement that Nvidia will double chip sales next year; the segment adds stock reaction and unit-volume context.",
+              "matching_facts": [
+                "Huang says Nvidia to double chip sales next year",
+                "Summit with King Charles III in Scotland"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "market reaction",
+                  "incoming": "Samsung and SK hynix shares rally",
+                  "candidate": "not reported"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "sales measure",
+                  "incoming": "doubling refers to unit volume, not revenue",
+                  "candidate": "not clarified"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia expects to sell twice as many chips next year as this year"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C3",
+                    "quote": "I expect Nvidia to sell twice as many chips as this next year as we do this year,"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_109_conflict_group_043.json",
+          "type": "conflict",
+          "expected_group": 43,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1",
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report Huang's same summit remark on next-year chip sales, but the multiple differs: triple versus double.",
+              "matching_facts": [
+                "Huang U.K. summit remark",
+                "Nvidia chip sales next year",
+                "Thursday statement"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "chip sales multiple next year",
+                  "incoming": "triple (3x)",
+                  "candidate": "double (2x)"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "I expect Nvidia to sell three times as many chips as this next year as we do this year,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "I expect Nvidia to sell twice as many chips as this next year as we do this year,"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report Huang's same Thursday summit remark on next-year chip sales, but the multiple differs: triple versus double.",
+              "matching_facts": [
+                "Huang summit remark",
+                "Nvidia chip sales next year",
+                "Thursday statement"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "chip sales multiple next year",
+                  "incoming": "triple (3x)",
+                  "candidate": "double (2x)"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "I expect Nvidia to sell three times as many chips as this next year as we do this year,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C3",
+                    "quote": "I expect Nvidia to sell twice as many chips as this next year as we do this year,"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_110_different_group_044.json",
+          "type": "different",
+          "expected_group": 44,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns MLPerf benchmark results for Vera Rubin hardware; candidate concerns Huang's comments on chip sales and AI safety.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns MLPerf benchmark performance results; candidate concerns Huang's projection that chip sales will double.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 7,
+      "tokens": {
+        "input": 30801,
+        "output": 12378
+      },
+      "database": "stock_news_eval_claude_b22_516a54_test"
+    },
+    {
+      "batch": 23,
+      "seconds": 24.7,
+      "articles": [
+        {
+          "file": "test_111_original_group_045.json",
+          "type": "original",
+          "expected_group": 45,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_112_update_group_045.json",
+          "type": "update",
+          "expected_group": 45,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both describe Huang's Friday CBS interview with Jo Ling Kent rejecting calls to slow AI; the candidate adds the extinction-warning context.",
+              "matching_facts": [
+                "Huang CBS interview with Jo Ling Kent",
+                "Friday comments on AI development"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "topic",
+                  "incoming": "AI pace and safety before release",
+                  "candidate": "rejects extinction warnings as doomsday narratives"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia CEO Jensen Huang tells CBS News' @jolingkent that he does not believe the U.S. should slow down in the AI race against China"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Huang told CBS News senior business and technology correspondent Jo Ling Kent on Friday."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_113_repeat_group_045.json",
+          "type": "repeat",
+          "expected_group": 45,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Both report Huang rejecting AI extinction warnings in the same CBS News interview, with the same 0% chance statement.",
+              "matching_facts": [
+                "Huang rejects AI extinction risk",
+                "0% chance world ends in 2030",
+                "CBS News interview"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "There is a 0 per cent chance it\u2019s going to be the end of the world."
+                  }
+                ],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_repeated to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_114_conflict_group_045.json",
+          "type": "conflict",
+          "expected_group": 45,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report Huang's CBS interview rejecting AI extinction warnings, but give incompatible 2030 world-ending odds of 10% versus 0%.",
+              "matching_facts": [
+                "Huang rejects AI doomsday warnings",
+                "CBS News interview",
+                "Nvidia co-founder and CEO"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "chance AI ends the world by 2030",
+                  "incoming": "about 10%",
+                  "candidate": "0%"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "There is about a 10% chance that's going to be the end of the world,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "There is 0% chance that's going to be the end of the world,"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E2",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "Both report Huang's CBS interview on 2030 extinction odds, but the incoming 10% conflicts with the candidate's 0 per cent.",
+              "matching_facts": [
+                "Huang rejects AI doomsday scenarios",
+                "CBS News interview",
+                "2030 world end odds"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "chance AI ends the world by 2030",
+                  "incoming": "about 10%",
+                  "candidate": "0 per cent"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "There is about a 10% chance that's going to be the end of the world,"
+                  }
+                ],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "candidate evidence quote not found in C3",
+                "downgraded same_event_conflict to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_115_different_group_046.json",
+          "type": "different",
+          "expected_group": 46,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Segment concerns an NVIDIA Isaac ROS software release, while the candidate concerns Jensen Huang's comments on AI extinction warnings.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 5,
+      "tokens": {
+        "input": 19645,
+        "output": 7139
+      },
+      "database": "stock_news_eval_claude_b23_0fc49a_test"
+    },
+    {
+      "batch": 24,
+      "seconds": 22.8,
+      "articles": [
+        {
+          "file": "test_116_original_group_047.json",
+          "type": "original",
+          "expected_group": 47,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_117_repeat_group_047.json",
+          "type": "repeat",
+          "expected_group": 47,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe IonQ's planned installation of Superion 256 at NVAQC, linked to GB200 via NVQLink; the segment restates the candidate.",
+              "matching_facts": [
+                "Superion 256 install at NVAQC",
+                "first QPU at facility",
+                "GB200 via NVQLink"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ plans to install its Superion 256 quantum computer at Nvidia's Accelerated Quantum Research Center in 2027"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ will install a Superion 256 system at NVAQC"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_118_update_group_047.json",
+          "type": "update",
+          "expected_group": 47,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both describe the same announced Superion 256 deployment at NVAQC with the same partners, architecture and 2027 timing; the segment adds only background.",
+              "matching_facts": [
+                "Superion 256 installed at NVAQC",
+                "connected to GB200 NVL72 via NVQLink",
+                "CUDA-Q orchestration",
+                "installation scheduled 2027"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ is set to deploy the first on-premises quantum computer at Nvidia\u2019s Accelerated Quantum Research Center (NVAQC) in Boston."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "IonQ plans to install Superion 256 at Nvidia's quantum research center in 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_119_conflict_group_047.json",
+          "type": "conflict",
+          "expected_group": 47,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both describe IonQ's first quantum system at NVIDIA's NVAQC, but the incoming text names Superion 128 while the candidate names Superion 256.",
+              "matching_facts": [
+                "IonQ first QPU at NVAQC",
+                "Connection to NVIDIA GB200 NVL72"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "system model",
+                  "incoming": "Superion 128",
+                  "candidate": "Superion 256"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "status",
+                  "incoming": "will install (planned)",
+                  "candidate": "deployed"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ will install a Superion 128 system at NVAQC"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ will install a Superion 256 system at NVAQC"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_120_different_group_048.json",
+          "type": "different",
+          "expected_group": 48,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "The incoming event is an FIU contract; the candidate is an IonQ deployment at NVIDIA's NVAQC, with different participants and object.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 11412,
+        "output": 4561
+      },
+      "database": "stock_news_eval_claude_b24_99ca54_test"
+    },
+    {
+      "batch": 25,
+      "seconds": 18.9,
+      "articles": [
+        {
+          "file": "test_121_original_group_049.json",
+          "type": "original",
+          "expected_group": 49,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_122_update_group_049.json",
+          "type": "update",
+          "expected_group": 49,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Both involve Huang, but the incoming segment covers the AI spending cycle, while the candidate covers his shutdown and safety remarks.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_123_repeat_group_049.json",
+          "type": "repeat",
+          "expected_group": 49,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "The incoming article restates the same Huang interview on the AI cycle turning in two to three years, already in E1.",
+              "matching_facts": [
+                "AI boom eventually cools in two to three years",
+                "digestion period",
+                "Huang interview with Ezra Klein"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Huang says the artificial intelligence infrastructure boom will eventually produce more computing capacity than the market needs"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Jensen Huang says AI spending will eventually cool, but not for another two to three years"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "E2 concerns Huang's comments on shutting down AI labs and Sanders' bill, not the AI demand cycle.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_124_conflict_group_049.json",
+          "type": "conflict",
+          "expected_group": 49,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "Both report Huang's interview on the AI cycle turning, but give incompatible timeframes for the turning point.",
+              "matching_facts": [
+                "Jensen Huang Ezra Klein interview",
+                "AI spending eventually cools",
+                "Nvidia Q2 revenue $96.2 billion"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "timing of cooling",
+                  "incoming": "five to six years",
+                  "candidate": "two to three years"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "but he doesn\u2019t expect that turning point for another five to six years."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "but he doesn\u2019t expect that turning point for another two to three years."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            },
+            {
+              "candidate_event": "E1",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "E2 concerns Huang's shutdown remarks and Sanders' bill, not the AI cooling timeline in S1.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_125_different_group_050.json",
+          "type": "different",
+          "expected_group": 50,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E2",
+              "label": "different_event",
+              "method": "llm",
+              "explanation": "Nscale's convertible financing is unrelated to Jensen Huang's comments on AI spending cycles and Nvidia results.",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 6,
+      "tokens": {
+        "input": 23260,
+        "output": 6209
+      },
+      "database": "stock_news_eval_claude_b25_c79ede_test"
+    }
+  ]
+}
