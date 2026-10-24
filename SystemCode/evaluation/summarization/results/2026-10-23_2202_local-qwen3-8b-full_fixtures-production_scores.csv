@@ -1,0 +1,78 @@
+﻿event,sources,files,auto_valid,faithful,coverage,conflict,clarity,acceptable,notes
+E1,1,test_001_original_group_001.json,y,,,n/a,,,
+E2,1,test_002_repeat_group_001.json,y,,,n/a,,,
+E3,1,test_003_update_group_001.json,y,,,n/a,,,
+E4,1,test_004_conflict_group_001.json,y,,,,,,
+E5,1,test_005_different_group_002.json,y,,,n/a,,,
+E6,3,test_006_original_group_003.json test_007_repeat_group_003.json test_008_update_group_003.json,y,,,n/a,,,
+E7,1,test_009_conflict_group_003.json,y,,,,,,
+E8,1,test_010_different_group_004.json,y,,,n/a,,,
+E9,3,test_011_original_group_005.json test_012_repeat_group_005.json test_014_conflict_group_005.json,n,,,,,n,not published: invalid
+E10,1,test_013_update_group_005.json,y,,,n/a,,,
+E11,1,test_015_different_group_006.json,n,,,n/a,,n,not published: invalid
+E12,1,test_016_original_group_007.json,y,,,n/a,,,
+E13,1,test_018_update_group_007.json,y,,,n/a,,,
+E14,1,test_019_conflict_group_007.json,y,,,,,,
+E15,1,test_020_different_group_008.json,y,,,n/a,,,
+E16,1,test_021_original_group_009.json,n,,,n/a,,n,not published: invalid
+E17,1,test_022_repeat_group_009.json,n,,,n/a,,n,not published: invalid
+E18,1,test_023_update_group_009.json,n,,,n/a,,n,not published: invalid
+E19,1,test_025_different_group_010.json,y,,,n/a,,,
+E20,1,test_026_original_group_011.json,y,,,n/a,,,
+E21,1,test_028_update_group_011.json,n,,,n/a,,n,not published: invalid
+E22,1,test_030_different_group_012.json,y,,,n/a,,,
+E23,2,test_031_original_group_013.json test_032_repeat_group_013.json,y,,,n/a,,,
+E24,1,test_033_update_group_013.json,y,,,n/a,,,
+E25,1,test_034_conflict_group_013.json,y,,,,,,
+E26,1,test_035_different_group_014.json,y,,,n/a,,,
+E27,2,test_037_repeat_group_015.json test_038_update_group_015.json,y,,,n/a,,,
+E28,1,test_039_conflict_group_015.json,y,,,,,,
+E29,1,test_040_different_group_016.json,y,,,n/a,,,
+E30,1,test_045_different_group_018.json,n,,,n/a,,n,not published: invalid
+E31,3,test_046_original_group_019.json test_049_conflict_group_019.json test_048_update_group_019.json,y,,,,,,
+E32,1,test_050_different_group_020.json,n,,,n/a,,n,not published: invalid
+E33,1,test_051_original_group_021.json,y,,,n/a,,,
+E34,1,test_052_repeat_group_021.json,n,,,n/a,,n,not published: invalid
+E35,1,test_053_update_group_021.json,y,,,n/a,,,
+E36,1,test_055_different_group_022.json,n,,,n/a,,n,not published: invalid
+E37,1,test_057_repeat_group_023.json,n,,,n/a,,n,not published: invalid
+E38,1,test_058_update_group_023.json,y,,,n/a,,,
+E39,1,test_059_conflict_group_023.json,n,,,,,n,not published: invalid
+E40,1,test_060_different_group_024.json,n,,,n/a,,n,not published: invalid
+E41,1,test_061_original_group_025.json,n,,,n/a,,n,not published: invalid
+E42,1,test_062_repeat_group_025.json,y,,,n/a,,,
+E43,1,test_064_conflict_group_025.json,n,,,,,n,not published: invalid
+E44,1,test_065_different_group_026.json,n,,,n/a,,n,not published: invalid
+E45,1,test_067_repeat_group_027.json,y,,,n/a,,,
+E46,1,test_068_update_group_027.json,n,,,n/a,,n,not published: invalid
+E47,1,test_069_conflict_group_027.json,y,,,,,,
+E48,1,test_072_repeat_group_029.json,n,,,n/a,,n,not published: invalid
+E49,1,test_073_update_group_029.json,y,,,n/a,,,
+E50,1,test_076_original_group_031.json,n,,,n/a,,n,not published: invalid
+E51,1,test_077_repeat_group_031.json,y,,,n/a,,,
+E52,1,test_078_update_group_031.json,y,,,n/a,,,
+E53,1,test_079_conflict_group_031.json,y,,,,,,
+E54,1,test_080_different_group_032.json,y,,,n/a,,,
+E55,1,test_081_original_group_033.json,y,,,n/a,,,
+E56,1,test_082_repeat_group_033.json,y,,,n/a,,,
+E57,1,test_083_update_group_033.json,n,,,n/a,,n,not published: invalid
+E58,1,test_085_different_group_034.json,n,,,n/a,,n,not published: invalid
+E59,2,test_086_original_group_035.json test_087_repeat_group_035.json,n,,,n/a,,n,not published: invalid
+E60,1,test_088_update_group_035.json,y,,,n/a,,,
+E61,1,test_089_conflict_group_035.json,n,,,,,n,not published: invalid
+E62,1,test_092_repeat_group_037.json,n,,,n/a,,n,not published: invalid
+E63,1,test_094_conflict_group_037.json,n,,,,,n,not published: invalid
+E64,1,test_096_original_group_039.json,n,,,n/a,,n,not published: invalid
+E65,1,test_098_update_group_039.json,y,,,n/a,,,
+E66,2,test_101_original_group_041.json test_104_conflict_group_041.json,y,,,,,,
+E67,1,test_103_update_group_041.json,y,,,n/a,,,
+E68,1,test_105_different_group_042.json,n,,,n/a,,n,not published: invalid
+E69,3,test_107_repeat_group_043.json test_106_original_group_043.json test_108_update_group_043.json,n,,,n/a,,n,not published: invalid
+E70,1,test_110_different_group_044.json,n,,,n/a,,n,not published: invalid
+E71,3,test_113_repeat_group_045.json test_112_update_group_045.json test_121_original_group_049.json,y,,,n/a,,,
+E72,1,test_115_different_group_046.json,n,,,n/a,,n,not published: invalid
+E73,1,test_117_repeat_group_047.json,y,,,n/a,,,
+E74,1,test_119_conflict_group_047.json,n,,,,,n,not published: invalid
+E75,1,test_120_different_group_048.json,y,,,n/a,,,
+E76,1,test_122_update_group_049.json,n,,,n/a,,n,not published: invalid
+E77,1,test_125_different_group_050.json,n,,,n/a,,n,not published: invalid
