@@ -34,7 +34,7 @@ NAME = "baseline-rule"  # letters, digits, . _ - ; used in the results file name
 DESCRIPTION = "Rule baseline: every candidate pair gets the same constant label"
 
 # ----------------------------------------------------------------------------- run config: edit, then run this file
-BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25
+BATCHES = []  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25
 SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
 KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
 
