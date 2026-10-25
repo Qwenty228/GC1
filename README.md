@@ -53,7 +53,98 @@ Grouping (pairwise, within each batch): precision 100.0 %, recall 88.7 %, F1 94.
 2. **Updates are the main weakness.** Gemini blurs update and repeat in both directions (repeat→update ×3, update→repeat ×1), and labels some conflicts as updates (×2).
 3. **Part of the update problem is retrieval, not the LLM.** 2 of the 4 update→different misses never reached Gemini, so tuning retrieval (similarity threshold, candidate count) could help as much as changing the prompt.
 
-## 4. What was evaluated
+## 4. Detailed Batch Documentation and Gemini Error Specialization
+
+This section provides supporting documentation for the completed Gemini 3.8 Flash event-consolidation evaluation. All 25 batches and 125 articles are linked to the final machine-readable evaluation output:
+
+**Primary evaluation result:** [gemini_125_completed.json](SystemCode/evaluation/consolidation/results/gemini_125_completed.json)
+
+The following documents provide batch-level explanations, evidence comparisons, and specialized analysis of incorrect or uncertain predictions.
+
+### 4.1 Batch-Level Evaluation Reports (`Report/batch_doc/`)
+
+**Folder:** [View all 25 batch reports](Report/batch_doc/)
+
+The `batch_doc` folder contains 25 Word documents, from `batch_001.docx` to `batch_025.docx`, corresponding to the 25 batches evaluated by Gemini.
+
+Each document examines five articles, including their expected event relationships and supporting textual evidence.
+
+| Article position | Category | Purpose |
+|---|---|---|
+| 1 | Original | Establishes the reference event and its baseline facts. |
+| 2 | Repeat | Reports the same event without meaningful new information. |
+| 3 | Update | Adds new information or developments to the existing event. |
+| 4 | Conflict | Contradicts an existing factual claim about the same event. |
+| 5 | Different | Represents a separate event that should not be consolidated with the reference event. |
+
+The batch reports contain:
+
+- Batch metadata and the five associated article filenames.
+- Event grouping and consolidation explanations.
+- Textual evidence supporting each article's expected relationship.
+- Classification rationale for original, repeated, updated, conflicting, and different events.
+- Context for interpreting Gemini's predicted classifications against the expected labels.
+
+**Example — Batch 001:**
+
+- `test_001`: Original NVIDIA–Groq DOJ investigation.
+- `test_002`: Repeated coverage of the same investigation.
+- `test_003`: Update introducing a 30-day response deadline.
+- `test_004`: Conflict concerning exclusive versus nonexclusive licensing rights.
+- `test_005`: Different event involving an NVIDIA developer training center.
+
+These documents explain the expected semantic relationships. Gemini's actual predicted labels, event assignments, and judgment evidence are recorded separately in `gemini_125_completed.json`.
+
+### 4.2 Gemini Error Detection and Specialization (`Report/gemini error detect/`)
+
+**Document:** [Gemini Evaluation Error Specialization v2](Report/gemini%20error%20detect/gemini_evaluation_error_specialization_v2.docx)
+
+This report focuses on discrepancies between Gemini's predicted labels and the expected classifications.
+
+The completed evaluation contains:
+
+| Evaluation outcome | Count |
+|---|---:|
+| Correct classifications | 88 |
+| Incorrect classifications | 10 |
+| Uncertain classifications | 2 |
+| Reference articles (not scored) | 25 |
+| **Total articles** | **125** |
+
+The diagnostic report examines four principal error patterns:
+
+1. **Multi-day market and timeline disconnections:** An update is incorrectly classified as a different event.
+2. **Over-interpretation of minor details:** A repeated article is incorrectly classified as an update.
+3. **Conflict rationalization as a temporal update:** Contradictory information is treated as a normal event development.
+4. **Under-sensitivity to contextual updates:** An article containing meaningful new information is incorrectly classified as a repeat.
+
+It also discusses uncertain predictions, evidence-quote verification, technical edge cases, and possible improvements to the evaluation pipeline.
+
+**Important distinction:** Not every incorrect classification originates from Gemini's language-model judgment. Some errors occur during candidate retrieval before Gemini receives an event for comparison. Other uncertain results arise during evidence validation.
+
+### 4.3 Relationship Between the Documents and Final JSON
+
+The three resources serve different purposes:
+
+| Resource | Role |
+|---|---|
+| [`gemini_125_completed.json`](SystemCode/evaluation/consolidation/results/gemini_125_completed.json) | Primary evaluation output containing expected and predicted labels, event assignments, model judgments, evidence, and metrics. |
+| [`Report/batch_doc/`](Report/batch_doc/) | Human-readable explanations of each batch's article relationships and supporting evidence. |
+| [`Report/gemini error detect/`](Report/gemini%20error%20detect/) | Diagnostic interpretation of classification discrepancies, uncertain predictions, and technical limitations. |
+
+**Recommended evaluation review workflow:**
+
+1. Identify the article and batch in `gemini_125_completed.json`.
+2. Open the corresponding `batch_XXX.docx` to understand the original event, expected relationship, and textual evidence.
+3. Compare the expected label against Gemini's predicted label and judgment explanation in the JSON.
+4. For incorrect or uncertain outcomes, consult `gemini_evaluation_error_specialization_v2.docx` to examine the relevant error pattern.
+5. Distinguish language-model classification errors from retrieval failures and post-processing validation issues.
+
+This structure connects the quantitative evaluation results with qualitative, evidence-based explanations. It supports examination of why a classification was expected, what Gemini actually predicted, and which pipeline component may have contributed to a discrepancy.
+
+**Evaluation scope:** These documents describe the team's 125-article benchmark. They are supporting analyses of the completed evaluation, not independent evaluation runs or evidence of performance on live financial news.
+
+## 5. What was evaluated
 
 | | |
 | :-- | :-- |
@@ -72,7 +163,7 @@ Grouping (pairwise, within each batch): precision 100.0 %, recall 88.7 %, F1 94.
 - **Accuracy**: over the 100 non-reference articles; `uncertain` always counts as wrong.
 - **Event IDs** (`E1`, `E2` …) are local to each batch.
 
-## 5. How the full 125-article run was completed
+## 6. How the full 125-article run was completed
 
 The first run (`2026-10-24_1709_gemini.json`, kept unchanged) finished only 68 of 125 articles. 57 failed on provider limits and outages: **HTTP 429 ×51, timeout ×4, HTTP 503 ×2**. A dedicated recovery runner finished the job:
 
@@ -89,7 +180,7 @@ Only processing failures were rerun. Wrong labels and `uncertain` answers are mo
 | Final 25 batches | 77 | 179,767 | 50,380 |
 | Discarded (failed original batches + 5 failed recovery attempts) | 5 | 9,379 | 3,171 |
 
-## 6. All 125 article outcomes
+## 7. All 125 article outcomes
 
 <details>
 <summary><b>Show the full table</b> (same content as <code>Gemini_125_Articles_REDOWNLOAD.pdf</code>, generated from the result JSON)</summary>
@@ -224,7 +315,7 @@ Only processing failures were rerun. Wrong labels and `uncertain` answers are mo
 
 </details>
 
-## 7. Files on this branch
+## 8. Files on this branch
 
 ```
 Report/
@@ -246,7 +337,7 @@ SystemCode/tests/
 └── test_evaluation_verbose.py        offline tests: logging, never leaks a key or prompt
 ```
 
-## 8. Reproduce or inspect
+## 9. Reproduce or inspect
 
 From `SystemCode/` (Windows CMD shown; API keys go in `SystemCode/.env`, which git ignores, so no key is in this repository):
 
@@ -264,7 +355,7 @@ rem the offline tests for the recovery and logging code
 uv run python -m pytest tests\test_evaluation_resume.py tests\test_evaluation_verbose.py
 ```
 
-## 9. Limitations
+## 10. Limitations
 
 - **Team-built dataset.** These scores come from the team's 125 labelled fixtures, not live news traffic. Treat them as a benchmark, not a real-world reliability claim.
 - **One run.** LLM output can vary between runs, even at temperature 0.
