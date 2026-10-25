@@ -1,0 +1,213 @@
+{
+  "batch": {
+    "batch": 5,
+    "seconds": 649.1,
+    "articles": [
+      {
+        "file": "test_021_original_group_009.json",
+        "type": "original",
+        "expected_group": 9,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_022_repeat_group_009.json",
+        "type": "repeat",
+        "expected_group": 9,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report Huawei unveiling over ten AI infrastructure chipsets at Huawei Connect in Shanghai.",
+            "matching_facts": [
+              "Huawei unveils over 10 AI infrastructure chipsets",
+              "Ascend 960 DT launch planned for Q1 2027",
+              "Ascend 960PR planned for Q3 2027"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Huawei introduced more than ten chipsets for AI infrastructure on Thursday, spanning AI accelerators, processors and high-speed connectivity."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Chinese tech giant Huawei unveiled over 10 new chipsets for AI computing infrastructure on Thursday"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_023_update_group_009.json",
+        "type": "update",
+        "expected_group": 9,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "The segment reports a follow-up partner evaluation program for the newly unveiled Ascend 960 DT AI accelerator.",
+            "matching_facts": [
+              "Huawei Ascend 960 DT launch scheduled for Q1 2027",
+              "Ascend 960PR launch scheduled for Q3 2027",
+              "Ascend 960 DT expected to double predecessor performance"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "partner evaluation program",
+                "incoming": "opened applications for testing and documentation access",
+                "candidate": "not mentioned"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Huawei has opened applications for a partner evaluation program for the Ascend 960 DT following its AI infrastructure chip announcement"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_024_conflict_group_009.json",
+        "type": "conflict",
+        "expected_group": 9,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming report disputes the launch timing announced at the Huawei Connect presentation, stating Q2 2027 instead of Q1 2027.",
+            "matching_facts": [
+              "Huawei presentation at Huawei Connect",
+              "Ascend 960 DT official launch milestone",
+              "Ascend 960PR scheduled for Q3 2027"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "Ascend 960 DT launch date",
+                "incoming": "second quarter of 2027",
+                "candidate": "first quarter of 2027"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "the Ascend 960 DT was scheduled for an official launch in the second quarter of 2027."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_025_different_group_010.json",
+        "type": "different",
+        "expected_group": 10,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6702,
+      "output": 1784
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 5,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_2",
+      "GEMINI_API_KEY_3",
+      "GEMINI_API_KEY_1"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6702,
+      "output": 1784
+    },
+    "http_attempts": 6,
+    "retried_failures": {
+      "unavailable": 3
+    },
+    "waited_seconds": 7.4,
+    "project_switches": [
+      {
+        "from": "GEMINI_API_KEY_2",
+        "to": "GEMINI_API_KEY_3",
+        "after": "unavailable"
+      },
+      {
+        "from": "GEMINI_API_KEY_3",
+        "to": "GEMINI_API_KEY_1",
+        "after": "unavailable"
+      }
+    ],
+    "seconds": 649.1,
+    "completed_at": "2026-10-24T15:45:03+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

@@ -1,0 +1,257 @@
+{
+  "batch": {
+    "batch": 13,
+    "seconds": 190.2,
+    "articles": [
+      {
+        "file": "test_061_original_group_025.json",
+        "type": "original",
+        "expected_group": 25,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_062_repeat_group_025.json",
+        "type": "repeat",
+        "expected_group": 25,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report Dan Ives' analysis on SpaceX's reported $40 billion Apollo-led debt financing to purchase Nvidia chips.",
+            "matching_facts": [
+              "SpaceX $40 billion debt financing",
+              "purchase of Nvidia chips",
+              "Apollo-led financing with Dan Ives commentary"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Space Exploration Technologies Corp. (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to purchase Nvidia Corp. (NASDAQ:NVDA) chips."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "SpaceX (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to buy Nvidia Corp. (NASDAQ:NVDA) chips."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_063_update_group_025.json",
+        "type": "update",
+        "expected_group": 25,
+        "expected_label": "same_event_update",
+        "predicted_label": "uncertain",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "uncertain",
+            "method": "llm",
+            "explanation": "The incoming segment reports the completion of the $40 billion financing package previously reported as in early discussions.",
+            "matching_facts": [
+              "SpaceX $40B Nvidia chip financing",
+              "Apollo Global Management leading debt package",
+              "PIMCO debt participation"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "deal status",
+                "incoming": "finalized and PIMCO committed",
+                "candidate": "in early talks / preparing to borrow"
+              },
+              {
+                "kind": "new_information",
+                "aspect": "analyst price target",
+                "incoming": "raised to $240",
+                "candidate": "$225"
+              }
+            ],
+            "evidence": {
+              "incoming": [],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "SpaceX (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to buy Nvidia Corp. (NASDAQ:NVDA) chips."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": [
+              "incoming evidence quote not found in U1",
+              "downgraded same_event_update to uncertain: evidence could not be verified on both sides"
+            ]
+          }
+        ]
+      },
+      {
+        "file": "test_064_conflict_group_025.json",
+        "type": "conflict",
+        "expected_group": 25,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E2",
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment directly contradicts the candidate regarding the debt plan's status, analyst ratings, and partner relationships.",
+            "matching_facts": [
+              "SpaceX financing for Nvidia chips",
+              "Dan Ives research note",
+              "$40 billion debt financing size"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "financing status",
+                "incoming": "dropped plans to borrow",
+                "candidate": "preparing to borrow"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "Nvidia stake in SpaceX",
+                "incoming": "does not hold a stake",
+                "candidate": "owns stake near $21B"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "Ives rating and target",
+                "incoming": "Neutral at $150",
+                "candidate": "Outperform at $225"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Space Exploration Technologies Corp. (NASDAQ:SPCX) has dropped plans to borrow for Nvidia Corp. (NASDAQ:NVDA) chips"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "SpaceX (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to buy Nvidia Corp. (NASDAQ:NVDA) chips."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          },
+          {
+            "candidate_event": "E2",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment reports that the debt financing was scrapped, contradicting the candidate's report that it was finalized.",
+            "matching_facts": [
+              "SpaceX $40 billion financing",
+              "Apollo Global Management role",
+              "Nvidia chip purchase"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "deal status",
+                "incoming": "dropped debt plans",
+                "candidate": "finalized $40B financing"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "Apollo participation",
+                "incoming": "not expected to take part",
+                "candidate": "leading the package"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Space Exploration Technologies Corp. (NASDAQ:SPCX) has dropped plans to borrow for Nvidia Corp. (NASDAQ:NVDA) chips"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C3",
+                  "quote": "Space Exploration Technologies Corp. (NASDAQ:SPCX) has finalized a $40 billion financing for Nvidia Corp. (NASDAQ:NVDA) chips"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_065_different_group_026.json",
+        "type": "different",
+        "expected_group": 26,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E3"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 4,
+    "tokens": {
+      "input": 9902,
+      "output": 3584
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 13,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_1"
+    ],
+    "comparison_calls": 4,
+    "tokens": {
+      "input": 9902,
+      "output": 3584
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 190.2,
+    "completed_at": "2026-10-24T17:38:26+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

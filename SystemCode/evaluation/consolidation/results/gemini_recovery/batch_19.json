@@ -1,0 +1,202 @@
+{
+  "batch": {
+    "batch": 19,
+    "seconds": 175.7,
+    "articles": [
+      {
+        "file": "test_091_original_group_037.json",
+        "type": "original",
+        "expected_group": 37,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_092_repeat_group_037.json",
+        "type": "repeat",
+        "expected_group": 37,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report Charlie Bilello's analysis comparing Nvidia's $5.4 trillion market valuation and profits to the Russell 2000 index.",
+            "matching_facts": [
+              "Nvidia's $5.4T market cap vs Russell 2000 $3.5T",
+              "Charlie Bilello of Creative Planning shared data",
+              "Nvidia $193B profit vs Russell 2000 $13B loss"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Charlie Bilello highlighted that NVIDIA's $5.4T market cap exceeds the combined $3.5T value of the Russell 2000."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp.‘s (NASDAQ:NVDA) total market capitalization reached $5.4 trillion on Sept. 25, surpassing the combined $3.5 trillion value of the entire Russell 2000 index."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_093_update_group_037.json",
+        "type": "update",
+        "expected_group": 37,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "The segment updates the ongoing NVIDIA valuation benchmark story with a revised September 28 estimate and ETF weighting.",
+            "matching_facts": [
+              "NVIDIA market capitalization",
+              "September 25 valuation benchmark around $5.4 trillion"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "closing market capitalization",
+                "incoming": "$5.45 trillion for September 28",
+                "candidate": "$5.4 trillion on September 25"
+              },
+              {
+                "kind": "new_information",
+                "aspect": "S&P 500 ETF weight",
+                "incoming": "8.08% weight",
+                "candidate": "not mentioned"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "a market-data provider published a revised closing estimate for NVIDIA's market capitalization at $5.45 trillion for September 28."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp.‘s (NASDAQ:NVDA) total market capitalization reached $5.4 trillion on Sept. 25"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_094_conflict_group_037.json",
+        "type": "conflict",
+        "expected_group": 37,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment reports NVIDIA's market cap on September 25 as $6.2 trillion, contradicting the candidate's $5.4 trillion valuation.",
+            "matching_facts": [
+              "NVIDIA market cap on September 25",
+              "comparison to Russell 2000"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "NVIDIA market capitalization",
+                "incoming": "$6.2 trillion",
+                "candidate": "$5.4 trillion"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "NVIDIA's market capitalization on September 25 was $6.2 trillion, rather than the approximately $5.4 trillion figure cited in the original comparison."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp.‘s (NASDAQ:NVDA) total market capitalization reached $5.4 trillion on Sept. 25, surpassing the combined $3.5 trillion value"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_095_different_group_038.json",
+        "type": "different",
+        "expected_group": 38,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6345,
+      "output": 2076
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 19,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_5"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6345,
+      "output": 2076
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 175.7,
+    "completed_at": "2026-10-25T00:01:56+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

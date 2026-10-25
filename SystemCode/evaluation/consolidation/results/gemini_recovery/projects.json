@@ -1,0 +1,145 @@
+{
+  "updated_at": "2026-10-25T00:28:03+00:00",
+  "note": "API-key variable names only; no key is ever stored",
+  "projects": {
+    "GEMINI_API_KEY_1": {
+      "status": "exhausted",
+      "until": "2026-10-25T07:00:00+00:00",
+      "reason": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: generativelanguage.googleapis.c",
+      "quota_id": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+      "counts": {
+        "attempts": 22,
+        "timeout": 3,
+        "unavailable": 6,
+        "successes": 10,
+        "quota_exhausted": 1
+      },
+      "tokens": {
+        "input": 22583,
+        "output": 6397
+      },
+      "last_error": "quota_exhausted HTTP 429: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: gener",
+      "last_error_at": "2026-10-24T17:38:27+00:00",
+      "last_success_at": "2026-10-24T17:38:25+00:00",
+      "tier": null
+    },
+    "GEMINI_API_KEY_2": {
+      "status": "exhausted",
+      "until": "2026-10-25T07:00:00+00:00",
+      "reason": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: generativelanguage.googleapis.c",
+      "quota_id": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+      "counts": {
+        "attempts": 19,
+        "timeout": 2,
+        "unavailable": 2,
+        "successes": 13,
+        "quota_exhausted": 1
+      },
+      "tokens": {
+        "input": 26115,
+        "output": 8085
+      },
+      "last_error": "quota_exhausted HTTP 429: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: gener",
+      "last_error_at": "2026-10-24T15:52:56+00:00",
+      "last_success_at": "2026-10-24T15:52:55+00:00",
+      "tier": null
+    },
+    "GEMINI_API_KEY_3": {
+      "status": "exhausted",
+      "until": "2026-10-25T07:00:00+00:00",
+      "reason": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: generativelanguage.googleapis.c",
+      "quota_id": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+      "counts": {
+        "attempts": 21,
+        "timeout": 2,
+        "unavailable": 3,
+        "successes": 14,
+        "quota_exhausted": 1
+      },
+      "tokens": {
+        "input": 31464,
+        "output": 9372
+      },
+      "last_error": "quota_exhausted HTTP 429: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: gener",
+      "last_error_at": "2026-10-24T18:49:34+00:00",
+      "last_success_at": "2026-10-24T18:49:32+00:00",
+      "tier": "free"
+    },
+    "GEMINI_API_KEY_4": {
+      "status": "available",
+      "until": null,
+      "reason": "",
+      "quota_id": null,
+      "counts": {
+        "attempts": 3,
+        "auth": 3
+      },
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "last_error": "auth HTTP 403: Your project has been denied access. Please contact support.",
+      "last_error_at": "2026-10-25T00:06:56+00:00",
+      "last_success_at": null,
+      "tier": null
+    },
+    "GEMINI_API_KEY_5": {
+      "status": "exhausted",
+      "until": "2026-10-25T07:00:00+00:00",
+      "reason": "You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: generativelanguage.googleapis.c",
+      "quota_id": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+      "counts": {
+        "attempts": 20,
+        "successes": 16,
+        "unavailable": 2,
+        "quota_exhausted": 1
+      },
+      "tokens": {
+        "input": 35505,
+        "output": 10202
+      },
+      "last_error": "quota_exhausted HTTP 429: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. * Quota exceeded for metric: gener",
+      "last_error_at": "2026-10-25T00:05:31+00:00",
+      "last_success_at": "2026-10-25T00:05:29+00:00",
+      "tier": "free"
+    },
+    "GEMINI_API_KEY_6": {
+      "status": "available",
+      "until": null,
+      "reason": null,
+      "quota_id": null,
+      "counts": {
+        "attempts": 18,
+        "unavailable": 3,
+        "successes": 15
+      },
+      "tokens": {
+        "input": 41421,
+        "output": 9111
+      },
+      "last_error": "unavailable HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "last_error_at": "2026-10-25T00:19:18+00:00",
+      "last_success_at": "2026-10-25T00:28:03+00:00",
+      "tier": null
+    },
+    "GEMINI_API_KEY_7": {
+      "status": "available",
+      "until": null,
+      "reason": null,
+      "quota_id": null,
+      "counts": {
+        "attempts": 3,
+        "unavailable": 2,
+        "successes": 1
+      },
+      "tokens": {
+        "input": 3512,
+        "output": 761
+      },
+      "last_error": "unavailable HTTP 503: This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+      "last_error_at": "2026-10-24T18:35:53+00:00",
+      "last_success_at": "2026-10-25T00:20:09+00:00",
+      "tier": null
+    }
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "batch": {
+    "batch": 23,
+    "seconds": 269.3,
+    "articles": [
+      {
+        "file": "test_111_original_group_045.json",
+        "type": "original",
+        "expected_group": 45,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_112_update_group_045.json",
+        "type": "update",
+        "expected_group": 45,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "Both report on Jensen Huang's CBS News interview with Jo Ling Kent, with the incoming segment highlighting different statements on pace.",
+            "matching_facts": [
+              "Jensen Huang interview with CBS News' Jo Ling Kent",
+              "Discussion on AI safety and development pace",
+              "Rebuttal of calls to slow down AI development"
+            ],
+            "differences": [
+              {
+                "kind": "new_information",
+                "aspect": "interview remarks",
+                "incoming": "emphasizes going as fast as possible for U.S. economic growth",
+                "candidate": "refutes AI extinction warnings as unscientific doomsday narratives"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Huang told correspondent Jo Ling Kent that the AI industry should continue advancing at full speed."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Huang told CBS News senior business and technology correspondent Jo Ling Kent on Friday."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_113_repeat_group_045.json",
+        "type": "repeat",
+        "expected_group": 45,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both articles cover Jensen Huang's statements during a CBS News interview rejecting AI extinction predictions.",
+            "matching_facts": [
+              "Jensen Huang CBS News interview",
+              "0% chance of world ending in 2030",
+              "pushback against AI extinction claims"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "“There is a 0 per cent chance it’s going to be the end of the world.”"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "\"2030 is not going to be the end of the world. There is 0% chance that's going to be the end of the world,\""
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_114_conflict_group_045.json",
+        "type": "conflict",
+        "expected_group": 45,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "Both articles report Huang's CBS News interview but contradict each other on his stated odds of AI ending the world.",
+            "matching_facts": [
+              "Jensen Huang CBS News interview",
+              "interviewed by Jo Ling Kent",
+              "rejection of AI extinction doomsday narratives"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "odds of world ending by 2030",
+                "incoming": "about a 10% chance",
+                "candidate": "0% chance"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "There is about a 10% chance that's going to be the end of the world"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "There is 0% chance that's going to be the end of the world"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_115_different_group_046.json",
+        "type": "different",
+        "expected_group": 46,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 8412,
+      "output": 1911
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 23,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_6",
+      "GEMINI_API_KEY_7"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 8412,
+      "output": 1911
+    },
+    "http_attempts": 4,
+    "retried_failures": {
+      "unavailable": 1
+    },
+    "waited_seconds": 0.0,
+    "project_switches": [
+      {
+        "from": "GEMINI_API_KEY_6",
+        "to": "GEMINI_API_KEY_7",
+        "after": "unavailable"
+      }
+    ],
+    "seconds": 269.3,
+    "completed_at": "2026-10-25T00:20:09+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

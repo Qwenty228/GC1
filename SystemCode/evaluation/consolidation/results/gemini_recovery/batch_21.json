@@ -1,0 +1,203 @@
+{
+  "batch": {
+    "batch": 21,
+    "seconds": 221.8,
+    "articles": [
+      {
+        "file": "test_101_original_group_041.json",
+        "type": "original",
+        "expected_group": 41,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_102_repeat_group_041.json",
+        "type": "repeat",
+        "expected_group": 41,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both articles report the same reported ~20% October 1 price hike across Nebius's GPU cloud lineup.",
+            "matching_facts": [
+              "GPU cloud price hike of ~20%",
+              "effective date October 1",
+              "second rate increase in four months"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Nebius will raise on-demand GPU cloud rates about 20% on Oct. 1, its second hike in four months."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The new prices are set to take effect Oct. 1 and cover several NVIDIA Corporation (NASDAQ:NVDA) GPU models, including the H100, H200, B200 and B300"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_103_update_group_041.json",
+        "type": "update",
+        "expected_group": 41,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "Nebius officially confirms the October 1 GPU price hikes and adds new rate increases for CPUs and memory.",
+            "matching_facts": [
+              "Nebius raising cloud prices effective October 1",
+              "Nvidia GPU rates increasing 17% to 21%"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "confirmation status",
+                "incoming": "confirmed by company statement",
+                "candidate": "reported from customer notices"
+              },
+              {
+                "kind": "new_information",
+                "aspect": "additional price hikes",
+                "incoming": "rates for CPUs and memory also raised",
+                "candidate": "only covers GPU pricing"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Cloud provider Nebius said on Thursday it will raise pay-as-you-go prices for leasing selected Nvidia chips from October 1"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "Nebius Group told customers that on-demand rates for its Nvidia GPU cloud will rise about 20% on Oct. 1"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_104_conflict_group_041.json",
+        "type": "conflict",
+        "expected_group": 41,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "Both sources report Nebius's planned October 1 GPU price increases, but they conflict on the new B300 hourly rate.",
+            "matching_facts": [
+              "Nebius raising GPU cloud prices",
+              "effective date of October 1",
+              "price changes for Nvidia GPUs"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "B300 new hourly rate",
+                "incoming": "$10.50 (climbing about 34%)",
+                "candidate": "$9.50 (climbing about 21%)"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "The B300 price will climb about 34% to $10.50 from $7.85."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The B300 price will climb about 21% to $9.50 from $7.85."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_105_different_group_042.json",
+        "type": "different",
+        "expected_group": 42,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 8806,
+      "output": 2057
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 21,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_6"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 8806,
+      "output": 2057
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 221.8,
+    "completed_at": "2026-10-25T00:11:13+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

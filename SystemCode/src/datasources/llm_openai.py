@@ -25,6 +25,7 @@ validation afterwards: only the transport differs.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -43,6 +44,8 @@ from .similarity.comparison import (
 
 JSON_MODES = ("json_schema", "json_object", "prompt")
 _FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S)
+# one line per HTTP outcome (status, time, timeout); never a header, a key, the prompt or the answer text
+LOGGER = logging.getLogger(__name__)
 
 
 def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: str, user: str,
@@ -70,13 +73,25 @@ def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: 
         response = httpx.post(f"{base_url.rstrip('/')}/chat/completions", json=body, headers=headers,
                               timeout=timeout)
     except httpx.TimeoutException as exc:
+        LOGGER.info("    HTTP: no answer from %s, timed out after %.1fs (timeout %.0fs)", model,
+                    time.monotonic() - started, timeout)
         raise error(f"{model}: timed out after {timeout}s", kind="timeout", retryable=True) from exc
     except httpx.HTTPError as exc:
+        LOGGER.info("    HTTP: connection to %s failed after %.1fs (%s)", model, time.monotonic() - started,
+                    type(exc).__name__)
         raise error(f"{model}: connection failed ({exc})", kind="connection", retryable=True) from exc
+    LOGGER.info("    HTTP %d from %s in %.1fs (timeout %.0fs)", response.status_code, model,
+                time.monotonic() - started, timeout)
     if response.status_code >= 400:
         retryable = response.status_code in (408, 409, 429) or response.status_code >= 500
-        raise error(f"{model}: HTTP {response.status_code}: {response.text[:300]}",
-                    kind="http_error", retryable=retryable)
+        failure = error(f"{model}: HTTP {response.status_code}: {response.text[:300]}",
+                        kind="http_error", retryable=retryable)
+        # for callers that retry (evaluation.gemini_projects): the status, the server's Retry-After and the full
+        # error body (Gemini puts the quota id and RetryInfo past the 300 characters kept in the message)
+        failure.status_code = response.status_code
+        failure.retry_after = response.headers.get("retry-after")
+        failure.body = response.text[:20000]
+        raise failure
     data = response.json()
     choice = (data.get("choices") or [{}])[0]
     finish = choice.get("finish_reason")
@@ -85,6 +100,8 @@ def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: 
     text = (choice.get("message") or {}).get("content") or ""
     fenced = _FENCE.match(text)  # some local models wrap JSON in ```json fences
     usage = data.get("usage") or {}
+    LOGGER.info("    answer: finish_reason %s, tokens in/out %s/%s, %d chars of JSON", finish,
+                usage.get("prompt_tokens", "?"), usage.get("completion_tokens", "?"), len(text))
     return JsonModelResult(
         text=fenced.group(1) if fenced else text.strip(),
         model=data.get("model") or model,

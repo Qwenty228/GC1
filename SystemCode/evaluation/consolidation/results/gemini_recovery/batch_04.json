@@ -1,0 +1,206 @@
+{
+  "batch": {
+    "batch": 4,
+    "seconds": 601.8,
+    "articles": [
+      {
+        "file": "test_016_original_group_007.json",
+        "type": "original",
+        "expected_group": 7,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_017_repeat_group_007.json",
+        "type": "repeat",
+        "expected_group": 7,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both articles summarize the identical report from The Information regarding Apple's planned M8 Ultra AI server project.",
+            "matching_facts": [
+              "Apple developing AI server with M8 Ultra chips",
+              "considering Nvidia NVLink Fusion technology",
+              "launch not expected before 2029"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Apple is developing an AI server that could combine two or four planned M8 Ultra processors, The Information reported Wednesday."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Apple Inc. (NASDAQ:AAPL) is developing an AI server that could use two or four planned M8 Ultra chips, The Information reported on Wednesday."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_018_update_group_007.json",
+        "type": "update",
+        "expected_group": 7,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "Apple has advanced from considering Nvidia NVLink Fusion connectivity to actively testing it in M8 Ultra server prototypes.",
+            "matching_facts": [
+              "Apple M8 Ultra AI server project",
+              "Nvidia NVLink Fusion interconnect",
+              "Targeted launch no earlier than 2029"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "development stage",
+                "incoming": "prototype tests begun",
+                "candidate": "considering technology"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Apple has started prototype tests of Nvidia NVLink Fusion connectivity for the AI server project described in the earlier report."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The iPhone company is considering Nvidia Corp‘s (NASDAQ:NVDA) NVLink Fusion technology to connect the processors."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_019_conflict_group_007.json",
+        "type": "conflict",
+        "expected_group": 7,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "A competing report directly disputes the launch timing of Apple's planned AI server, asserting a 2028 target rather than 2029.",
+            "matching_facts": [
+              "Apple M8 Ultra AI server development",
+              "potential Nvidia NVLink Fusion connectivity"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "expected launch year",
+                "incoming": "targeted for 2028",
+                "candidate": "not expected before 2029"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "A competing account of Apple's M8 Ultra AI server project says its intended launch year was 2028 at the time of the September 16 report."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Apple does not expect a launch before 2029, and the project could still be canceled or proceed without NVIDIA technology."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_020_different_group_008.json",
+        "type": "different",
+        "expected_group": 8,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 5917,
+      "output": 1449
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 4,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_1",
+      "GEMINI_API_KEY_2"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 5917,
+      "output": 1449
+    },
+    "http_attempts": 4,
+    "retried_failures": {
+      "unavailable": 1
+    },
+    "waited_seconds": 0.0,
+    "project_switches": [
+      {
+        "from": "GEMINI_API_KEY_1",
+        "to": "GEMINI_API_KEY_2",
+        "after": "unavailable"
+      }
+    ],
+    "seconds": 601.8,
+    "completed_at": "2026-10-24T15:34:14+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

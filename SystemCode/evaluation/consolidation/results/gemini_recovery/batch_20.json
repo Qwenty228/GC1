@@ -1,0 +1,197 @@
+{
+  "batch": {
+    "batch": 20,
+    "seconds": 213.4,
+    "articles": [
+      {
+        "file": "test_096_original_group_039.json",
+        "type": "original",
+        "expected_group": 39,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_097_repeat_group_039.json",
+        "type": "repeat",
+        "expected_group": 39,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "The incoming segment summarizes the same AI chip power demand projections and grid constraints reported in the candidate event.",
+            "matching_facts": [
+              "1,100% electricity demand surge",
+              "315 gigawatts global demand by 2033",
+              "200 gigawatts U.S. demand"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "The estimate placed worldwide AI-chip power demand at roughly 315 gigawatts in 2033, with the United States potentially accounting for about 200 gigawatts."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The Kobeissi Letter projects electricity demand from AI chips will increase more than 1,100% from 2025 levels to roughly 315 gigawatts globally by 2033."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_098_update_group_039.json",
+        "type": "update",
+        "expected_group": 39,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "The incoming segment adds a subsequent implementation timetable to the tech giants' existing Ratepayer Protection Pledge.",
+            "matching_facts": [
+              "Hyperscalers signed Ratepayer Protection Pledge",
+              "Covers grid-upgrade costs for AI data centers",
+              "Pledge covers 80% of US utilities"
+            ],
+            "differences": [
+              {
+                "kind": "new_information",
+                "aspect": "reporting timetable",
+                "incoming": "quarterly timetable requiring progress reports next quarter",
+                "candidate": "none reported"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "technology companies participating in the Ratepayer Protection Pledge released a new quarterly implementation timetable for grid-upgrade cost reporting."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "Amazon, Google, Meta, Microsoft and Oracle have signed the Ratepayer Protection Pledge, agreeing to build, bring or buy new electricity"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_099_conflict_group_039.json",
+        "type": "conflict",
+        "expected_group": 39,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment reports a conflicting 2033 AI power demand estimate and growth rate for the same forecast baseline.",
+            "matching_facts": [
+              "global AI chip electricity demand",
+              "forecast from 2025 to 2033"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "2033 power demand and growth",
+                "incoming": "150 gigawatts and ~500% growth",
+                "candidate": "roughly 315 gigawatts and over 1,100% growth"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "estimated global electricity demand from AI chips at only 150 gigawatts by 2033, representing an increase of approximately 500% from 2025."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The Kobeissi Letter projects electricity demand from AI chips will increase more than 1,100% from 2025 levels to roughly 315 gigawatts globally by 2033."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_100_different_group_040.json",
+        "type": "different",
+        "expected_group": 40,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6426,
+      "output": 1764
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 20,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_5"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6426,
+      "output": 1764
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 213.4,
+    "completed_at": "2026-10-25T00:05:30+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

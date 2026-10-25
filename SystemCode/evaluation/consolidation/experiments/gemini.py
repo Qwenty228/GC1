@@ -13,12 +13,12 @@ NAME = "gemini"
 DESCRIPTION = "Gemini (OpenAI-compatible endpoint), the production comparison prompt"
 
 # ----------------------------------------------------------------------------- run config: edit, then run this file
-BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Paid model: start small.
+BATCHES = []  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Paid model: start small.
 SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
 KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
 
 BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.8-flash"
 API_KEY_ENV = "GEMINI_API_KEY"  # the name of the variable in .env, not the key itself
 JSON_MODE = "json_schema"  # "json_object" or "prompt" if the server rejects JSON schemas
 

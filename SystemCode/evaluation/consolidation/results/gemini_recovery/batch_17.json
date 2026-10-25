@@ -1,0 +1,161 @@
+{
+  "batch": {
+    "batch": 17,
+    "seconds": 141.1,
+    "articles": [
+      {
+        "file": "test_081_original_group_033.json",
+        "type": "original",
+        "expected_group": 33,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_082_repeat_group_033.json",
+        "type": "repeat",
+        "expected_group": 33,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report Elon Musk detailing the GPU configuration and expansion schedule for SpaceXAI's Colossus supercluster without new developments.",
+            "matching_facts": [
+              "Colossus supercluster GPU expansion",
+              "addition of 220,000 NVIDIA GB300 GPUs",
+              "Colossus 1 and 2 GPU breakdown"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Elon Musk outlined an expansion schedule for SpaceXAI's Colossus computing infrastructure, including a planned addition of 220,000 NVIDIA GB300 GPUs"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "He added that expansion plans include another 220,000 GB300 GPUs operational next week, 220,000 more in November, and potentially 220,000 by late December"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_083_update_group_033.json",
+        "type": "update",
+        "expected_group": 33,
+        "expected_label": "same_event_update",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_084_conflict_group_033.json",
+        "type": "conflict",
+        "expected_group": 33,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment reports that Colossus's scheduled 220,000-chip expansion consists of AMD MI300X accelerators rather than NVIDIA GB300 GPUs.",
+            "matching_facts": [
+              "Colossus cluster expansion",
+              "scheduled 220,000 chip batch",
+              "Elon Musk announcement"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "accelerator supplier and model",
+                "incoming": "220,000 AMD MI300X accelerators",
+                "candidate": "220,000 NVIDIA GB300 GPUs"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "stated that the next scheduled batch would consist of 220,000 AMD MI300X accelerators rather than NVIDIA GB300 GPUs."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "planned addition of 220,000 NVIDIA GB300 GPUs expected to be operational the following week."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_085_different_group_034.json",
+        "type": "different",
+        "expected_group": 34,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E3"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 2,
+    "tokens": {
+      "input": 4932,
+      "output": 1315
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 17,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_3"
+    ],
+    "comparison_calls": 2,
+    "tokens": {
+      "input": 4932,
+      "output": 1315
+    },
+    "http_attempts": 2,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 141.1,
+    "completed_at": "2026-10-24T18:49:33+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

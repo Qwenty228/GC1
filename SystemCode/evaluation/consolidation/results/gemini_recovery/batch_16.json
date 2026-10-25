@@ -1,0 +1,160 @@
+{
+  "batch": {
+    "batch": 16,
+    "seconds": 484.5,
+    "articles": [
+      {
+        "file": "test_076_original_group_031.json",
+        "type": "original",
+        "expected_group": 31,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_077_repeat_group_031.json",
+        "type": "repeat",
+        "expected_group": 31,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report that Super Micro has started shipping direct liquid-cooled NVIDIA Vera Rubin NVL72 rack systems.",
+            "matching_facts": [
+              "Super Micro shipping NVIDIA Vera Rubin NVL72 racks",
+              "72 Rubin GPUs and 36 Vera CPUs per rack",
+              "16-rack unit contains 1,152 Rubin GPUs and 331 TB HBM4 memory"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Super Micro Computer said it has started shipping NVIDIA Vera Rubin NVL72 rack systems using direct liquid cooling."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Super Micro said Wednesday that it has started shipping NVIDIA Corp. (NASDAQ:NVDA) Vera Rubin NVL72 racks with its Data Center Building Block Solutions"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_078_update_group_031.json",
+        "type": "update",
+        "expected_group": 31,
+        "expected_label": "same_event_update",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_079_conflict_group_031.json",
+        "type": "conflict",
+        "expected_group": 31,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "Both articles report Super Micro's initial Vera Rubin NVL72 shipments, but dispute the GPU and CPU count per rack.",
+            "matching_facts": [
+              "Super Micro shipping Vera Rubin NVL72 racks",
+              "Liquid-cooled architecture"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "rack GPU and CPU configuration",
+                "incoming": "128 Rubin GPUs and 64 Vera CPUs",
+                "candidate": "72 Rubin GPUs and 36 Vera CPUs"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Super Micro began shipping NVIDIA Vera Rubin racks equipped with 128 Rubin GPUs and 64 Vera CPUs."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "The systems combine 72 NVIDIA Rubin GPUs and 36 Vera CPUs in a single liquid-cooled rack."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_080_different_group_032.json",
+        "type": "different",
+        "expected_group": 32,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E3"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 2,
+    "tokens": {
+      "input": 3733,
+      "output": 1280
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 16,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_3"
+    ],
+    "comparison_calls": 2,
+    "tokens": {
+      "input": 3733,
+      "output": 1280
+    },
+    "http_attempts": 2,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 484.5,
+    "completed_at": "2026-10-24T18:47:11+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

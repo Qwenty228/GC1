@@ -1,0 +1,220 @@
+{
+  "batch": {
+    "batch": 14,
+    "seconds": 408.2,
+    "articles": [
+      {
+        "file": "test_066_original_group_027.json",
+        "type": "original",
+        "expected_group": 27,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_067_repeat_group_027.json",
+        "type": "repeat",
+        "expected_group": 27,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report Intuitive Machines stock falling 7.10% to $14.00 alongside reports of SpaceX's planned $40 billion debt raise.",
+            "matching_facts": [
+              "Intuitive Machines shares fell 7.10% to $14.00",
+              "Space stocks fell on SpaceX $40 billion debt report",
+              "SpaceX seeking debt to purchase Nvidia chips"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Intuitive Machines dropped about 7% to $14.00 as space stocks fell on sympathy with SpaceX's planned $40 billion debt raise for Nvidia chips."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "LUNR Price Action: Intuitive Machines shares were down 7.10% at $14.00 at the time of publication on Wednesday, according to Benzinga Pro."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_068_update_group_027.json",
+        "type": "update",
+        "expected_group": 27,
+        "expected_label": "same_event_update",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "different_event",
+            "method": "llm",
+            "explanation": "The incoming segment covers Thursday's rebound and a new lunar contract, whereas the candidate event covers Wednesday's sell-off.",
+            "matching_facts": [],
+            "differences": [],
+            "evidence": {
+              "incoming": [],
+              "candidate": []
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_069_conflict_group_027.json",
+        "type": "conflict",
+        "expected_group": 27,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "Both passages report on Wednesday's space stock trading and SpaceX financing, but directly contradict each other on stock direction and lead arranger.",
+            "matching_facts": [
+              "Wednesday trading session",
+              "SpaceX financing for Nvidia chips",
+              "reported loan and debt amounts"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "LUNR stock movement",
+                "incoming": "rose 5.2% to $14.85",
+                "candidate": "fell 7.10% to $14.00"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "lead arranger",
+                "incoming": "Goldman Sachs leads, no Apollo",
+                "candidate": "Apollo Global Management leads"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "SPCX stock movement",
+                "incoming": "up approximately 3.5%",
+                "candidate": "down approximately 3.5%"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Intuitive Machines Inc (NASDAQ:LUNR) shares rose Wednesday, gaining about 5% as space stocks rallied"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Intuitive Machines Inc (NASDAQ:LUNR) shares are tumbling Wednesday as space stocks slide"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          },
+          {
+            "candidate_event": "E2",
+            "label": "different_event",
+            "method": "llm",
+            "explanation": "E2 covers Thursday's trading session and a new 2028 commercial lunar delivery contract, whereas S1 covers Wednesday's market action.",
+            "matching_facts": [],
+            "differences": [],
+            "evidence": {
+              "incoming": [],
+              "candidate": []
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_070_different_group_028.json",
+        "type": "different",
+        "expected_group": 28,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E3"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "different_event",
+            "method": "llm",
+            "explanation": "S1 examines SpaceX and IREN AI business margins, while E1 covers Intuitive Machines stock trading activity.",
+            "matching_facts": [],
+            "differences": [],
+            "evidence": {
+              "incoming": [],
+              "candidate": []
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      }
+    ],
+    "comparison_calls": 5,
+    "tokens": {
+      "input": 12622,
+      "output": 3652
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 14,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_3"
+    ],
+    "comparison_calls": 5,
+    "tokens": {
+      "input": 12622,
+      "output": 3652
+    },
+    "http_attempts": 4,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 408.2,
+    "completed_at": "2026-10-24T18:17:19+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

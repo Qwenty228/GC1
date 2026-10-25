@@ -19,6 +19,7 @@ The answer key (file name) is never shown to the model: only the article goes in
 from __future__ import annotations
 
 import json
+import logging
 import re
 import tempfile
 import time
@@ -37,6 +38,7 @@ from ..db.evaluation import FIXTURE_DIR, Fixture, FixtureType, read_fixtures
 from ..db.repository import ALPACA_NAMESPACE
 from . import metrics
 
+LOGGER = logging.getLogger(__name__)  # stage logs, silent unless evaluation.verbose.enable() (`--verbose`)
 BATCH_SIZE = 5
 # Retrieval settings (SIMILARITY_* in .env) that change which articles reach the model; saved with every run.
 RECORDED_SETTINGS = ("window_days", "min_semantic_similarity", "lexical_plausible_rank", "semantic_top_k",
@@ -73,6 +75,49 @@ SELECT d.source_record_id AS article_id, c.segment_key, c.candidate_event_id::te
  WHERE d.source_namespace = %s
  ORDER BY c.created_at
 """
+
+
+# --verbose only: one article right after it was processed (its stage statuses hold counts, never text)
+ARTICLE_TRACE_SQL = """
+SELECT a.status AS analysis_status, a.stage_status, a.last_error,
+       m.event_id::text AS event_id, m.relation, m.state, m.created_at
+  FROM document d
+  JOIN document_revision r ON r.revision_id = d.current_revision_id
+  LEFT JOIN revision_analysis a ON a.revision_id = r.revision_id
+  LEFT JOIN event_membership m ON m.revision_id = r.revision_id
+ WHERE d.source_namespace = %s AND d.source_record_id = %s
+ ORDER BY m.created_at
+"""
+ARTICLE_JUDGMENTS_SQL = """
+SELECT c.label, c.method, c.insufficient_context, c.validation_notes
+  FROM document d
+  JOIN document_revision r ON r.revision_id = d.current_revision_id
+  JOIN event_comparison c ON c.revision_id = r.revision_id
+ WHERE d.source_namespace = %s AND d.source_record_id = %s
+ ORDER BY c.created_at
+"""
+TRACED_STAGES = ("text_units", "embeddings", "retrieval", "route", "comparison", "resolution")
+
+
+def _trace_article(db, article_id: str, expected: str | None) -> None:
+    """Log what the pipeline did with one article: stage statuses, judgments, label vs the expected one."""
+    with db.connection() as conn:
+        rows = [dict(r) for r in conn.execute(ARTICLE_TRACE_SQL, (ALPACA_NAMESPACE, article_id)).fetchall()]
+        judgments = conn.execute(ARTICLE_JUDGMENTS_SQL, (ALPACA_NAMESPACE, article_id)).fetchall()
+    stages = (rows[0].get("stage_status") if rows else None) or {}
+    for stage in TRACED_STAGES:
+        if stage in stages:
+            LOGGER.info("    %-11s %s", stage, stages[stage])
+    for j in judgments:
+        notes = j["validation_notes"] or []
+        LOGGER.info("    judgment    %s (%s)%s, validation: %s", j["label"], j["method"],
+                    ", insufficient context" if j["insufficient_context"] else "",
+                    "; ".join(notes)[:200] if notes else "ok")
+    events, label = _predicted_label(rows)
+    if rows and rows[0].get("last_error"):
+        LOGGER.info("    error       %s", " ".join(str(rows[0]["last_error"]).split())[:160])  # one line
+    LOGGER.info("    result      predicted %s, expected %s, %d active event(s) -> %s", label,
+                expected or "- (first article)", len(events), "OK" if expected in (None, label) else "MISS")
 
 
 def _judgment_row(c: dict[str, Any]) -> dict[str, Any]:
@@ -119,11 +164,16 @@ class BatchDatabase:
             admin.execute(sql)
 
     def __enter__(self) -> Database:
+        started = time.monotonic()
+        LOGGER.info("database %s: creating", self.name)
         self._admin(f"CREATE DATABASE {self.name}")
         self.database = Database(replace(self.server, dbname=self.name))
-        migrations.apply_migrations(self.database)
+        applied = migrations.apply_migrations(self.database)
+        LOGGER.info("database %s: %d migration(s) applied", self.name, len(applied))
         with self.database.transaction() as conn:
             register_companies(conn, coverage_companies())
+        LOGGER.info("database %s: ready in %.1fs (coverage companies registered)", self.name,
+                    time.monotonic() - started)
         return self.database
 
     def __exit__(self, *exc) -> None:
@@ -131,6 +181,7 @@ class BatchDatabase:
             self.database.close()
         if not self.keep:
             self._admin(f"DROP DATABASE IF EXISTS {self.name} WITH (FORCE)")
+        LOGGER.info("database %s: %s", self.name, "kept (--keep-db)" if self.keep else "dropped")
 
 
 def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder, sim_settings, *,
@@ -147,10 +198,17 @@ def run_batch(number: int, items: list[Fixture], name: str, comparator, embedder
         analyzer = build_runtime(db, sim_settings, embedder=embedder, comparator=comparator)
         service = IngestionService(load_settings(demo=False).with_overrides(output_root=Path(root)),
                                    database=db, analyzer=analyzer)
-        for f in items:  # test-number order: the original opens the event, the rest arrive after it
+        for position, f in enumerate(items):  # test-number order: the original opens the event, the rest follow
+            article_started = time.monotonic()
+            LOGGER.info("article %d/%d %s: ingestion started", position + 1, len(items), f.filename)
             # the pipeline's file input, as `datasources-ingest process-file <file> --provider alpaca`
             _process_alpaca_payload(service, articles[f.test_number], source=directory / f.filename,
                                     restrict_symbols=False)
+            LOGGER.info("article %d/%d %s: ingestion finished in %.1fs", position + 1, len(items), f.filename,
+                        time.monotonic() - article_started)
+            if LOGGER.isEnabledFor(logging.INFO):  # --verbose: one read-only query, nothing else changes
+                _trace_article(db, str(articles[f.test_number]["id"]),
+                               None if position == 0 else EXPECTED_LABEL[f.fixture_type])
         with db.connection() as conn:
             rows = conn.execute(PREDICTIONS_SQL, (ALPACA_NAMESPACE,)).fetchall()
             comparison_rows = conn.execute(COMPARISONS_SQL, (ALPACA_NAMESPACE,)).fetchall()

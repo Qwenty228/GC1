@@ -1,0 +1,182 @@
+{
+  "batch": {
+    "batch": 12,
+    "seconds": 240.0,
+    "articles": [
+      {
+        "file": "test_056_original_group_023.json",
+        "type": "original",
+        "expected_group": 23,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_057_repeat_group_023.json",
+        "type": "repeat",
+        "expected_group": 23,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both articles report the same Wednesday trading session decline for AST SpaceMobile and share identical market metrics.",
+            "matching_facts": [
+              "AST SpaceMobile shares dropped about 6% on Wednesday",
+              "Trading price reached $59.24",
+              "Sector peers including Space Exploration Technologies declined"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares fell about 6% on Wednesday as communications and satellite names sold off"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares were down about 6% on Wednesday as the stock slid with weakness across Communication Services"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_058_update_group_023.json",
+        "type": "update",
+        "expected_group": 23,
+        "expected_label": "same_event_update",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "different_event",
+            "method": "llm",
+            "explanation": "The incoming segment reports Thursday's stock rebound, whereas the candidate event reports Wednesday's trading decline during a different trading session.",
+            "matching_facts": [],
+            "differences": [],
+            "evidence": {
+              "incoming": [],
+              "candidate": []
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_059_conflict_group_023.json",
+        "type": "conflict",
+        "expected_group": 23,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The reports contradict whether AST SpaceMobile stock rose or fell on Wednesday and whether Japan co-sponsored the partnership backing.",
+            "matching_facts": [
+              "AST SpaceMobile trading on Wednesday",
+              "partnership with Rakuten Group"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "Wednesday stock performance",
+                "incoming": "rose about 4% to $64.80",
+                "candidate": "fell about 6% to $59.24"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "government backing source",
+                "incoming": "U.S. government alone",
+                "candidate": "joint U.S. and Japanese governments"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares rose about 4% on Wednesday"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "AST SpaceMobile, Inc. (NASDAQ:ASTS) shares fell about 6% on Wednesday"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_060_different_group_024.json",
+        "type": "different",
+        "expected_group": 24,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E3"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6630,
+      "output": 1702
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 12,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_1"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6630,
+      "output": 1702
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 240.0,
+    "completed_at": "2026-10-24T17:35:16+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

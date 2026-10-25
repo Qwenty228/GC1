@@ -1,0 +1,217 @@
+{
+  "batch": {
+    "batch": 8,
+    "seconds": 248.4,
+    "articles": [
+      {
+        "file": "test_036_original_group_015.json",
+        "type": "original",
+        "expected_group": 15,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_037_repeat_group_015.json",
+        "type": "repeat",
+        "expected_group": 15,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "Both articles report Morgan Stanley naming Nvidia its top chip pick, with the incoming text adding Friday closing share price data.",
+            "matching_facts": [
+              "Morgan Stanley selected Nvidia as top semiconductor stock",
+              "Joseph Moore cited reasonable valuation and cloud partner base",
+              "About half of revenue originates from non-hyperscaler clients"
+            ],
+            "differences": [
+              {
+                "kind": "new_information",
+                "aspect": "closing share price",
+                "incoming": "closed up 2.46% at $236.53",
+                "candidate": "not reported"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Nvidia Corp. has reclaimed its position as the top semiconductor selection for Morgan Stanley"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp. (NASDAQ:NVDA) has returned as Morgan Stanley’s preferred semiconductor stock"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_038_update_group_015.json",
+        "type": "update",
+        "expected_group": 15,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "The incoming segment reports on Morgan Stanley's top-pick call for Nvidia, adding updates regarding secondary cloud orders and trading volume.",
+            "matching_facts": [
+              "Morgan Stanley names Nvidia top pick",
+              "analyst Joseph Moore",
+              "revenue per gigawatt over $50 billion"
+            ],
+            "differences": [
+              {
+                "kind": "new_information",
+                "aspect": "secondary cloud purchase orders",
+                "incoming": "additional $4 billion committed",
+                "candidate": "none reported"
+              },
+              {
+                "kind": "new_information",
+                "aspect": "institutional trading reaction",
+                "incoming": "volume surged to triple 30-day moving average",
+                "candidate": "none reported"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Following Morgan Stanley's decision to reinstate Nvidia Corp. as its top chip pick, institutional inflows surged late Friday"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp. (NASDAQ:NVDA) has returned as Morgan Stanley’s preferred semiconductor stock"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_039_conflict_group_015.json",
+        "type": "conflict",
+        "expected_group": 15,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming report claims Morgan Stanley dropped Nvidia from its preferred list, contradicting reports that it was restored as top pick.",
+            "matching_facts": [
+              "Morgan Stanley analyst Joseph Moore",
+              "Nvidia Corp.",
+              "Preferred semiconductor stock status"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "Preferred list status",
+                "incoming": "Dropped from preferred semiconductor list",
+                "candidate": "Returned as preferred semiconductor stock"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "Valuation view",
+                "incoming": "Extreme valuation risks",
+                "candidate": "Very undemanding valuation"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Morgan Stanley has actually dropped Nvidia Corp. from its preferred semiconductor list, citing extreme valuation risks"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp. (NASDAQ:NVDA) has returned as Morgan Stanley’s preferred semiconductor stock, with analysts pointing to valuation"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_040_different_group_016.json",
+        "type": "different",
+        "expected_group": 16,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6149,
+      "output": 2003
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 8,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_2"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 6149,
+      "output": 2003
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 248.4,
+    "completed_at": "2026-10-24T15:51:13+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "batch": {
+    "batch": 7,
+    "seconds": 121.6,
+    "articles": [
+      {
+        "file": "test_031_original_group_013.json",
+        "type": "original",
+        "expected_group": 13,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_032_repeat_group_013.json",
+        "type": "repeat",
+        "expected_group": 13,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both passages report the exact same $150 billion share repurchase authorization by Nvidia's board and identical market reactions.",
+            "matching_facts": [
+              "Nvidia board approved $150 billion repurchase authorization",
+              "Total buyback capacity reached approximately $235 billion through fiscal 2028",
+              "Market capitalization rose to approximately $5.7 trillion"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Nvidia Corp. shares reached a record high on Friday following board approval for an additional $150 billion in share repurchase authorization."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia Corp. (NASDAQ:NVDA) shares hit a fresh all-time high on Friday after the board approved an additional $150 billion share repurchase authorization."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_033_update_group_013.json",
+        "type": "update",
+        "expected_group": 13,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "The incoming segment reports the subsequent execution of repurchases under the newly authorized $150B buyback and after-hours stock gains.",
+            "matching_facts": [
+              "Nvidia $150 billion buyback program"
+            ],
+            "differences": [
+              {
+                "kind": "temporal_development",
+                "aspect": "execution status",
+                "incoming": "first tranche executed ahead of schedule",
+                "candidate": "authorization newly approved"
+              },
+              {
+                "kind": "new_information",
+                "aspect": "share price",
+                "incoming": "exceeded $240 after hours",
+                "candidate": "traded at $235.50 at midday"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "chipmaker has already executed its first tranche of open-market repurchases ahead of schedule."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "the board approved an additional $150 billion share repurchase authorization."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_034_conflict_group_013.json",
+        "type": "conflict",
+        "expected_group": 13,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "The incoming segment denies the $150 billion buyback authorization that the candidate passages claim was approved.",
+            "matching_facts": [
+              "Nvidia board action on $150 billion buyback authorization",
+              "Transaction timing on Friday"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "buyback authorization status",
+                "incoming": "board denies and rejects buyback authorization",
+                "candidate": "board approved $150 billion buyback"
+              },
+              {
+                "kind": "conflict",
+                "aspect": "share price reaction",
+                "incoming": "shares tumbled 4.5% to $210.20",
+                "candidate": "shares rose about 2% to $235.5"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Nvidia stock drops 4.5% as board denies any $150 billion buyback authorization"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "Nvidia approved a massive $150B buyback, lifting remaining authorization to about $235B through fiscal 2028."
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_035_different_group_014.json",
+        "type": "different",
+        "expected_group": 14,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 5299,
+      "output": 2093
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 7,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_2"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 5299,
+      "output": 2093
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 121.6,
+    "completed_at": "2026-10-24T15:47:05+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}

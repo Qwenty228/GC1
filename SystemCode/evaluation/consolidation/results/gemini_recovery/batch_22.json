@@ -1,0 +1,197 @@
+{
+  "batch": {
+    "batch": 22,
+    "seconds": 266.9,
+    "articles": [
+      {
+        "file": "test_106_original_group_043.json",
+        "type": "original",
+        "expected_group": 43,
+        "expected_label": null,
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": []
+      },
+      {
+        "file": "test_107_repeat_group_043.json",
+        "type": "repeat",
+        "expected_group": 43,
+        "expected_label": "same_event_repeated",
+        "predicted_label": "same_event_repeated",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_repeated",
+            "method": "llm",
+            "explanation": "Both articles report Jensen Huang's statements at the Scotland AI summit projecting Nvidia's chip sales will double next year.",
+            "matching_facts": [
+              "Huang projects chip sales will double next year",
+              "Comments made at summit with King Charles III in Scotland",
+              "Discussed AI safety alongside OpenAI and DeepMind"
+            ],
+            "differences": [],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "\"I expect Nvidia to sell twice as many chips as this next year as we do this year,\" Huang told media at the summit."
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "“I expect Nvidia to sell twice as many chips as this next year as we do this year,” Huang said at a summit with King Charles III in Scotland"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_108_update_group_043.json",
+        "type": "update",
+        "expected_group": 43,
+        "expected_label": "same_event_update",
+        "predicted_label": "same_event_update",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_update",
+            "method": "llm",
+            "explanation": "Both report Huang's projection at the Scotland summit, with the incoming segment adding subsequent Korean stock market reactions.",
+            "matching_facts": [
+              "Huang projects doubling chip sales next year",
+              "statement at Scotland AI summit with King Charles III",
+              "projected fiscal 2028 revenue of about $673 billion"
+            ],
+            "differences": [
+              {
+                "kind": "new_information",
+                "aspect": "market impact",
+                "incoming": "reports South Korean chip stock rally closing figures",
+                "candidate": "not reported"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "Huang told reporters on the 17th ahead of an artificial intelligence summit in Scotland hosted by Britain's King Charles III that Nvidia expects to sell"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C2",
+                  "quote": "Nvidia Corp will double its chip sales next year compared to this year, CEO Jensen Huang said Thursday at a summit with the U.K.’s King Charles III in"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_109_conflict_group_043.json",
+        "type": "conflict",
+        "expected_group": 43,
+        "expected_label": "same_event_conflict",
+        "predicted_label": "same_event_conflict",
+        "predicted_events": [
+          "E1"
+        ],
+        "error": null,
+        "judgments": [
+          {
+            "candidate_event": "E1",
+            "label": "same_event_conflict",
+            "method": "llm",
+            "explanation": "Both articles report Huang's remarks at the Scotland summit, but directly conflict on whether chip sales will double or triple.",
+            "matching_facts": [
+              "Jensen Huang remarks at summit in Scotland",
+              "Projection for Nvidia chip sales next year"
+            ],
+            "differences": [
+              {
+                "kind": "conflict",
+                "aspect": "projected chip sales growth",
+                "incoming": "triple / three times as many chips",
+                "candidate": "double / twice as many chips"
+              }
+            ],
+            "evidence": {
+              "incoming": [
+                {
+                  "ref": "U1",
+                  "quote": "“I expect Nvidia to sell three times as many chips as this next year as we do this year,” Huang said"
+                }
+              ],
+              "candidate": [
+                {
+                  "ref": "C1",
+                  "quote": "“I expect Nvidia to sell twice as many chips as this next year as we do this year,” Huang said"
+                }
+              ]
+            },
+            "insufficient_context": false,
+            "uncertainty": null,
+            "validation_notes": []
+          }
+        ]
+      },
+      {
+        "file": "test_110_different_group_044.json",
+        "type": "different",
+        "expected_group": 44,
+        "expected_label": "different_event",
+        "predicted_label": "different_event",
+        "predicted_events": [
+          "E2"
+        ],
+        "error": null,
+        "judgments": []
+      }
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 7562,
+      "output": 2068
+    },
+    "database": null
+  },
+  "recovery": {
+    "batch": 22,
+    "attempt": 1,
+    "model": "gemini-3.8-flash",
+    "projects": [
+      "GEMINI_API_KEY_6"
+    ],
+    "comparison_calls": 3,
+    "tokens": {
+      "input": 7562,
+      "output": 2068
+    },
+    "http_attempts": 3,
+    "retried_failures": {},
+    "waited_seconds": 0.0,
+    "project_switches": [],
+    "seconds": 266.9,
+    "completed_at": "2026-10-25T00:15:40+00:00",
+    "configuration_sha256": "646292b7120d13a26de679eba1b8f70e15810627cc6ebfcb63c5d2ae8f4d3b10"
+  }
+}
