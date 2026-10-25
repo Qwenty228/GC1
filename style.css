@@ -37,6 +37,7 @@ code { background: var(--code-bg); border: 1px solid var(--line); border-radius:
 pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: .9rem 1rem; overflow-x: auto; line-height: 1.5; }
 .label { font: 600 .7rem/1.2 var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
 .muted { color: var(--ink-2); }
+.small { font-size: .84rem; }
 
 .wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
 .masthead { border-bottom: 1px solid var(--line); }
@@ -111,6 +112,7 @@ th, td { text-align: left; vertical-align: top; padding: .5rem .7rem; border-bot
 th { font: 600 .72rem/1.2 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); background: var(--ivory); white-space: nowrap; }
 tr:last-child td { border-bottom: none; }
 td code { white-space: nowrap; }
+td:first-child { white-space: nowrap; }
 p.label { margin: 1.4rem 0 .3rem; }
 p.label code { text-transform: none; letter-spacing: 0; font-weight: 400; }
 .caveats { padding-left: 1.2rem; margin: .4rem 0 1.4rem; }

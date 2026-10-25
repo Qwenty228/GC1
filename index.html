@@ -67,7 +67,7 @@ checked separately against Alpaca's archive.</p>
 <ul class="principles">
   <li><b>Beat a free baseline first <span class="st done">In place</span></b>An LLM score means little until it is compared with
   something cheaper.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
-  <span class="now">Now: the similarity gate alone, and a local Qwen 2.5 7B (Ollama) run on all 25 batches. Every other model is compared with both.</span></li>
+  <span class="now">Now: the similarity gate alone runs on all 25 batches, and every model is compared with it under the same settings.</span></li>
   <li><b>Same items, same settings <span class="st done">In place</span></b>Only the model changes between runs, and each result
   records what produced it.<sup class="cite"><a href="#note-1" aria-label="note *">*</a></sup>
   <span class="now">Now: the experiment scripts run the unchanged pipeline and prompt, and each result file saves the model, prompt version, embedder and retrieval settings.</span></li>
@@ -100,24 +100,30 @@ or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and c
 </div>
 
 <h3 id="compare">What to compare</h3>
-<p>Your run sits next to these finished reference runs, all with local Qwen 2.5 7B on Ollama.</p>
+<p>Every run uses the same 25 batches, the same prompt (<code>compare-2</code>) and the same retrieval settings, the
+<code>.env.example</code> values: <code>SIMILARITY_MAX_CANDIDATE_EVENTS=3</code> and <code>SIMILARITY_LEXICAL_PLAUSIBLE_RANK=0</code>.
+Check the <code>settings</code> block of a result file before adding it to the table.</p>
 
-<p class="label">Consolidation · <code>evaluation/consolidation/results/</code></p>
+<p class="label">Consolidation results · <code>evaluation/consolidation/results/</code></p>
 <div class="table-wrap"><table>
-<thead><tr><th>Run</th><th>What it is</th><th>Grouping F1</th><th>Label macro-F1</th><th>Settings</th></tr></thead>
+<thead><tr><th>Model</th><th>Grouping F1</th><th>Precision</th><th>Recall</th><th>Label macro-F1</th><th>Conflict F1</th><th>Uncertain</th><th>Result file</th></tr></thead>
 <tbody>
-<tr><td><code>2026-10-12_0348_local-qwen2.5-7b</code></td><td>LLM reference, all 25 batches</td><td>0.649</td><td>0.466</td><td>6 / 3</td></tr>
-<tr><td><code>2026-10-10_1458_baseline-rule</code></td><td>Similarity gate alone, no LLM</td><td>0.954</td><td>0.355</td><td>3 / 0</td></tr>
+<tr><td><b>Gemini 3.8 Flash</b></td><td>0.940</td><td>1.00</td><td>0.89</td><td><b>0.889</b></td><td>0.94</td><td>2</td><td><code>gemini_125_completed.json</code>*</td></tr>
+<tr><td><b>Claude Sonnet 5.5</b></td><td>0.925</td><td>1.00</td><td>0.86</td><td>0.869</td><td><b>0.96</b></td><td>0</td><td><code>2026-10-23_1818_claude-sonnet-5-5</code></td></tr>
+<tr><td><b>Claude Haiku 5.5</b></td><td>0.859</td><td>1.00</td><td>0.75</td><td>0.806</td><td>0.94</td><td>2</td><td><code>2026-10-23_1902_haiku-sonnet-settings</code></td></tr>
+<tr><td><b>Qwen 2.5 7B</b> (local)</td><td colspan="6" class="muted">Rerun at 3 / 0 in progress</td><td></td></tr>
+<tr><td>Similarity gate alone (no LLM)</td><td><b>0.954</b></td><td>0.95</td><td><b>0.96</b></td><td>0.355</td><td>0.00</td><td>0</td><td><code>2026-10-10_1458_baseline-rule</code></td></tr>
 </tbody></table></div>
+<p class="muted small">* On branch <code>GC1_nghia_mike_gemini_results</code>, recovered batch by batch after quota limits and re-scored with the same <code>metrics.py</code>.</p>
 <ul class="caveats">
-  <li>Run all 25 batches with the <code>.env.example</code> settings (6 candidates, lexical rank 3), then compare grouping F1, label
-  macro-F1 and the per-label scores, especially conflicts.</li>
-  <li><code>uv run datasources-eval compare</code> lists complete runs only. The Qwen reference is marked incomplete because 4 of 125 articles
-  did not finish analysis (1 <code>pending</code>, 3 <code>partial</code>; the report shows them as misses), so read it with <code>uv run datasources-eval report 2026-10-12_0348_local-qwen2.5-7b</code>.</li>
-  <li>The gate baseline used 3 / 0. For a like-for-like baseline, rerun <code>baseline_rule.py</code> with <code>BATCHES = []</code> (free, under a minute).</li>
+  <li><b>Precision 1.00</b>: the model never merged two different events. <b>Recall</b>: the share of same-event pairs it kept together.
+  The gate links everything above the similarity threshold, so it leads on recall here (the set has only 2 hard negatives) but cannot label repeats, updates or conflicts.</li>
+  <li>Compare label macro-F1 and the per-label scores first, especially conflicts; that is where the LLM adds what the gate cannot.</li>
+  <li><code>uv run datasources-eval compare</code> lists complete runs; <code>uv run datasources-eval report &lt;run&gt;</code> shows any run in full.</li>
+  <li>Earlier runs at 6 / 3 are not comparable: Claude Haiku 5.5 (<code>2026-10-23_1557_claude</code>) and Qwen 2.5 7B (<code>2026-10-12_0348</code>, <code>2026-10-22_2231</code>).</li>
 </ul>
 
-<p class="label">Summarization · <code>evaluation/summarization/results/</code></p>
+<p class="label">Summarization results (local Qwen 2.5 7B) · <code>evaluation/summarization/results/</code></p>
 <div class="table-wrap"><table>
 <thead><tr><th>Run</th><th>Data</th><th>Events</th><th>Published</th><th>Rejected</th><th>No answer</th></tr></thead>
 <tbody>
