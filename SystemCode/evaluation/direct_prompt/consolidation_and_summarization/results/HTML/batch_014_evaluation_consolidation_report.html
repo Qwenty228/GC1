@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 014 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 014 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 066–070 Analysis, Vector Embedding Sensitivity & Conflict Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_14 (Articles 066–070)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 066 to 070) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 066 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 066</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">LUNR drops 7.10% to $14.00 on SpaceX debt sympathy & shared launch provider ties.</p>
+            </div>
+
+            <!-- Test 067 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 067</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">96% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Re-syndicated market report on LUNR's 7.10% sympathy drop with zero new facts.</p>
+            </div>
+
+            <!-- Test 068 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 068</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+28% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Rebounds 4% to $14.58 Thursday after signing new 2028 commercial lunar delivery contract.</p>
+            </div>
+
+            <!-- Test 069 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 069</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (+5.2%)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Contradicts market direction: claims LUNR rose 5.2% to $14.85 using rival launch rockets.</p>
+            </div>
+
+            <!-- Test 070 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 070</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">Unrelated comparative AI compute economics report (SpaceX vs. IREN margins) starting Group 028.</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Sympathy Correlation Vectoring vs. Numerical Direction Conflicts
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    Dense embedding architectures (e.g., BAAI/bge-small-en-v1.5, OpenAI Ada-002) frequently exhibit semantic blindness when evaluating opposing financial market movements. Articles reporting a sharp stock drop (test_066: -7.10% to $14.00) vs a sharp rally (test_069: +5.2% to $14.85) yield high cosine similarity (~0.88) because both share identical underlying entity tokens ("Intuitive Machines", "LUNR", "SpaceX", "Nvidia", "Apollo").
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a direct inversion in stock direction or core partnership dependency.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Blindness</strong>
+                        Vector spaces group articles by general thematic context (e.g., commercial space launch debt & market sentiment), causing opposite price vectors (+5.2% vs -7.1%) to pass similarity thresholds undetected.
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        The symbolic reasoning layer evaluates specific numeric metrics and factual assertions (launch provider connection vs rival provider), applying &Delta;F<sub>contradiction</sub> = 1.0 to guarantee conflicting market reports are preserved rather than flattened.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Breakdown Table -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship & Percentage Breakdown (Batch 014)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_066_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">Intuitive Machines (LUNR), SpaceX sympathy drop, down 7.10% to $14.00, $40B debt raise, launch provider</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes breaking news frame on LUNR stock drop connected to SpaceX debt financing and launch provider relationship.</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_067_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">LUNR stock slide, 7.10% drop to $14.00, SpaceX $40B debt report, Apollo lead</td>
+                            <td class="p-3 font-semibold text-yellow-800">96%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Synthetic restatement of initial price drop and launch partner context without introducing new market data.</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_068_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Thursday 4% rebound to $14.58</span>, new 2028 commercial lunar contract, Q1 2027 SpaceX debt close timeline</td>
+                            <td class="p-3 font-semibold text-blue-800">82%</td>
+                            <td class="p-3 text-blue-700">+28% Operational Facts</td>
+                            <td class="p-3 text-slate-600">Advances event timeline to Thursday, detailing stock recovery and contract execution for 2028 mission.</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_069_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Gained 5.2% to $14.85</span>, Goldman lead (no Apollo), rival launch provider, no SpaceX tie</td>
+                            <td class="p-3 font-semibold text-red-800">88% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly disputes stock direction (+5.2% vs -7.10%), deal lead (Goldman vs Apollo), and launch provider independence.</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_070_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">SpaceX vs IREN AI chip economics, 87% vs 32% gross margins, $9.7B Microsoft deal</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 028 Trigger</td>
+                            <td class="p-3 text-slate-600">Zero domain overlap with LUNR lunar lander sympathy; triggers standalone Group 028 comparative economics event.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 027 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (066–069)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    Intuitive Machines (LUNR) stock experienced sentiment-driven volatility linked to SpaceX news flow and launch provider arrangements (<span class="highlight-repeat">Articles 066–067</span>). Operational state progressed as <span class="highlight-update">LUNR recovered 4% to $14.58 on Thursday after signing a new 2028 commercial lunar delivery contract</span> using SpaceX rockets, while SpaceX's planned debt raise timeline was accelerated to Q1 2027 (<span class="highlight-update">Article 068</span>). However, price movement and launch ties are in direct conflict: initial reports noted <span class="highlight-conflict">LUNR tumbled 7.1% to $14.00 on Wednesday due to SpaceX debt sympathy and launch partner ties</span>, whereas a contradictory report claims <span class="highlight-conflict">LUNR jumped 5.2% to $14.85, asserting LUNR uses rival launch providers and operates independently of SpaceX</span> (<span class="highlight-conflict">Article 069</span>; &Delta;F<sub>contradiction</sub> = 1.0).
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-green-700 font-semibold">✓ Update Preserved: Rebounded 4% to $14.58 on 2028 Lunar Contract</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: Down 7.1% to $14.00 vs Up 5.2% to $14.85</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 067 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 028 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (070)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">A comparative economic analysis highlights divergent business models for NVIDIA chip deployment</span>, contrasting SpaceX's capital-intensive compute ownership model (32% gross margin) against IREN's high-margin compute monetization model (87% gross margin backed by a $9.7 billion Microsoft cloud deal) (<span class="highlight-different">Article 070</span>).
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 027</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 014 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification & Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 066 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_066_original_group_027.json</span>
+                            <span class="text-slate-300">Group 027</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 62228938,
+  "headline": "Intuitive Machines Stock Drops Wednesday: What's Going On?",
+  "symbols": ["LUNR", "NVDA", "SPCX"],
+  "summary": "Intuitive Machines Inc shares are tumbling Wednesday as space stocks slide, pressured by weakness in SpaceX-related sentiment..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes baseline -7.10% drop & SpaceX tie.
+                    </div>
+                </div>
+
+                <!-- Test 068 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_068_update_group_027.json</span>
+                            <span class="text-blue-300">Group 027</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000011,
+  "headline": "Intuitive Machines Rebounds Thursday After New Lunar Delivery Contract",
+  "symbols": ["LUNR", "NVDA", "SPCX"],
+  "summary": "Intuitive Machines rose about 4% to $14.58 after announcing a new 2028 lunar delivery contract..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds 4% rebound & 2028 lunar contract.
+                    </div>
+                </div>
+
+                <!-- Test 069 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_069_conflict_group_027.json</span>
+                            <span class="text-red-300">Group 027</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000012,
+  "headline": "Intuitive Machines Stock Jumps Wednesday as Space Stocks Rally",
+  "symbols": ["LUNR", "NVDA", "SPCX"],
+  "summary": "Intuitive Machines rose about 5% to $14.85 as space stocks rallied... launches on a rival provider's rockets..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes price move (+5.2%) & launch provider.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

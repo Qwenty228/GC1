@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 006 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 006 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 026–030 Analysis, Vector Embedding Sensitivity & Conflict Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_06 (Articles 026–030)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 026 to 030) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 026 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 026</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">SpaceX Starmind AI satellites target 250 kW solar power with Nvidia NV72 racks[cite: 56, 60].</p>
+            </div>
+
+            <!-- Test 027 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 027</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">96% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Re-syndicated fixture wire story detailing identical 250 kW solar array facts[cite: 57, 60].</p>
+            </div>
+
+            <!-- Test 028 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 028</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+25% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Secures regulatory approval, passes 300 kW peak load tests, target early Q1 2027 launch[cite: 58, 60].</p>
+            </div>
+
+            <!-- Test 029 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 029</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (45 kW)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Contradicts power output: claims thermal flaws cap solar power at 45 kW per satellite[cite: 59, 60].</p>
+            </div>
+
+            <!-- Test 030 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 030</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">Unrelated announcement of Nvidia's $10B Healthcare AI initiative starting Group 012[cite: 55, 60].</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive: Embedding Limitations & Numerical Conflict Blindness -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Dense Vector Blindness vs. Numerical Contradiction Metrics
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    A core challenge in automated financial news aggregation is that dense vector models (e.g., BAAI/bge-small-en-v1.5, OpenAI Ada-002) compute cosine similarity based on <em>semantic context</em> rather than <em>numerical fidelity</em>. Changing power capacity specifications (e.g., 250 kW vs 45 kW in test_029) yields high vector similarity (~0.88) because both texts share identical surrounding context tokens ("SpaceX", "Starmind", "solar power", "NVIDIA").
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a hard numerical or engineering spec dispute.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Blindness</strong>
+                        Dense embeddings project words into high-dimensional space where "250 kW" and "45 kW" share near-identical context embeddings. Thus, pure vector cosine distance fails to flag this metric conflict.
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        To prevent missing critical engineering disputes, the LLM reasoning layer performs explicit entity-attribute-value matching, overriding high vector similarity when &Delta;F<sub>contradiction</sub> = 1.0 is detected.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Analysis Matrix -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship & Percentage Breakdown (Batch 006)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_026_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">SpaceX Starmind, 250 kW solar power, Nvidia NV72, Elon Musk, ISS comparison[cite: 56]</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes breaking news frame on SpaceX Starmind AI satellites and Nvidia hardware integration[cite: 60].</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_027_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">Starmind AI fleet, 250 kW solar array, NV72 AI rack, space station benchmarks[cite: 57]</td>
+                            <td class="p-3 font-semibold text-yellow-800">96%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Rephrased wire report detailing identical power specs and hardware plans without new developments[cite: 60].</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_028_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Regulatory approval</span>, 300 kW peak load test, Q1 2027 orbital test flight[cite: 58]</td>
+                            <td class="p-3 font-semibold text-blue-800">83%</td>
+                            <td class="p-3 text-blue-700">+25% Operational Facts</td>
+                            <td class="p-3 text-slate-600">Advances event state by securing regulatory approval, testing 300 kW peak load, and moving launch target to early Q1 2027[cite: 60].</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_029_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">45 kW power cap dispute</span>, thermal dissipation flaws, upending Nvidia compute[cite: 59]</td>
+                            <td class="p-3 font-semibold text-red-800">88% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly disputes initial 250 kW solar power output, asserting thermal flaws limit power to just 45 kW[cite: 60].</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_030_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">Healthcare AI initiative, $10B supercomputer partnership, Blackwell architecture, hospital networks[cite: 55]</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 012 Trigger</td>
+                            <td class="p-3 text-slate-600">Zero domain overlap; triggers standalone Group 012 event cluster[cite: 60].</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 011 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (026–029)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    SpaceX CEO Elon Musk outlined plans for the Starmind AI compute satellite constellation powered by NVIDIA NV72/VR72 AI racks (<span class="highlight-repeat">Articles 026–027</span>)[cite: 60]. Program progress advanced as SpaceX <span class="highlight-update">secured regulatory approvals, completed 300 kW peak load power regulation tests, and accelerated orbital test flight targets to early Q1 2027</span> (<span class="highlight-update">Article 028</span>)[cite: 60]. However, baseline engineering capacity remains heavily disputed: original reports cited solar power output exceeding 250 kW per spacecraft, whereas a conflicting disclosure claims <span class="highlight-conflict">severe thermal dissipation constraints cap power at just 45 kW</span>, threatening the deployment of NVIDIA hardware (<span class="highlight-conflict">Article 029</span>; &Delta;F<sub>contradiction</sub> = 1.0)[cite: 60].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-green-700 font-semibold">✓ Update Preserved: 300 kW Test & Q1 2027 Schedule</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: 250 kW vs 45 kW Thermal Cap</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 027 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 012 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (030)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">NVIDIA CEO Jensen Huang announced a $10 billion partnership with a major healthcare consortium</span> to deploy medical diagnostic supercomputers using Blackwell architecture across 500 hospital networks for real-time genomic sequencing (<span class="highlight-different">Article 030</span>)[cite: 60].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 011</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 006 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification & Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 026 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_026_original.json</span>
+                            <span class="text-slate-300">Group 011</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 62126369,
+  "headline": "Elon Musk Says SpaceX's Starmind AI Satellites Could Pack in More Power...",
+  "symbols": ["NVDA", "SPCX", "T", "TMUS"],
+  "summary": "Elon Musk says SpaceX’s Starmind AI satellites could deliver 250 kW..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes Starmind & 250 kW baseline.
+                    </div>
+                </div>
+
+                <!-- Test 028 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_028_update.json</span>
+                            <span class="text-blue-300">Group 011</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000027,
+  "headline": "SpaceX Accelerates Starmind AI Satellite Launch Timeline...",
+  "symbols": ["NVDA", "SPCX", "T", "TMUS"],
+  "summary": "SpaceX advances its Starmind AI satellite deployment schedule to early 2027..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds 300 kW load test & Q1 2027 launch.
+                    </div>
+                </div>
+
+                <!-- Test 029 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_029_conflict.json</span>
+                            <span class="text-red-300">Group 011</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000028,
+  "headline": "SpaceX Starmind Project Stalls as Engineering Flaws Limit Satellites to Just 45 kW...",
+  "symbols": ["NVDA", "SPCX", "T", "TMUS"],
+  "summary": "SpaceX's Starmind AI satellites face major engineering hurdles..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes 250 kW vs 45 kW thermal cap.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

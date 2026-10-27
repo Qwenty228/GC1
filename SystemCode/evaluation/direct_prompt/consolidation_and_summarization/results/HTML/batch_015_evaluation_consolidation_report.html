@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 015 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 015 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 071–075 Analysis, Vector Embedding Sensitivity &amp; Macro Bond Market Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_15 (Articles 071–075)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 071 to 075) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 071 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 071</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Global bond selloff weighs on S&amp;P 500 after record high; 30-year yield at 5.719% ahead of $39B auction.</p>
+            </div>
+
+            <!-- Test 072 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 072</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">96% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Re-syndicated commentary on bond selloff, 5.719% 30-year yield, and $39B Treasury auction.</p>
+            </div>
+
+            <!-- Test 073 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 073</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+25% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Strong $39B auction demand pulls 30-yr yield down to 5.61%; FOMC minutes lift rate-sensitive stocks.</p>
+            </div>
+
+            <!-- Test 074 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 074</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (Yields/Auction)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Disputes market direction &amp; metrics: S&amp;P closed lower, 30-yr yield fell to 4.85%, RBI cut rates 25 bps, $25B auction.</p>
+            </div>
+
+            <!-- Test 075 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 075</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">AMD balances Treasury yield pressures with 2027 supply expansion and agentic AI CPU growth, triggering Group 030.</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Macro Financial Entity Vectors vs. Contradictory Yield &amp; Auction Metrics
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    Dense vector embeddings (e.g. BAAI/bge-small-en-v1.5) exhibit high cosine similarity (~0.88-0.92) across financial market reports because articles share macro terminology ("Treasury auction", "FOMC minutes", "S&amp;P 500", "yields", "Reserve Bank of India"). However, opposing numerical directions (e.g. 30-year yield at 5.719% vs 4.85%, RBI 25 bps hike vs 25 bps cut, $39B vs $25B auction size) create severe financial contradiction blindness.
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a numerical yield direction or monetary policy contradiction.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Macro Blindness</strong>
+                        Dense vectors map "rate hike 25 bps" and "rate cut 25 bps" into close proximity due to identical policy context, missing directional disputes.
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        Explicit quantitative rule-matching overrides semantic similarity when hard macro disputes (yield deltas, auction figures, central bank actions) occur.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Analysis Matrix -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship &amp; Percentage Breakdown (Batch 015)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_071_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">S&amp;P 500 record close, 30-yr yield 5.719%, $39B Treasury auction, RBI 25 bps hike, Momo crowd</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes baseline macro frame on global bond selloff and upcoming $39B auction.</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_072_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">Bond selloff, 30-yr yield 5.719%, $39B auction, RBI hike, carry trade</td>
+                            <td class="p-3 font-semibold text-yellow-800">96%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Rephrased market commentary detailing identical yield numbers, auction size, and macro events.</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_073_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Strong $39B auction demand</span>, 30-yr yield drop to 5.61%, post-FOMC minutes rally, Intel/Tesla gains</td>
+                            <td class="p-3 font-semibold text-blue-800">82%</td>
+                            <td class="p-3 text-blue-700">+25% Operational Facts</td>
+                            <td class="p-3 text-slate-600">Advances event state by reporting successful $39B auction outcome, yield drop to 5.61%, and post-FOMC stock recovery.</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_074_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">S&amp;P closed lower</span>, 30-yr yield 4.85% drop, RBI 25 bps rate cut, $25B auction</td>
+                            <td class="p-3 font-semibold text-red-800">87% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly contradicts baseline report: asserts S&amp;P fell, yields dropped to 4.85%, RBI cut rates, and auction was $25B.</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_075_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">AMD $1T market cap, 2027 chip supply ramp, TSMC/Foxconn, EPYC agentic AI CPUs, Mizuho/Citi targets</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 030 Trigger</td>
+                            <td class="p-3 text-slate-600">Has zero domain overlap with macro bond auction mechanics; triggers standalone Group 030 event cluster.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 029 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (071–074)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    Global bond markets experienced sharp yield increases ahead of a key U.S. 10-year Treasury auction and FOMC minutes release, with the U.S. 30-year Treasury yield reaching 5.719% and the RBI raising rates by 25 bps to 5.5% (<span class="highlight-repeat">Articles 071–072</span>). Market conditions subsequently stabilized as <span class="highlight-update">strong demand at the $39 billion Treasury auction pulled the 30-year yield down to 5.61%, sparking an equity market recovery supported by cautious FOMC minutes</span> (<span class="highlight-update">Article 073</span>). However, market direction and macro metrics are in direct conflict: initial reports noted the S&amp;P 500 closed at a record high while 30-year yields surged and RBI hiked rates, whereas a contradictory report claims the <span class="highlight-conflict">S&amp;P 500 closed lower on heavy volume, 30-year yields fell to 4.85%, the RBI cut rates by 25 bps, and the auction size was $25 billion</span> (<span class="highlight-conflict">Article 074</span>; &Delta;F<sub>contradiction</sub> = 1.0).
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-blue-700 font-semibold">✓ Update Preserved: Strong $39B Treasury Auction &amp; Yield Drop to 5.61%</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: Record High / 5.719% Yield / $39B vs Lower / 4.85% Yield / $25B</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 072 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 030 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (075)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">Advanced Micro Devices (AMD) is balancing short-term macro yield pressures with strong long-term AI growth</span>, planning a substantial chip supply expansion in 2027 with TSMC, Foxconn, and memory suppliers while securing EPYC processor market share for agentic AI workloads at Meta and OpenAI (<span class="highlight-different">Article 075</span>). Analysts maintain a Buy consensus rating with price targets up to $800.
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 029</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 015 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification &amp; Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 071 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_071_original.json</span>
+                            <span class="text-slate-300">Group 029</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 62227573,
+  "headline": "Global Bond Selloff Dents Market Bullishness — Treasury Auction To Test Sentiment",
+  "symbols": ["AAPL", "AMD", "INTC", "NVDA", "SPY"],
+  "summary": "Treasury Auction Will Be The Test. U.S. 30 year Treasury yield has risen to 5.719%..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes baseline $39B auction &amp; 5.719% yield.
+                    </div>
+                </div>
+
+                <!-- Test 073 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_073_update.json</span>
+                            <span class="text-blue-300">Group 029</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000014,
+  "headline": "Strong Treasury Auction Eases Bond Selloff; FOMC Minutes Lift Rate-Sensitive Stocks",
+  "symbols": ["AAPL", "AMZN", "GOOG", "MSFT", "NVDA", "SPY"],
+  "summary": "A strong $39 billion Treasury auction pulled the 30-year yield back from 5.719% to 5.61%..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds auction results, yield drop &amp; FOMC relief.
+                    </div>
+                </div>
+
+                <!-- Test 074 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_074_conflict.json</span>
+                            <span class="text-red-300">Group 029</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000015,
+  "headline": "Stocks Slide as Bond Yields Fall; Smaller Treasury Auction Ahead",
+  "symbols": ["AAPL", "AMD", "INTC", "NVDA", "SPY"],
+  "summary": "The S&P 500 closed lower as 30-year yield dropped to 4.85% with a $25B auction..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes market direction, yield rate &amp; auction size.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

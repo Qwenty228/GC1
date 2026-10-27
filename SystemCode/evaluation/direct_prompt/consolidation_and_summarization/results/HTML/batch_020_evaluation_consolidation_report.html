@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 020 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 020 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 096–100 Analysis, Vector Embedding Sensitivity & Conflict Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_20 (Articles 096–100)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 096 to 100) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 096 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 096</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Big Tech AI capex faces grid bottleneck; power demand projected to surge 1,100%+ to 315 GW by 2033[cite: 14].</p>
+            </div>
+
+            <!-- Test 097 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 097</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">95% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Restates 1,100% power surge to 315 GW globally (200 GW US) with zero new data[cite: 14].</p>
+            </div>
+
+            <!-- Test 098 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 098</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+20% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Ratepayer Protection Pledge signatories release new quarterly implementation timetable[cite: 14].</p>
+            </div>
+
+            <!-- Test 099 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 099</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (150 GW)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Contradicts energy projections: claims global AI demand will only reach 150 GW (+500%)[cite: 14].</p>
+            </div>
+
+            <!-- Test 100 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 100</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">NVIDIA ETF concentration risks and Michael Burry 'model collapse' warning starting Group 040[cite: 14].</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive: Embedding Limitations & Numerical Conflict Blindness -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Dense Vector Blindness vs. Temporal Contradiction Metrics
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    A core challenge in automated financial news aggregation is that dense vector models (e.g., BAAI/bge-small-en-v1.5, OpenAI Ada-002) compute cosine similarity based on <em>semantic context</em> rather than <em>numerical accuracy or forecast fidelity</em>. Divergent energy growth figures (e.g., +1,100% to 315 GW in test_096 vs +500% to 150 GW in test_099) yield extremely high vector similarity (~0.88) because both texts share identical domain tokens ("AI data centers", "electricity demand", "grid capacity", "gigawatts").
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a hard numeric or forecasted gigawatt growth dispute.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Blindness</strong>
+                        Dense embeddings project words into high-dimensional space where "315 gigawatts (+1,100%)" and "150 gigawatts (+500%)" share near-identical contextual embeddings. Consequently, standard vector cosine metrics fail to recognize the severe numerical contradiction.
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        To ensure forecasting fidelity, the LLM reasoning layer performs structured attribute extraction and numeric threshold validation, overriding vector similarity scores when &Delta;F<sub>contradiction</sub> = 1.0 is established.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Analysis Matrix -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship & Percentage Breakdown (Batch 020)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_096_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">AI power demand, Kobeissi Letter, 315 GW global, $1.3T capex, Ratepayer Pledge[cite: 9, 14]</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes breaking story frame on hyperscaler power bottlenecks and 1,100%+ power growth projections[cite: 14].</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_097_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">AI chip electricity, 1,100% surge, 315 gigawatts, 200 GW US, grid capacity[cite: 10, 14]</td>
+                            <td class="p-3 font-semibold text-yellow-800">95%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Restates identical power growth metrics, global gigawatt targets, and grid constraints without new facts[cite: 14].</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_098_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Quarterly implementation timetable</span>, grid-upgrade cost reporting, Ratepayer Pledge[cite: 11, 14]</td>
+                            <td class="p-3 font-semibold text-blue-800">83%</td>
+                            <td class="p-3 text-blue-700">+20% Policy Facts</td>
+                            <td class="p-3 text-slate-600">Advances event state by announcing a quarterly implementation and reporting timetable for pledge signatories[cite: 14].</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_099_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">150 gigawatts dispute</span>, 500% surge claim, contradictory market forecast[cite: 12, 14]</td>
+                            <td class="p-3 font-semibold text-red-800">88% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly disputes baseline forecast, claiming global AI power demand caps at 150 GW (+500%)[cite: 14].</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_100_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">NVIDIA $5.4T cap, VOO & QQQ ETF weighting, Michael Burry, model collapse[cite: 8, 14]</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 040 Trigger</td>
+                            <td class="p-3 text-slate-600">Zero domain overlap; triggers standalone Group 040 event cluster on ETF concentration and AGI warnings[cite: 14].</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 039 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (096–099)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    Big Tech faces critical grid bottlenecks as hyperscaler AI capex approaches $1.3 trillion in 2027, with companies expanding energy infrastructure through nuclear upgrades and backup generator deals (<span class="highlight-repeat">Articles 096–097</span>)[cite: 9, 10, 14]. Corporate compliance state advanced as signatories of the Ratepayer Protection Pledge—including Amazon, Google, Meta, Microsoft, and Oracle—<span class="highlight-update">released a new quarterly implementation timetable requiring initial progress reports next quarter</span> (<span class="highlight-update">Article 098</span>)[cite: 11, 14]. However, long-term power demand projections are in direct conflict: initial reports projected 1,100%+ power growth to 315 GW globally by 2033 (200 GW in the US), whereas a contradictory report claims <span class="highlight-conflict">global AI power demand will only reach 150 GW by 2030 (a 500% increase)</span> (<span class="highlight-conflict">Article 099</span>; &Delta;F<sub>contradiction</sub> = 1.0)[cite: 12, 14].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-green-700 font-semibold">✓ Update Preserved: Quarterly Implementation Timetable Issued</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: 315 GW (+1,100%) vs 150 GW (+500%) Demand Forecast</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 097 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 040 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (100)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">NVIDIA's $5.4 trillion market capitalization creates heavy portfolio concentration in broad-market ETFs</span> such as Vanguard S&P 500 ETF (VOO at 8.08%) and Invesco QQQ Trust (QQQ at 8.2%)[cite: 8, 14]. Concurrently, investor <span class="highlight-different">Michael Burry warned that recursive training on synthetic AI data risks triggering 'model collapse'</span> and hindering AGI progress, raising questions about mega-cap valuations (<span class="highlight-different">Article 100</span>)[cite: 8, 14].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 039</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 020 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification & Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 096 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_096_original.json</span>
+                            <span class="text-slate-300">Group 039</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 61991451,
+  "headline": "Big Tech’s Data Center Boom Could Be Stopped by One Scarce Resource",
+  "symbols": ["AMZN", "GNRC", "GOOGL", "META", "MSFT", "NVDA", "ORCL", "SPCX"],
+  "summary": "Big Tech's AI expansion faces a power bottleneck as global electricity demand..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes 315 GW (+1,100%) baseline.
+                    </div>
+                </div>
+
+                <!-- Test 098 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_098_update.json</span>
+                            <span class="text-blue-300">Group 039</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000098,
+  "headline": "Tech giants sign Ratepayer Protection Pledge covering 80% of US power utilities",
+  "symbols": ["AMZN", "GOOGL", "META", "MSFT", "NVDA"],
+  "summary": "Hyperscalers committed to funding energy upgrades to prevent AI data centers..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds quarterly reporting timetable.
+                    </div>
+                </div>
+
+                <!-- Test 099 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_099_conflict.json</span>
+                            <span class="text-red-300">Group 039</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000099,
+  "headline": "Report claims AI electricity demand will increase 500% to 150 gigawatts by 2030",
+  "symbols": ["NVDA"],
+  "summary": "A conflicting market study estimates global AI power demand will cap at 150 GW..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes 315 GW (+1,100%) vs 150 GW (+500%).
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

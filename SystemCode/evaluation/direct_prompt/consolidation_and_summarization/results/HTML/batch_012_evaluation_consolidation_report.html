@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 012 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 012 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 056–060 Analysis, Vector Embedding Sensitivity & Conflict Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_12 (Articles 056–060)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 056 to 060) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 056 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 056</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">ASTS falls 6% to $59.24 amid space selloff; joint US-Japan backing for Rakuten deal[cite: 87, 89].</p>
+            </div>
+
+            <!-- Test 057 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 057</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">96% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Re-syndicated wire report on ASTS 6% drop and moving average technicals[cite: 87, 90].</p>
+            </div>
+
+            <!-- Test 058 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 058</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+22% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">ASTS rebounds 2% to $60.45 as Rakuten confirms H1 2027 commercial service launch[cite: 87, 91].</p>
+            </div>
+
+            <!-- Test 059 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 059</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (+4% / US)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Contradicts price and technicals: ASTS rose 4% to $64.80 with US-only backing & reversed death cross[cite: 87, 92].</p>
+            </div>
+
+            <!-- Test 060 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 060</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">Unrelated S&P pullback analysis with subdued VIX below 16 starting Group 024[cite: 87, 88].</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive: Embedding Limitations & Directional/Technical Contradiction Metrics -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Dense Vector Blindness vs. Directional & Government Backing Contradiction Metrics
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    A core challenge in automated financial news aggregation is that dense vector models (e.g., BAAI/bge-small-en-v1.5, OpenAI Ada-002) compute cosine similarity based on <em>semantic context</em> rather than <em>directional stock sentiment or geopolitical alignment fidelity</em>[cite: 87]. Changing price trajectories and backing scope (e.g., -6% drop to $59.24 with joint US-Japan backing vs +4% surge to $64.80 with US-only backing in test_059) yields high vector similarity (~0.89) because both texts share identical surrounding context tokens ("AST SpaceMobile", "Rakuten Group", "SpaceX", "death cross", "moving average")[cite: 87, 89, 92].
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a hard directional price move or geopolitical attribution dispute[cite: 87].
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Blindness</strong>
+                        Dense embeddings project words into high-dimensional space where "fell 6% to $59.24 with joint US-Japan backing" and "rose 4% to $64.80 with US-only backing" share near-identical context embeddings. Thus, pure vector cosine distance fails to flag this directional conflict[cite: 87].
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        To prevent missing critical price movement disputes, the LLM reasoning layer performs explicit directional and entity attribute-value matching, overriding high vector similarity when &Delta;F<sub>contradiction</sub> = 1.0 is detected[cite: 87].
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Analysis Matrix -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship & Percentage Breakdown (Batch 012)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_056_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">ASTS, down 6% to $59.24, joint US-Japan backing, Rakuten, death cross[cite: 87, 89]</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes breaking story frame on ASTS stock slide and joint government backing[cite: 87, 89].</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_057_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">ASTS fell 6% to $59.24, 20-day SMA $60.15, RSI 48.08, July death cross[cite: 87, 90]</td>
+                            <td class="p-3 font-semibold text-yellow-800">96%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Rephrased wire report detailing identical price technicals and government backing[cite: 87, 90].</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_058_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Rebounds 2% to $60.45</span>, Thursday recovery, Rakuten H1 2027 commercial service launch[cite: 87, 91]</td>
+                            <td class="p-3 font-semibold text-blue-800">83%</td>
+                            <td class="p-3 text-blue-700">+22% Operational Facts</td>
+                            <td class="p-3 text-slate-600">Advances event state with Thursday price recovery and Rakuten's H1 2027 commercial launch confirmation[cite: 87, 91].</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_059_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Rose 4% to $64.80 dispute</span>, US-only backing, RSI 62.4, death cross reversed[cite: 87, 92]</td>
+                            <td class="p-3 font-semibold text-red-800">88% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly disputes price direction and technicals, asserting ASTS rose 4% to $64.80 with US-only backing[cite: 87, 92].</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_060_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">S&P 500 pullback, 10-year Treasury yield >5.3%, VIX below 16, SKEW 141[cite: 87, 88]</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 024 Trigger</td>
+                            <td class="p-3 text-slate-600">Zero domain overlap; triggers standalone Group 024 event cluster[cite: 87, 88].</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 023 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (056–059)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    AST SpaceMobile experienced stock trading activity tied to government backing and partner updates for its Rakuten Group satellite venture (<span class="highlight-repeat">Articles 056–057</span>)[cite: 87, 89, 90]. Operational momentum progressed as <span class="highlight-update">Rakuten confirmed commercial service launch for H1 2027, lifting ASTS stock 2% to $60.45</span> (<span class="highlight-update">Article 058</span>)[cite: 87, 91]. However, stock trajectory and government backing details are in direct conflict: original reports noted ASTS fell 6% to $59.24 amid a sector selloff with joint US-Japan backing, whereas a contradictory report claims <span class="highlight-conflict">ASTS rose 4% to $64.80 with US-only backing, reversing its death cross</span> (<span class="highlight-conflict">Article 059</span>; &Delta;F<sub>contradiction</sub> = 1.0)[cite: 87, 92].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-green-700 font-semibold">✓ Update Preserved: Rakuten Confirmed H1 2027 Service Launch</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: Down 6% ($59.24) vs Up 4% ($64.80)</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 057 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 024 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (060)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">Wall Street pulled back as 10-year Treasury yields topped 5.3% and oil passed $100</span>, yet the VIX remained subdued below 16 while SKEW reached 141, signaling a valuation reset rather than broad market panic for tech leaders like NVIDIA (<span class="highlight-different">Article 060</span>)[cite: 87, 88].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 023</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 012 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification & Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 056 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_056_original.json</span>
+                            <span class="text-slate-300">Group 023</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 62228481,
+  "headline": "Why Is AST SpaceMobile Stock Falling on Wednesday?",
+  "symbols": ["ASTS", "NVDA", "SPCX"],
+  "summary": "Why is ASTS stock falling Wednesday? AST SpaceMobile trades lower..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes -6% drop & joint US-Japan backing[cite: 87, 89].
+                    </div>
+                </div>
+
+                <!-- Test 058 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_058_update.json</span>
+                            <span class="text-blue-300">Group 023</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000005,
+  "headline": "AST SpaceMobile Rebounds Thursday After Rakuten Confirms...",
+  "symbols": ["ASTS", "SPCX"],
+  "summary": "AST SpaceMobile rose about 2% to $60.45 after Rakuten confirmed..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds Rakuten H1 2027 commercial launch confirmation[cite: 87, 91].
+                    </div>
+                </div>
+
+                <!-- Test 059 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_059_conflict.json</span>
+                            <span class="text-red-300">Group 023</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 90000006,
+  "headline": "Why Is AST SpaceMobile Stock Rising on Wednesday? Death Cross...",
+  "symbols": ["ASTS", "NVDA", "SPCX"],
+  "summary": "AST SpaceMobile rose about 4% to $64.80, with a reversed death cross..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes -6% vs +4% price move and US-only backing[cite: 87, 92].
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>

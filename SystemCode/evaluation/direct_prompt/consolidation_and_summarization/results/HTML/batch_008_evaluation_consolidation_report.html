@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch 008 Evaluation & Consolidation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        repeat: { bg: '#FEF9C3', text: '#854D0E', border: '#FDE047' },   // Yellow
+                        update: { bg: '#DBEAFE', text: '#1E40AF', border: '#93C5FD' },   // Blue
+                        conflict: { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5' }, // Red
+                        different: { bg: '#F3E8FF', text: '#6B21A8', border: '#D8B4FE' } // Purple
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .highlight-repeat { background-color: #FEF9C3; color: #854D0E; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-update { background-color: #DBEAFE; color: #1E40AF; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-conflict { background-color: #FEE2E2; color: #991B1B; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        .highlight-different { background-color: #F3E8FF; color: #6B21A8; padding: 2px 4px; border-radius: 4px; font-weight: 500; }
+        
+        pre {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <header class="bg-slate-900 text-white py-6 px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">StockEvent Lens — Batch 008 Intelligence Dashboard</h1>
+                <p class="text-slate-400 text-sm mt-1">Articles 036–040 Analysis, Vector Embedding Sensitivity & Conflict Thresholds</p>
+            </div>
+            <div class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 text-right">
+                <span class="text-xs text-slate-400 block">Batch ID</span>
+                <span class="text-blue-400 text-sm font-mono font-bold">batch_08 (Articles 036–040)</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-8">
+        
+        <!-- Executive Summary Cards (Articles 036 to 040) -->
+        <section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Test 036 -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Test 036</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-slate-900">Original</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">100% Base</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Morgan Stanley reinstates Nvidia as top chip pick on undemanding valuation[cite: 67].</p>
+            </div>
+
+            <!-- Test 037 -->
+            <div class="bg-yellow-50 p-4 rounded-xl shadow-sm border border-yellow-200">
+                <div class="text-xs font-semibold text-yellow-800 uppercase tracking-wider">Test 037</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-yellow-900">Repeat</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-200 text-yellow-800">96% Overlap</span>
+                </div>
+                <p class="text-xs text-yellow-700 mt-2">Re-syndicated wire report on Morgan Stanley's rating with zero new facts[cite: 68].</p>
+            </div>
+
+            <!-- Test 038 -->
+            <div class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+                <div class="text-xs font-semibold text-blue-800 uppercase tracking-wider">Test 038</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-blue-900">Update</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-200 text-blue-800">+20% New Info</span>
+                </div>
+                <p class="text-xs text-blue-700 mt-2">Secondary cloud providers commit $4B in new orders, volume triples[cite: 69].</p>
+            </div>
+
+            <!-- Test 039 -->
+            <div class="bg-red-50 p-4 rounded-xl shadow-sm border border-red-200">
+                <div class="text-xs font-semibold text-red-800 uppercase tracking-wider">Test 039</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-red-900">Conflict</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-200 text-red-800">Dispute (Downgrade)</span>
+                </div>
+                <p class="text-xs text-red-700 mt-2">Contradicts top pick status: claims MS dropped Nvidia over valuation, stock down 5.2%[cite: 70].</p>
+            </div>
+
+            <!-- Test 040 -->
+            <div class="bg-purple-50 p-4 rounded-xl shadow-sm border border-purple-200">
+                <div class="text-xs font-semibold text-purple-800 uppercase tracking-wider">Test 040</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <span class="text-lg font-bold text-purple-900">Different</span>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">0% Overlap</span>
+                </div>
+                <p class="text-xs text-purple-700 mt-2">Unrelated federal enforcement action against illegal AI server smuggling starting Group 016[cite: 66].</p>
+            </div>
+        </section>
+
+        <!-- Technical Deep-Dive: Embedding Limitations & Numerical Conflict Blindness -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-bold text-blue-400 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Technical Analysis: Dense Vector Blindness vs. Directional Rating Contradiction Metrics
+            </h2>
+
+            <div class="space-y-4 text-sm text-slate-300 leading-relaxed">
+                <p>
+                    A core challenge in automated financial news aggregation is that dense vector models (e.g., BAAI/bge-small-en-v1.5, OpenAI Ada-002) compute cosine similarity based on <em>semantic context</em> rather than <em>directional recommendation fidelity</em>. Changing analyst stance (e.g., reinstating top pick vs stripping top pick status in test_039) yields high vector similarity (~0.89) because both texts share identical surrounding context tokens ("Nvidia", "Morgan Stanley", "Joseph Moore", "valuation").
+                </p>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 font-mono text-xs">
+                    <div class="text-slate-400 mb-2">// Formula: Formal Conflict Detection Condition</div>
+                    <div class="text-yellow-300 font-bold">
+                        Conflict_State = ( Cosine_Similarity(E<sub>orig</sub>, E<sub>cand</sub>) &gt; &tau;<sub>sim</sub> ) &amp;&amp; ( &Delta;F<sub>contradiction</sub> == 1.0 )
+                    </div>
+                    <div class="text-slate-400 mt-2">
+                        where &tau;<sub>sim</sub> = 0.60, and &Delta;F<sub>contradiction</sub> = 1.0 indicates a hard directional or rating dispute.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 text-xs">
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-red-400 block mb-1">1. Dense Embedding Blindness</strong>
+                        Dense embeddings project words into high-dimensional space where "reinstated as top pick" and "dropped from preferred list" share near-identical context embeddings. Thus, pure vector cosine distance fails to flag this analyst rating conflict.
+                    </div>
+                    <div class="bg-slate-800/80 p-3 rounded border border-slate-700">
+                        <strong class="text-green-400 block mb-1">2. LLM Evaluation Override</strong>
+                        To prevent missing critical rating change disputes, the LLM reasoning layer performs explicit attribute-value matching, overriding high vector similarity when &Delta;F<sub>contradiction</sub> = 1.0 is detected.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Relationship & Percentage Analysis Matrix -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Article Relationship & Percentage Breakdown (Batch 008)
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase text-xs">
+                            <th class="p-3 border-b">File Identifier</th>
+                            <th class="p-3 border-b">Pattern Label</th>
+                            <th class="p-3 border-b">Keywords Identified</th>
+                            <th class="p-3 border-b">Similarity %</th>
+                            <th class="p-3 border-b">Delta %</th>
+                            <th class="p-3 border-b">Classification Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-medium">test_036_original</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-200 text-slate-800">Original (%5=1)</span></td>
+                            <td class="p-3 text-slate-600">Morgan Stanley top pick, Joseph Moore, valuation, 80 cloud partners, Jensen Huang[cite: 67]</td>
+                            <td class="p-3 font-semibold">100%</td>
+                            <td class="p-3 text-slate-500">Baseline</td>
+                            <td class="p-3 text-slate-600">Establishes breaking story frame on Morgan Stanley reinstating NVIDIA as top pick[cite: 65].</td>
+                        </tr>
+                        <tr class="bg-yellow-50/50 hover:bg-yellow-50">
+                            <td class="p-3 font-mono font-medium">test_037_repeat</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-repeat">Repeat (%5=2)</span></td>
+                            <td class="p-3 text-slate-600">Morgan Stanley preferred choice, Joseph Moore, leadership meetings, 80 cloud partners[cite: 68]</td>
+                            <td class="p-3 font-semibold text-yellow-800">96%</td>
+                            <td class="p-3 text-yellow-700">0% New Facts</td>
+                            <td class="p-3 text-slate-600">Rephrased wire report detailing identical analyst ratings and cloud partner metrics[cite: 65].</td>
+                        </tr>
+                        <tr class="bg-blue-50/50 hover:bg-blue-50">
+                            <td class="p-3 font-mono font-medium">test_038_update</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-update">Update (%5=3)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">$4 billion purchase orders</span>, secondary cloud providers, volume tripled, institutional inflows[cite: 69]</td>
+                            <td class="p-3 font-semibold text-blue-800">83%</td>
+                            <td class="p-3 text-blue-700">+20% Operational Facts</td>
+                            <td class="p-3 text-slate-600">Advances event state with $4B in new cloud infrastructure orders and volume surge[cite: 65].</td>
+                        </tr>
+                        <tr class="bg-red-50/50 hover:bg-red-50">
+                            <td class="p-3 font-mono font-medium">test_039_conflict</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-conflict">Conflict (%5=4)</span></td>
+                            <td class="p-3 text-slate-600"><span class="font-bold underline">Dropped top pick status</span>, valuation fears, emergency briefing, stock down 5.2%[cite: 70]</td>
+                            <td class="p-3 font-semibold text-red-800">89% Match</td>
+                            <td class="p-3 text-red-700">&Delta;F<sub>contradiction</sub> = 1.0</td>
+                            <td class="p-3 text-slate-600">Directly disputes top pick reinstatement, claiming Morgan Stanley stripped top pick status[cite: 65].</td>
+                        </tr>
+                        <tr class="bg-purple-50/50 hover:bg-purple-50">
+                            <td class="p-3 font-mono font-medium">test_040_different</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold highlight-different">Different (%5=0)</span></td>
+                            <td class="p-3 text-slate-600">Federal crackdown, smuggling ring, illegal AI server export, Southeast Asian hubs[cite: 66]</td>
+                            <td class="p-3 font-semibold text-purple-800">0%</td>
+                            <td class="p-3 text-purple-700">Group 016 Trigger</td>
+                            <td class="p-3 text-slate-600">Zero domain overlap; triggers standalone Group 016 event cluster[cite: 65].</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Consolidated Event Outputs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 015 — Consolidated Event Summary</span>
+                    <span class="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">4 Articles (036–039)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    Morgan Stanley named NVIDIA its preferred semiconductor stock pick, citing attractive valuation and a broad cloud partner network (<span class="highlight-repeat">Articles 036–037</span>)[cite: 65]. Institutional interest surged following the designation, with <span class="highlight-update">secondary cloud providers committing $4 billion in new infrastructure orders</span> (<span class="highlight-update">Article 038</span>)[cite: 65]. However, analyst ratings are in direct conflict: original reports confirmed NVIDIA was reinstated as top pick by Joseph Moore, whereas a contradictory report claims <span class="highlight-conflict">Morgan Stanley stripped NVIDIA of top pick status due to valuation risks, sending shares down 5.2%</span> (<span class="highlight-conflict">Article 039</span>; &Delta;F<sub>contradiction</sub> = 1.0)[cite: 65].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <span class="text-green-700 font-semibold">✓ Update Preserved: $4B Secondary Cloud Purchase Orders</span>
+                    <span class="text-red-700 font-semibold">✓ Conflict Preserved: Top Pick Reinstatement vs Downgrade</span>
+                    <span class="text-yellow-700 font-semibold">✓ Duplicate Removed: Article 037 Consolidated</span>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <h3 class="text-md font-bold text-slate-900 mb-3 flex items-center justify-between">
+                    <span>Group 016 — Standalone Summary</span>
+                    <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">1 Article (040)</span>
+                </h3>
+                <p class="text-sm text-slate-700 leading-relaxed bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <span class="highlight-different">Federal law enforcement agencies announced a crackdown on an international smuggling network</span> illegally routing restricted NVIDIA AI server components through Southeast Asian transit hubs to overseas entities (<span class="highlight-different">Article 040</span>)[cite: 65].
+                </p>
+                <div class="mt-3 flex flex-wrap gap-2 text-xs text-purple-700">
+                    <span class="font-semibold">✓ New Event Cluster Established</span>
+                    <span class="font-semibold">✓ Zero Entity Contamination from Group 015</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Json Data Inspector Section -->
+        <section class="bg-slate-900 text-white rounded-xl shadow-md p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-200 flex items-center justify-between">
+                <span>Batch 008 Raw Data Source Inspector</span>
+                <span class="text-xs font-normal text-slate-400">JSON Format Verification & Evidence Code Snippets</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                <!-- Test 036 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-slate-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_036_original.json</span>
+                            <span class="text-slate-300">Group 015</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 62134216,
+  "headline": "Nvidia's 'Very Undemanding Valuation' Helps Win Back Top Chip Pick...",
+  "symbols": ["NVDA"],
+  "summary": "Morgan Stanley names Nvidia its top chip pick again, citing valuation..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-slate-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Establishes Morgan Stanley top pick baseline.
+                    </div>
+                </div>
+
+                <!-- Test 038 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-blue-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_038_update.json</span>
+                            <span class="text-blue-300">Group 015</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000035,
+  "headline": "Morgan Stanley's Top Pick Status Triggers Massive Institutional Inflows...",
+  "symbols": ["NVDA"],
+  "summary": "Institutional buyers rush into Nvidia following Morgan Stanley's designation..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-blue-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Adds $4B new orders & volume spike.
+                    </div>
+                </div>
+
+                <!-- Test 039 JSON -->
+                <div class="bg-slate-800 p-3 rounded border border-slate-700 flex flex-col justify-between">
+                    <div>
+                        <div class="text-red-400 border-b border-slate-700 pb-1 mb-2 font-bold flex justify-between">
+                            <span>test_039_conflict.json</span>
+                            <span class="text-red-300">Group 015</span>
+                        </div>
+                        <pre class="text-slate-300 overflow-x-auto h-36">
+{
+  "id": 990000036,
+  "headline": "Morgan Stanley Downgrades Nvidia Outlook Over Valuation Fears...",
+  "symbols": ["NVDA"],
+  "summary": "Morgan Stanley removes Nvidia from its preferred list due to valuation..."
+}</pre>
+                    </div>
+                    <div class="mt-2 text-red-400 text-[10px] italic border-t border-slate-700/50 pt-1">
+                        Disputes top pick status vs rating downgrade.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>
