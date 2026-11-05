@@ -11,6 +11,8 @@
 
   const R = window.StockNewsRender;
   const W = window.StockNewsWatchlist;
+  const F = window.StockNewsFilters;
+  const T = window.StockNewsTour;
   const $ = (id) => document.getElementById(id);
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const SYMBOL = /^[A-Z0-9.\-]{1,12}$/;
@@ -25,7 +27,7 @@
   const from = readFrom();
   const state = { detail: null, timeline: null, first: true };
 
-  // Only the feed's own view keys are carried back; anything else in the address is ignored.
+  // Only the feed's own view and filter keys are carried back (validated); anything else in the address is ignored.
   function readFrom() {
     const p = new URLSearchParams(location.hash.replace(/^#/, ""));
     if (!p.has("from")) return null;
@@ -34,6 +36,7 @@
     const company = (feed.get("company") || "").toUpperCase();
     if (feed.get("view") === "watchlist") back.set("view", "watchlist");
     else if (SYMBOL.test(company)) back.set("company", company);
+    F.write(F.read(feed), back);
     if (feed.get("sample") === "1") back.set("sample", "1");
     return back;
   }
@@ -126,6 +129,7 @@
       return;
     }
     $("story").setAttribute("aria-busy", "true");
+    $("story").innerHTML = R.storySkeleton(); // also when trying again after an error
     document.body.dataset.storyState = "loading";
     const query = sample ? "?include_sample=true" : "";
     state.timeline = null;
@@ -150,6 +154,11 @@
   }
 
   document.addEventListener("click", async (event) => {
+    const tour = event.target.closest("#tour-button");
+    if (tour) {
+      T.start(T.tours.story, { opener: tour, name: "story" });
+      return;
+    }
     if (event.target.closest("[data-retry]")) {
       load();
       return;

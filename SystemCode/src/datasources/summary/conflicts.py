@@ -83,6 +83,19 @@ def display_status(review: dict[str, Any], summary_revisions: set[str] | None) -
     return "under_review"  # an unknown state is never shown as resolved
 
 
+# The SQL twin of ``display_status(...) in ACTIVE`` for review ``v`` of comparison ``c``, used to filter the event
+# list ("sources disagree") before paging. ``{manifest}`` is the published summary's input_manifest (NULL when
+# there is none). Keep the two in step: tests/test_feed_filters.py checks them against each other.
+ACTIVE_REVIEW_SQL = """
+    (v.status IN ('open', 'in_review')
+     OR v.resolution IS NULL OR v.resolution NOT IN ('not_a_conflict', 'different_events')
+     OR (v.resolution = 'different_events' AND (
+           EXISTS (SELECT 1 FROM event_membership mm WHERE mm.event_id = c.candidate_event_id
+                    AND mm.revision_id = c.revision_id AND mm.state IN ('active', 'pending'))
+           OR COALESCE(({manifest}) -> 'member_revision_ids' @> to_jsonb(c.revision_id::text), false))))
+"""
+
+
 def event_status(statuses: list[str]) -> str:
     for status in _PRECEDENCE:
         if status in statuses:

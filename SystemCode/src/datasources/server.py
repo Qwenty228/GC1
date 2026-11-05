@@ -149,40 +149,71 @@ def _database_unavailable(exc: Exception) -> JSONResponse:
     return JSONResponse({"error": f"database unavailable: {type(exc).__name__}"}, status_code=503)
 
 
+def _instant(value: str | None, name: str) -> datetime | None:
+    """An ISO 8601 date-time for a filter bound; one without a time zone is read as UTC."""
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip())
+    except ValueError:
+        raise ValueError(f"{name} must be an ISO 8601 date-time such as 2026-11-05T00:00:00Z") from None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
 @app.get("/api/events")
 def api_events(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
                state: str | None = Query(None, description="Filter by summary_state"),
                symbol: str | None = Query(None, description="Only events with a source linked to this ticker"),
                company: list[str] | None = Query(None, description="Only events with a source linked to ANY of "
                                                                      "these companies (SEC CIKs; a watchlist)"),
+               q: str | None = Query(None, description="Search text: every word must appear in the headline, "
+                                                        "summary, a source title, or a company name or ticker"),
+               since: str | None = Query(None, description="Only events whose latest report is at or after this "
+                                                            "ISO date-time"),
+               until: str | None = Query(None, description="Only events whose latest report is before this "
+                                                            "ISO date-time"),
+               has_filing: bool = Query(False, description="Only events with an SEC filing among their sources"),
+               conflict: bool = Query(False, description="Only events whose sources disagree (an open review, a "
+                                                          "confirmed disagreement or an unfinished correction)"),
                include_sample: bool = False, database=Depends(get_database)) -> JSONResponse:
     """Grouped events, newest first, each with its current summary (or pending / review state), a
     compact `conflict` status and count from the stored conflict reviews, the company `symbols` and
-    `companies` of its sources and its `latest_source` (title, publisher, time, http(s) link) for cards
-    without a summary.
+    `companies` of its sources, its `latest_source` (title, publisher, time, http(s) link) for cards
+    without a summary, its SEC `filings` (form and 8-K items with their official captions) and its
+    `latest_update` (the newest substantive update's time, source and stored aspects).
 
-    `company` (repeatable, or comma-separated) is the reader's watchlist: it is applied in SQL before
-    `limit`/`offset`, and an event linked to several of the companies is returned once. Sample (demo/test)
-    events are excluded unless `include_sample=true`.
+    `company` (repeatable, or comma-separated) is the reader's watchlist. It and every other filter (`q`,
+    `since`/`until`, `has_filing`, `conflict`) are applied in SQL before `limit`/`offset`, and an event linked
+    to several of the companies is returned once. Sample (demo/test) events are excluded unless
+    `include_sample=true`.
     """
     from fastapi.encoders import jsonable_encoder
 
-    from .summary.read import SUMMARY_STATES, list_events
+    from .summary.read import SUMMARY_STATES, list_events, search_terms
 
     if state is not None and state not in SUMMARY_STATES:
         return JSONResponse({"error": f"state must be one of {', '.join(SUMMARY_STATES)}"}, status_code=422)
     try:
         ticker = _symbol(symbol)
         ciks = _ciks(company)
+        terms = search_terms(q)
+        start, end = _instant(since, "since"), _instant(until, "until")
+        if start and end and start >= end:
+            raise ValueError("since must be earlier than until")
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=422)
     try:
         with database.connection() as conn:
             events = list_events(conn, include_sample=include_sample, language=_summary_language(), limit=limit,
-                                 offset=offset, state=state, symbol=ticker, ciks=ciks)
+                                 offset=offset, state=state, symbol=ticker, ciks=ciks, terms=terms, since=start,
+                                 until=end, has_filing=has_filing, conflict=conflict)
     except Exception as exc:
         return _database_unavailable(exc)
-    return JSONResponse(jsonable_encoder({"events": events, "limit": limit, "offset": offset}))
+    # The filters actually applied, so a page never presents unfiltered results as filtered (an older server
+    # ignores parameters it does not know and returns no "filters").
+    applied = {"q": " ".join(q.split()) if terms else None, "since": start, "until": end, "has_filing": has_filing,
+               "conflict": conflict}
+    return JSONResponse(jsonable_encoder({"events": events, "limit": limit, "offset": offset, "filters": applied}))
 
 
 @app.get("/api/coverage")

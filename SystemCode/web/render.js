@@ -28,6 +28,11 @@
     arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
     arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+    history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    compass: '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.8 5.4a2 2 0 0 1-1.28 1.28l-5.4 1.8 1.8-5.4a2 2 0 0 1 1.28-1.28z"/>',
   };
   const svg = (name) => `<svg viewBox="0 0 24 24" focusable="false">${ICONS[name] || ICONS.dot}</svg>`;
   const icon = (name, cls) =>
@@ -177,6 +182,13 @@
       (symbols.length > max ? `<span class="ticker more">+${esc(symbols.length - max)}</span>` : "");
   }
 
+  // "New" / "Updated" since the reader's last visit (`ctx.fresh(e)`, from visits.js), in words for screen readers too.
+  const FRESH = { new: ["fresh-new", "New"], updated: ["fresh-updated", "Updated"] };
+  function freshBadge(kind) {
+    const [cls, word] = FRESH[kind] || [];
+    return cls ? `<span class="badge ${cls}">${word}<span class="sr-only"> since your last visit</span></span>` : "";
+  }
+
   function cardHead(e, ctx) {
     const id = esc(e.event_id);
     const headline = (e.summary && e.summary.headline) || e.title || "Untitled story";
@@ -184,7 +196,8 @@
     const time = e.last_source_time
       ? `<span>${e.documents > 1 ? "Latest report" : "Published"} ${shortWhen(e.last_source_time)}</span>` : "";
     const sample = e.is_sample ? `<span class="badge sample">Sample</span>` : "";
-    const meta = [tickers && `<span class="tickers">${tickers}</span>`, time, sample].filter(Boolean)
+    const fresh = freshBadge(ctx.fresh ? ctx.fresh(e) : "");
+    const meta = fresh + [tickers && `<span class="tickers">${tickers}</span>`, time, sample].filter(Boolean)
       .join(`<span class="sep" aria-hidden="true">·</span>`);
     return `<h3 class="card-title" id="event-${id}-title">${esc(headline)}</h3>
       ${meta ? `<p class="card-meta">${meta}</p>` : ""}`;
@@ -246,6 +259,79 @@
     if (!e.summary) return { preview: noSummary(e, ctx), full: "", more: false };
     const p = preview(e.summary);
     return { preview: `<p class="ai-label">${icon("ai")}AI summary</p>${p.html}`, full: fullSummary(e), more: !p.complete };
+  }
+
+  // ------------------------------------------------------------------ card: SEC filing and latest update
+  // Short plain-language names for 8-K items; the official caption (from the API) is the tooltip. An item without
+  // a plain name shows its official caption, and an unknown item only its number.
+  const ITEM_LABEL = {
+    "1.01": "Major agreement signed", "1.02": "Major agreement ended", "1.03": "Bankruptcy or receivership",
+    "1.04": "Mine safety shutdown", "1.05": "Cybersecurity incident",
+    "2.01": "Acquisition or sale of assets completed", "2.02": "Earnings and financial results",
+    "2.03": "New debt or financial obligation", "2.04": "Debt obligation accelerated or increased",
+    "2.05": "Exit or restructuring costs", "2.06": "Asset impairment",
+    "3.01": "Delisting or listing transfer", "3.02": "Unregistered sale of shares",
+    "3.03": "Change to shareholder rights", "4.01": "Change of auditor",
+    "4.02": "Earlier financial statements no longer reliable", "5.01": "Change in control",
+    "5.02": "Executive or board change", "5.03": "Bylaw or fiscal-year change",
+    "5.04": "Benefit-plan trading suspended", "5.05": "Code of ethics change or waiver",
+    "5.06": "Shell company status change", "5.07": "Shareholder vote results",
+    "5.08": "Shareholder director nominations", "7.01": "Regulation FD disclosure", "8.01": "Other events",
+    "9.01": "Financial statements and exhibits",
+  };
+
+  function filingItem(item) {
+    const code = esc(item.code);
+    const official = item.caption ? `Item ${item.code}: ${item.caption}` : `Item ${item.code}`;
+    const name = ITEM_LABEL[item.code] || item.caption;
+    return `<span class="filing-item" title="${esc(official)}">${name ? `${esc(name)} <span class="muted">(Item ${code})</span>`
+      : `Item ${code}`}</span>`;
+  }
+
+  // "SEC 8-K: Earnings and financial results (Item 2.02)" for a story with a filing among its sources. Item 9.01
+  // (the exhibit list) is left out when the filing reports anything else.
+  function filingLine(e) {
+    const filings = e.filings || [];
+    if (!filings.length) return "";
+    const f = filings[0];
+    let items = (f.items || []).filter((i) => i && i.code);
+    if (items.length > 1) items = items.filter((i) => i.code !== "9.01");
+    const more = filings.length > 1 ? ` <span class="muted">· ${esc(plural(filings.length - 1, "more filing"))}</span>` : "";
+    return `<p class="filing-line">${icon("file")}<span><strong>SEC ${esc(f.form || "filing")}</strong>${items.length
+      ? `: ${items.map(filingItem).join("; ")}` : ""}${more}</span></p>`;
+  }
+
+  // What the newest substantive update added, from the stored grouping comparison (the same words as the timeline).
+  function updateLine(e) {
+    const u = e.latest_update;
+    if (!u) return "";
+    const what = (u.aspects || []).length ? `new information on ${listNames(u.aspects.map(esc))}`
+      : "new information or a later development";
+    const when = u.time ? ` ${shortWhen(u.time)}` : "";
+    const who = u.name ? ` from ${esc(publisher(u.name))}` : "";
+    return `<p class="update-line">${icon("history")}<span><strong>Latest update</strong>${when}${who}: ${what}.</span></p>`;
+  }
+
+  // ------------------------------------------------------------------ feed: day headers
+  const pad = (n) => String(n).padStart(2, "0");
+  // The calendar day of a story's latest report in this browser's time zone ("unknown" without a time).
+  function dayKey(iso) {
+    const d = new Date(iso);
+    if (!iso || isNaN(d)) return "unknown";
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function dayHead(key, now) {
+    if (key === "unknown") return "Date unknown";
+    const [y, m, dd] = key.split("-").map(Number);
+    const d = new Date(y, m - 1, dd);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const days = Math.round((today - d) / 864e5);
+    const full = esc(d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric",
+                                                     ...(y !== now.getFullYear() ? { year: "numeric" } : {}) }));
+    if (days === 0) return `Today <span class="day-date">${full}</span>`;
+    if (days === 1) return `Yesterday <span class="day-date">${full}</span>`;
+    return full;
   }
 
   // ------------------------------------------------------------------ sources panel: conflict notice
@@ -397,8 +483,15 @@
   }
 
   // ------------------------------------------------------------------ feed states
-  // `label` names what the feed is narrowed to: a ticker, "the companies you follow", or nothing.
-  function feedEmpty(status, label) {
+  // `label` names what the feed is narrowed to: a ticker, "the companies you follow", or nothing. `filters` are the
+  // search and filter phrases in force (filters.js describe()); with any, the message is about them.
+  function feedEmpty(status, label, filters) {
+    if ((filters || []).length) {
+      return `<div class="state filters-empty"><h3>No stories match</h3><p>There are no stored stories${label
+        ? ` about ${esc(label)}` : ""} ${esc(filters.join(", "))}.</p>
+        <p class="state-actions"><button type="button" class="button secondary" data-clear-filters>Clear search and
+        filters</button></p></div>`;
+    }
     const counts = status && status.counts;
     if (counts && counts.articles === 0) {
       return `<div class="state"><h3>No news yet</h3><p>Stories appear here as articles are collected.</p></div>`;
@@ -606,7 +699,7 @@
       return `${loadError("the timeline", t.error, false)}<p><button type="button" class="button secondary"
         data-retry-timeline>Try again</button></p>`;
     }
-    return t ? timeline(t) : `<p class="muted" role="status">Loading the timeline…</p>`;
+    return t ? timeline(t) : skeletonLines(4, "Loading the timeline…");
   }
 
   // The whole story: headline, companies, status, summary, conflict notices, timeline, sources and quotes.
@@ -627,6 +720,31 @@
         <div id="timeline-slot" aria-live="polite">${timelineBlock(t)}</div></section>
       <section class="story-section" aria-labelledby="sources-heading"><h3 id="sources-heading">Sources and
         evidence</h3>${sourceList(d)}${evidence(d.summary)}${related(d)}${resolvedReviews(d)}</section>`;
+  }
+
+  // ------------------------------------------------------------------ loading placeholders
+  // Grey shapes in the layout of what is loading, with the words for screen readers (the shapes are hidden).
+  const bar = (cls) => `<span class="sk ${cls}"></span>`;
+
+  function skeletonCards(count, label) {
+    const card = `<div class="card skeleton-card">${bar("sk-meta")}${bar("sk-title")}${bar("sk-title sk-short")}${
+      bar("sk-pill")}${bar("sk-line")}${bar("sk-line")}${bar("sk-line sk-short")}<span class="sk-actions">${
+      bar("sk-button")}${bar("sk-button")}</span></div>`;
+    return `<div class="skeleton" role="status"><span class="sr-only">${esc(label)}</span><div class="skeleton-list"
+      aria-hidden="true">${card.repeat(count)}</div></div>`;
+  }
+
+  function skeletonLines(count, label) {
+    const lines = Array.from({ length: count }, (_, i) => bar(i === count - 1 ? "sk-line sk-short" : "sk-line")).join("");
+    return `<div class="skeleton skeleton-block" role="status"><span class="sr-only">${esc(label)}</span><span
+      class="skeleton-lines" aria-hidden="true">${bar("sk-heading")}${lines}</span></div>`;
+  }
+
+  function storySkeleton() {
+    return `<div class="skeleton" role="status"><span class="sr-only">Loading the story…</span><div aria-hidden="true"
+      class="skeleton-story">${bar("sk-title sk-large")}${bar("sk-title sk-large sk-short")}${bar("sk-meta")}${
+      bar("sk-heading")}${bar("sk-pill")}${bar("sk-line")}${bar("sk-line")}${bar("sk-line")}${bar("sk-line sk-short")}${
+      bar("sk-heading")}${bar("sk-line")}${bar("sk-line sk-short")}</div></div>`;
   }
 
   function loadError(what, message, retrying = true) {
@@ -859,8 +977,9 @@
       esc(item.title)}</span> <a href="/tools.html#activity">See activity</a>`;
   }
 
-  const api = { esc, safeUrl, extLink, when, clock, ago, plural, icon, notice, sentenceEnds, preview, cardHead,
+  const api = { esc, safeUrl, extLink, when, shortWhen, clock, ago, plural, icon, notice, sentenceEnds, preview, cardHead,
                 tickerChips, conflictLine, summaryView, sourcesPanel, feedEmpty, watchlistEmpty, loadError,
+                filingLine, updateLine, dayKey, dayHead, freshBadge, skeletonCards, skeletonLines, storySkeleton,
                 articleCard, articlesEmpty, collectorStatus, processingStatus, dateOnly, timeline, timelineBlock,
                 storyPage, activityCurrent, activityRecent, activityStatus, activityLine };
   if (typeof module !== "undefined" && module.exports) module.exports = api;

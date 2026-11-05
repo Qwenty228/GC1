@@ -14,12 +14,16 @@ status and count in the list, and every dispute with its claims, verbatim quotes
 
 from __future__ import annotations
 
+import re
+from datetime import datetime
 from typing import Any
 
 from psycopg import Connection
 
+from ..sec_items import SEC_8K_ITEMS
 from ..similarity.store import SOURCE_TIME
 from . import conflicts
+from .timeline import _UPDATE_KINDS, _aspects
 
 _EVENT_COLUMNS = f"""
     e.event_id, e.title, e.status, e.is_sample, e.first_source_time, e.last_source_time, e.superseded_by,
@@ -111,17 +115,94 @@ _LIST_COLUMNS = f"""
        LEFT JOIN sec_filing_details s ON s.revision_id = m.revision_id
        LEFT JOIN company co ON co.company_id = s.issuer_company_id
       WHERE m.event_id = e.event_id
-      ORDER BY {SOURCE_TIME} DESC NULLS LAST, m.revision_id LIMIT 1) AS latest_source
+      ORDER BY {SOURCE_TIME} DESC NULLS LAST, m.revision_id LIMIT 1) AS latest_source,
+    {{filings}},
+    {{latest_update}}
+"""
+
+# The SEC filings among the current sources, newest first: form and the 8-K items of the part of the filing that
+# belongs to THIS event (a filing can cover several events), else the filing's own item list.
+_FILINGS_COLUMN = """
+    COALESCE((SELECT jsonb_agg(jsonb_build_object('form', f.form, 'items', to_jsonb(f.items)) ORDER BY f.at DESC NULLS LAST)
+      FROM (SELECT s.form, COALESCE(r.published_at, s.accepted_at) AS at,
+                   COALESCE(NULLIF(ARRAY(SELECT DISTINCT t.location->>'item_code' FROM text_unit t
+                                          WHERE t.revision_id = m.revision_id AND t.profile_id = e.profile_id
+                                            AND t.location->>'segment_key' IS NOT DISTINCT FROM m.segment_key
+                                            AND COALESCE(t.location->>'item_code', '') <> ''
+                                          ORDER BY 1), '{}'::text[]), s.item_codes, '{}'::text[]) AS items
+              FROM current_event_membership m
+              JOIN sec_filing_details s ON s.revision_id = m.revision_id
+              JOIN document_revision r ON r.revision_id = m.revision_id
+             WHERE m.event_id = e.event_id) f), '[]'::jsonb) AS filings
+"""
+
+# The most recent report that grouping recorded as a substantive update (new facts or a later development): its
+# own time (never the retrieval time), source and the stored difference aspects.
+_LATEST_UPDATE_COLUMN = """
+    (SELECT jsonb_build_object('time', COALESCE(r.published_at, s.accepted_at, r.source_updated_at),
+                               'name', COALESCE(pub.name, co.name), 'record_type', m.record_type,
+                               'differences', c.differences)
+       FROM current_event_membership m
+       JOIN document_revision r ON r.revision_id = m.revision_id
+       LEFT JOIN event_comparison c ON c.comparison_id = m.comparison_id
+       LEFT JOIN publisher pub ON pub.publisher_id = r.publisher_id
+       LEFT JOIN sec_filing_details s ON s.revision_id = m.revision_id
+       LEFT JOIN company co ON co.company_id = s.issuer_company_id
+      WHERE m.event_id = e.event_id AND m.relation = 'same_event_update'
+      ORDER BY m.source_time DESC NULLS LAST, m.membership_id LIMIT 1) AS latest_update
+"""
+_LIST_COLUMNS = _LIST_COLUMNS.format(filings=_FILINGS_COLUMN, latest_update=_LATEST_UPDATE_COLUMN)
+
+# Search: every term must appear (case-insensitive, at the start of a word when the term starts with a letter or
+# digit) in the headline, the stored summary, a current source's title, or a linked company's name or ticker.
+MAX_SEARCH_CHARS = 200
+MAX_SEARCH_TERMS = 8
+_SEARCH_SQL = """
+    (%(terms)s::text[] IS NULL OR NOT EXISTS (
+        SELECT 1 FROM unnest(%(terms)s::text[]) AS q(term)
+         WHERE concat_ws(' ', e.title, s.headline, s.summary_text, s.key_points::text) !~* q.term
+           AND NOT EXISTS (SELECT 1 FROM current_event_membership m
+                             JOIN document_revision r ON r.revision_id = m.revision_id
+                            WHERE m.event_id = e.event_id AND r.title ~* q.term)
+           AND NOT EXISTS (SELECT 1 FROM current_event_membership m
+                             JOIN revision_company rc ON rc.revision_id = m.revision_id
+                             JOIN company co ON co.company_id = rc.company_id
+                             LEFT JOIN company_symbol cs ON cs.company_id = co.company_id
+                            WHERE m.event_id = e.event_id AND (co.name ~* q.term OR cs.symbol ~* q.term))))
 """
 
 
+def search_terms(text: str | None) -> list[str] | None:
+    """Reader search text as literal, case-insensitive PostgreSQL regular expressions, one per distinct
+    whitespace-separated term (a term is matched literally: every special character is escaped)."""
+    if text is None or not text.strip():
+        return None
+    if len(text) > MAX_SEARCH_CHARS:
+        raise ValueError(f"search text is limited to {MAX_SEARCH_CHARS} characters")
+    terms: list[str] = []
+    for term in text.split():
+        if term.casefold() not in {t.casefold() for t in terms}:
+            terms.append(term)
+    return [("\\m" if term[0].isalnum() else "") + re.escape(term) for term in terms[:MAX_SEARCH_TERMS]]
+
+
+def _filing_items(codes: list[str]) -> list[dict[str, str | None]]:
+    return [{"code": code, "caption": SEC_8K_ITEMS.get(code)} for code in codes if isinstance(code, str) and code]
+
+
 def list_events(conn: Connection, *, include_sample: bool, language: str, limit: int, offset: int,
-                state: str | None = None, symbol: str | None = None,
-                ciks: list[str] | None = None) -> list[dict[str, Any]]:
+                state: str | None = None, symbol: str | None = None, ciks: list[str] | None = None,
+                terms: list[str] | None = None, since: datetime | None = None, until: datetime | None = None,
+                has_filing: bool = False, conflict: bool = False) -> list[dict[str, Any]]:
     """``symbol`` keeps events with at least one current source linked to that company symbol; ``ciks`` (a
-    watchlist) keeps events with a current source linked to ANY of those companies. Both filters run in SQL before
-    LIMIT/OFFSET, so a page is the newest matching events, and an event linked to several of the companies is one
-    row (it is selected from ``news_event``; the company links are only tested with EXISTS)."""
+    watchlist) keeps events with a current source linked to ANY of those companies. ``terms`` (``search_terms``)
+    keeps events matching every term; ``since``/``until`` bound the event's latest report time (until exclusive);
+    ``has_filing`` keeps events with an SEC filing among their current sources; ``conflict`` keeps events whose
+    sources disagree (an open review, a confirmed disagreement or an unfinished correction: the list's active
+    conflict statuses). Every filter runs in SQL before LIMIT/OFFSET, so a page is the newest matching events, and
+    an event linked to several of the companies is one row (it is selected from ``news_event``; the company links
+    are only tested with EXISTS)."""
+    active_review = conflicts.ACTIVE_REVIEW_SQL.format(manifest="s.input_manifest")
     rows = conn.execute(
         f"""
         SELECT * FROM (
@@ -137,13 +218,23 @@ def list_events(conn: Connection, *, include_sample: bool, language: str, limit:
                     SELECT 1 FROM current_event_membership m
                       JOIN revision_company rc ON rc.revision_id = m.revision_id
                       JOIN company co ON co.company_id = rc.company_id
-                     WHERE m.event_id = e.event_id AND co.cik = ANY(%(ciks)s::text[])))) x
-         WHERE %(state)s::text IS NULL OR {_STATE_SQL} = %(state)s::text
+                     WHERE m.event_id = e.event_id AND co.cik = ANY(%(ciks)s::text[])))
+               AND (NOT %(has_filing)s OR EXISTS (
+                    SELECT 1 FROM current_event_membership m
+                     WHERE m.event_id = e.event_id AND m.record_type = 'sec_filing'))
+               AND (NOT %(conflict)s OR EXISTS (
+                    SELECT 1 FROM event_conflict_review v JOIN event_comparison c ON c.comparison_id = v.comparison_id
+                     WHERE c.candidate_event_id = e.event_id AND {active_review}))
+               AND {_SEARCH_SQL}) x
+         WHERE (%(state)s::text IS NULL OR {_STATE_SQL} = %(state)s::text)
+           AND (%(since)s::timestamptz IS NULL OR x.last_source_time >= %(since)s::timestamptz)
+           AND (%(until)s::timestamptz IS NULL OR x.last_source_time < %(until)s::timestamptz)
          ORDER BY x.last_source_time DESC NULLS LAST, x.event_id
          LIMIT %(limit)s OFFSET %(offset)s
         """,
         {"lang": language, "sample": include_sample, "limit": limit, "offset": offset, "state": state,
-         "symbol": symbol, "ciks": ciks},
+         "symbol": symbol, "ciks": ciks, "terms": terms, "since": since, "until": until,
+         "has_filing": has_filing, "conflict": conflict},
     ).fetchall()
     conflict_status = conflicts.list_status(conn, [{**r, "input_manifest": r["input_manifest"] if r["summary_id"]
                                                      else None} for r in rows])
@@ -155,7 +246,9 @@ def list_events(conn: Connection, *, include_sample: bool, language: str, limit:
                 "pending_relations": int(row["pending_relations"]), **summary_state(row),
                 "conflict": conflict_status[str(row["event_id"])], "symbols": list(row["symbols"] or []),
                 "companies": row["companies"], "latest_source": _latest_source(row["latest_source"]),
-                "summary": None}
+                "filings": [{"form": f.get("form"), "items": _filing_items(f.get("items") or [])}
+                            for f in row["filings"] or []],
+                "latest_update": _latest_update(row["latest_update"]), "summary": None}
         if row["summary_id"]:
             item["summary"] = {"version": row["version"], "headline": row["headline"],
                                "overview": row["summary_text"], "key_points": row["key_points"],
@@ -168,6 +261,15 @@ def _latest_source(source: dict[str, Any] | None) -> dict[str, Any] | None:
     if not source:
         return None
     return {**source, "url": conflicts.safe_url(source.get("url"))}
+
+
+def _latest_update(update: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The card's "what changed": the latest substantive update's time, source and stored aspects (the same
+    aspects the timeline shows; malformed stored differences are skipped, never repaired)."""
+    if not update:
+        return None
+    return {"time": update.get("time"), "name": update.get("name"), "record_type": update.get("record_type"),
+            "aspects": _aspects(update.get("differences"), _UPDATE_KINDS)}
 
 
 def event_detail(conn: Connection, event_id: str, *, include_sample: bool, language: str) -> dict[str, Any] | None:

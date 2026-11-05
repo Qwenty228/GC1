@@ -3,6 +3,8 @@
 Watchlist: following companies, the two feed views, persistence across reloads, empty / unreadable / outdated
 saved selections and blocked storage. Story page: the link from a card, direct loads, an unknown or malformed
 event, a failed API request, and going back to the feed with its view. Mobile width: no sideways scrolling.
+Feed tools: "New"/"Updated" since the last visit, day headers, search and filters (also through the story
+page), the filing and update lines, loading placeholders and the guided tours.
 
 The pages are served from a temporary database (``conftest.temporary_database``, dropped afterwards) holding the
 registered coverage companies and sample stories grouped through the real graph with scripted models. The usual
@@ -74,7 +76,7 @@ def site(browser_path):
             nvda = [story(f"NVIDIA example launch {i}", f"NVIDIA launched example product {i}.", 3 + i, ["NVDA"])
                     for i in (1, 2)]
             with live_server(db) as base, offline_reads():
-                yield {"base": base, "msft": msft, "shared": shared, "nvda": nvda[::-1]}
+                yield {"base": base, "msft": msft, "shared": shared, "nvda": nvda[::-1], "story": story, "t0": t0}
         finally:
             from datasources import server
 
@@ -257,8 +259,13 @@ def test_feed_and_story_page_fit_a_phone_screen(site, page):
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     assert page.evaluate("document.querySelector('.site-header .header-link').getAttribute('href')") == "/tools.html"
     heights = page.evaluate("[...document.querySelectorAll('.view-switch button, .follow-item, .story-link, "
-                            ".header-link')].map(b => b.getBoundingClientRect().height)")
+                            ".header-link, .chip, #search-input, #when-select')]"
+                            ".map(b => b.getBoundingClientRect().height)")
     assert heights and min(heights) >= 44  # comfortable touch targets
+    feed(page, f"{site['base']}/?p#sample=1&when=custom&from=2030-01-01")  # the custom date fields too
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+    assert min(page.evaluate("[...document.querySelectorAll('#from-date, #to-date')]"
+                             ".map(b => b.getBoundingClientRect().height)")) >= 44
     page.goto(f"{site['base']}/events/{site['shared']}?sample=1")
     page.wait_for("document.body.dataset.storyState === 'ready'")
     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
@@ -318,3 +325,265 @@ def test_processing_activity_is_live_on_the_tools_page_and_named_on_the_feed(sit
         page.wait_for("document.getElementById('activity-line').hidden")
     finally:
         worker.close("stopped")
+
+
+# ----------------------------------------------------------------------------- since the last visit, day headers
+VISITS = "stocknews.visits"
+
+
+def set_visits(page, since, last_seen_js: str = "new Date().toISOString()") -> None:
+    page.evaluate(f"localStorage.setItem({json.dumps(VISITS)}, JSON.stringify({{version: 1, since: "
+                  f"{json.dumps(since)}, last_seen: {last_seen_js}}}))")
+
+
+def fresh(page) -> dict:
+    return page.evaluate("Object.fromEntries([...document.querySelectorAll('#events-list .news-card')].map(c => "
+                         "[c.dataset.id, (c.querySelector('.fresh-new') ? 'new' : c.querySelector('.fresh-updated') "
+                         "? 'updated' : '')]))")
+
+
+def test_new_and_updated_since_the_last_visit_and_day_headers(site, page):
+    base, t0 = site["base"], site["t0"]
+    feed(page, f"{base}/#sample=1")
+    assert page.evaluate("document.querySelectorAll('.fresh-new, .fresh-updated').length") == 0  # a first visit: none
+    assert page.evaluate("document.getElementById('fresh-note').hidden") is True
+
+    # A visit that is still going on keeps its baseline: here between the shared story's two reports.
+    set_visits(page, (t0 + timedelta(minutes=150)).isoformat())
+    feed(page, f"{base}/?v1#sample=1")
+    assert fresh(page) == {site["nvda"][0]: "new", site["nvda"][1]: "new", site["shared"]: "updated", site["msft"]: ""}
+    note = page.evaluate("document.getElementById('fresh-note').innerText")
+    assert "2 new stories and 1 updated since your last visit" in note
+    labels = page.evaluate("[...document.querySelectorAll('#events-list .fresh-new, #events-list .fresh-updated')]"
+                           ".map(b => b.textContent)")
+    assert sorted(labels) == ["New since your last visit"] * 2 + ["Updated since your last visit"]  # in words
+
+    # Day headers: one before the first story of each day, never two in a row.
+    rows = page.evaluate("[...document.querySelectorAll('#events-list > *')].map(e => "
+                         "e.classList.contains('day-head') ? 'H' : 'C')")
+    assert rows[0] == "H" and rows.count("C") == 4 and "HH" not in "".join(rows)
+    heads = page.evaluate("(() => { const R = window.StockNewsRender, now = new Date(), day = 864e5; "
+                          "return [0, 1, 3].map(n => R.dayHead(R.dayKey(new Date(now - n * day).toISOString()), now)); })()")
+    assert heads[0].startswith("Today ") and heads[1].startswith("Yesterday ") and "day" in heads[2]
+
+    page.evaluate("document.querySelector('[data-mark-read]').click()")
+    assert set(fresh(page).values()) == {""} and page.evaluate("document.getElementById('fresh-note').hidden")
+    feed(page, f"{base}/?v2#sample=1")  # a reload in the same visit keeps them read
+    assert set(fresh(page).values()) == {""}
+
+    # Back after more than 30 minutes away: the previous visit's end is the new baseline (the sample stories are
+    # dated in the future, so all of them are newer).
+    set_visits(page, (t0 - timedelta(days=400)).isoformat(), "new Date(Date.now() - 31 * 60000).toISOString()")
+    feed(page, f"{base}/?v3#sample=1")
+    assert set(fresh(page).values()) == {"new"}
+
+
+# ----------------------------------------------------------------------------- search and filters
+def type_into(page, selector: str, text: str) -> None:
+    page.evaluate(f"document.querySelector({json.dumps(selector)}).focus()")
+    for ch in text:
+        page.send("Input.dispatchKeyEvent", type="keyDown", text=ch, key=ch, unmodifiedText=ch)
+        page.send("Input.dispatchKeyEvent", type="keyUp", key=ch)
+
+
+def settled(page, count: int) -> list[str]:
+    page.wait_for(f"{READY} === 'list' && !document.getElementById('events-list').classList.contains('is-stale') "
+                  "&& document.getElementById('events-list').getAttribute('aria-busy') === 'false' "
+                  f"&& {CARDS}.length === {count}")
+    return page.evaluate(CARDS)
+
+
+def test_search_and_filters_narrow_the_feed_and_survive_the_story_page(site, page):
+    base = site["base"]
+    feed(page, f"{base}/#sample=1")
+    type_into(page, "#search-input", "partnership")  # case-insensitive; runs after a short pause in typing
+    page.wait_for("location.hash.includes('q=partnership')")
+    assert settled(page, 1) == [site["shared"]]
+    assert "matching “partnership”" in page.evaluate("document.getElementById('filter-note').innerText")
+
+    page.evaluate("document.getElementById('filter-filing').click()")  # no story here has an SEC filing
+    page.wait_for("document.getElementById('events-state').innerText.includes('No stories match')")
+    assert page.evaluate("document.getElementById('filter-filing').getAttribute('aria-pressed')") == "true"
+    assert "with an SEC filing" in page.evaluate("document.getElementById('events-state').innerText")
+    page.evaluate("document.querySelector('#events-state [data-clear-filters]').click()")
+    assert len(settled(page, 4)) == 4
+    assert "q=" not in page.evaluate("location.hash")
+    assert page.evaluate("document.getElementById('search-input').value") == ""
+
+    # Dates come from the address too, and the controls show them.
+    feed(page, f"{base}/?d1#sample=1&when=custom&from=2000-01-01&to=2000-12-31")
+    assert page.evaluate(CARDS) == []
+    assert "No stories match" in page.evaluate("document.getElementById('events-state').innerText")
+    assert page.evaluate("[document.getElementById('when-select').value, "
+                         "document.getElementById('from-date').value]") == ["custom", "2000-01-01"]
+    feed(page, f"{base}/?d2#sample=1&when=custom&from=2099-12-31&to=2030-01-01")  # put into order
+    assert len(page.evaluate(CARDS)) == 4 and "from=2030-01-01" in page.evaluate("location.hash")
+
+    # The filters apply to the watchlist view, and go to the story page and back with the reader.
+    page.evaluate(f"localStorage.setItem({json.dumps(KEY)}, "
+                  f"{json.dumps(json.dumps({'version': 1, 'companies': [MSFT]}))})")
+    feed(page, f"{base}/?w#sample=1&view=watchlist&q=campus")
+    assert page.evaluate(CARDS) == [site["msft"]]
+    page.evaluate(f"document.querySelector('#event-{site['msft']} [data-story-link]').click()")
+    page.wait_for("document.body.dataset.storyState === 'ready'")
+    assert page.evaluate("document.getElementById('back-link').getAttribute('href')") == (
+        f"/#view=watchlist&q=campus&sample=1&story={site['msft']}")
+
+
+def test_filing_and_update_lines_use_plain_words_and_stored_aspects(site, page):
+    feed(page, f"{site['base']}/#sample=1")
+    filing, update, no_filing, no_update = page.evaluate("""(() => { const R = window.StockNewsRender;
+        const filing = R.filingLine({filings: [{form: '8-K', items: [
+            {code: '2.02', caption: 'Results of Operations and Financial Condition'},
+            {code: '9.01', caption: 'Financial Statements and Exhibits'}, {code: '9.99', caption: null}]}]});
+        const update = R.updateLine({latest_update: {time: null, name: 'benzinga',
+            aspects: ['closing date', '<b>price</b>']}});
+        return [filing, update, R.filingLine({filings: []}), R.updateLine({latest_update: null})]; })()""")
+    assert "Earnings and financial results" in filing and "(Item 2.02)" in filing and "Item 9.99" in filing
+    assert "9.01" not in filing  # the exhibit list is left out next to anything else
+    assert 'title="Item 2.02: Results of Operations and Financial Condition"' in filing
+    assert "from Benzinga: new information on closing date and &lt;b&gt;price&lt;/b&gt;." in update  # escaped
+    assert no_filing == "" and no_update == ""
+
+
+# ----------------------------------------------------------------------------- loading placeholders and the tour
+TOUR = "stocknews.tour"
+PAUSE = "new Promise(r => setTimeout(r, 700))"  # the smooth scroll and the spotlight glide
+
+
+def test_loading_placeholders_are_announced_and_replaced(site, page):
+    feed(page, f"{site['base']}/#sample=1")
+    assert page.evaluate("document.querySelector('#events-state .skeleton')") is None  # gone once stories are in
+    served = page.evaluate("fetch('/').then(r => r.text())")
+    assert 'class="skeleton"' in served and "Loading news…" in served  # shown before the scripts have run
+    cards = page.evaluate("window.StockNewsRender.skeletonCards(2, 'Loading news…')")
+    lines = page.evaluate("window.StockNewsRender.skeletonLines(3, 'Loading sources…')")
+    for html, words in ((cards, "Loading news…"), (lines, "Loading sources…")):
+        assert 'role="status"' in html and f'<span class="sr-only">{words}</span>' in html and 'aria-hidden="true"' in html
+    assert cards.count("skeleton-card") == 2
+
+
+def tour(page) -> dict | None:
+    return page.evaluate("""(() => { const c = document.querySelector('.tour-card'); if (!c) return null;
+        const r = c.getBoundingClientRect();
+        return {count: document.getElementById('tour-count').textContent,
+                title: document.getElementById('tour-title').textContent,
+                inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5,
+                focus: c.contains(document.activeElement),
+                fits: document.documentElement.scrollWidth <= innerWidth}; })()""")
+
+
+def walk_tour(page) -> list[str]:
+    titles = []
+    while (state := tour(page)) is not None and len(titles) < 20:
+        page.evaluate(PAUSE)
+        state = tour(page)
+        assert state["inside"] and state["focus"] and state["fits"], state
+        titles.append(state["title"])
+        page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    return titles
+
+
+def test_the_tour_opens_by_itself_once_and_walks_through_the_feed(site, page):
+    base = site["base"]
+    feed(page, f"{base}/#sample=1")  # sample mode (demos and tests) never opens it by itself
+    page.evaluate(PAUSE)
+    assert tour(page) is None
+    page.goto(f"{base}/")  # the first real visit in this browser
+    page.wait_for("!!document.querySelector('.tour-card')")
+    first = tour(page)
+    assert (first["count"], first["title"], first["focus"]) == ("Step 1 of 9", "Welcome to StockEvent Lens", True)
+    assert json.loads(page.evaluate(f"localStorage.getItem({json.dumps(TOUR)})"))["seen"] == ["feed"]
+    page.send("Input.dispatchKeyEvent", type="keyDown", key="Escape", code="Escape", windowsVirtualKeyCode=27)
+    assert tour(page) is None
+    page.goto(f"{base}/?again")
+    page.wait_for(f"{READY} === 'list'")
+    page.evaluate(PAUSE)
+    assert tour(page) is None  # only once
+
+    # The Tour button: every step on screen and in focus; the story steps point at the first story.
+    feed(page, f"{base}/?t#sample=1")
+    page.evaluate("(b => { b.focus(); b.click(); })(document.getElementById('tour-button'))")
+    page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    page.evaluate(PAUSE)
+    assert tour(page)["title"] == "Each card is one story"
+    offset = page.evaluate("(() => { const s = document.querySelector('.tour-spot').getBoundingClientRect(), "
+                           "c = document.querySelector('#events-list .news-card').getBoundingClientRect(); "
+                           "return [s.left - c.left, s.top - c.top, s.width - c.width, s.height - c.height]; })()")
+    assert all(abs(a - b) <= 3 for a, b in zip(offset, [-6, -6, 12, 12])), offset  # the spotlight is on the story
+    page.send("Input.dispatchKeyEvent", type="keyDown", key="ArrowLeft", code="ArrowLeft", windowsVirtualKeyCode=37)
+    assert tour(page)["count"] == "Step 1 of 9"
+    titles = walk_tour(page)
+    assert len(titles) == 9 and titles[0] == "Welcome to StockEvent Lens" and titles[-1] == "You are all set"
+    assert page.evaluate("document.activeElement.id") == "tour-button"  # focus returns where the tour began
+
+    page.send("Emulation.setDeviceMetricsOverride", width=375, height=740, deviceScaleFactor=2, mobile=True)
+    page.evaluate("scrollTo(0, 0); document.getElementById('tour-button').click()")
+    assert len(walk_tour(page)) == 9  # a phone: every step fits the screen
+
+
+FIRST_CARD = "document.querySelector('#events-list .news-card')"
+SOURCES_OPEN = (f"(c => c.querySelector('.card-actions [data-action=sources]').getAttribute('aria-expanded') === 'true' "
+                f"&& !c.querySelector('[data-slot=sources]').hidden)({FIRST_CARD})")
+
+
+def tour_to(page, title: str) -> None:
+    page.evaluate("document.getElementById('tour-button').click()")
+    while tour(page)["title"] != title:
+        page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    page.evaluate(PAUSE)
+
+
+def test_the_tour_opens_the_hidden_parts_it_explains_and_closes_them_again(site, page):
+    feed(page, f"{site['base']}/?parts#sample=1")
+    tour_to(page, "Read the whole summary")
+    # The sample stories have no AI summary yet: nothing to open, and the step says so.
+    assert "already fits on its card" in page.evaluate("document.getElementById('tour-body').textContent")
+    assert page.evaluate(f"{FIRST_CARD}.querySelector('[data-slot=full]').hidden")
+
+    page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    page.wait_for(f"{SOURCES_OPEN} && !!{FIRST_CARD}.querySelector('[data-slot=sources] .source-list')")
+    page.evaluate(PAUSE)
+    state = tour(page)
+    assert state["title"] == "Check the sources" and state["inside"] and state["focus"], state
+    assert "opens this list" in page.evaluate("document.getElementById('tour-body').textContent")
+    # One spotlight over the buttons and the loaded panel together.
+    top, bottom = page.evaluate(f"""(c => {{ const s = document.querySelector('.tour-spot').getBoundingClientRect(),
+        a = c.querySelector('.card-actions').getBoundingClientRect(),
+        p = c.querySelector('[data-slot=sources]').getBoundingClientRect();
+        return [s.top - (a.top - 6), s.bottom - Math.min(p.bottom + 6, innerHeight + 6)]; }})({FIRST_CARD})""")
+    assert abs(top) <= 3 and abs(bottom) <= 3, (top, bottom)
+
+    page.send("Input.dispatchKeyEvent", type="keyDown", key="Escape", code="Escape", windowsVirtualKeyCode=27)
+    assert tour(page) is None and not page.evaluate(SOURCES_OPEN)  # closing the tour closes what it opened
+
+    # Sources the reader opened stay open: the tour only closes what it opened itself.
+    page.evaluate(f"{FIRST_CARD}.querySelector('.card-actions [data-action=sources]').click()")
+    page.wait_for(SOURCES_OPEN)
+    tour_to(page, "Check the sources")
+    page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    assert tour(page)["title"] == "When sources disagree" and page.evaluate(SOURCES_OPEN)
+    page.send("Input.dispatchKeyEvent", type="keyDown", key="Escape", code="Escape", windowsVirtualKeyCode=27)
+
+    # The watchlist step opens the Follow companies panel and spotlights it with its button; leaving closes it.
+    tour_to(page, "Your watchlist")
+    state = tour(page)
+    assert state["count"] == "Step 7 of 9" and state["inside"] and state["focus"], state
+    assert not page.evaluate("document.getElementById('follow-panel').hidden")
+    top, bottom = page.evaluate("""(() => { const s = document.querySelector('.tour-spot').getBoundingClientRect(),
+        b = document.getElementById('follow-toggle').getBoundingClientRect(),
+        p = document.getElementById('follow-panel').getBoundingClientRect();
+        return [s.top - Math.max(Math.min(b.top, p.top) - 6, -6), s.bottom - Math.min(p.bottom + 6, innerHeight + 6)]; })()""")
+    assert abs(top) <= 3 and abs(bottom) <= 3, (top, bottom)
+    page.evaluate("document.querySelector('.tour [data-tour=next]').click()")
+    assert tour(page)["title"] == "See what is new" and page.evaluate("document.getElementById('follow-panel').hidden")
+
+
+def test_the_story_page_has_its_own_tour(site, page):
+    page.goto(f"{site['base']}/events/{site['shared']}?sample=1")
+    page.wait_for("document.body.dataset.storyState === 'ready'")
+    page.evaluate(PAUSE)
+    assert tour(page) is None  # only from the button
+    page.evaluate("document.getElementById('tour-button').click()")
+    assert walk_tour(page) == ["A story's own page", "The story", "The AI summary", "Timeline", "Sources and evidence"]
+    assert page.evaluate("document.querySelector('.site-header .header-link').getAttribute('href')") == "/tools.html"

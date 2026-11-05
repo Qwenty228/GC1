@@ -256,10 +256,11 @@ def test_the_page_references_its_assets_by_content_version(client_without_databa
     from datasources import config
 
     client, _ = client_without_database
-    feed = {"styles.css", "render.js", "watchlist.js", "app.js"}
+    feed = {"styles.css", "render.js", "watchlist.js", "filters.js", "visits.js", "tour.js", "app.js"}
     pages = {"/": feed, "/index.html": feed, "/tools.html": {"styles.css", "render.js", "tools.js", "explorer.js"},
              # The story page lives at /events/<id>, so its assets are absolute paths.
-             "/events/00000000-0000-4000-8000-000000000000": {"/styles.css", "/render.js", "/watchlist.js", "/event.js"}}
+             "/events/00000000-0000-4000-8000-000000000000": {"/styles.css", "/render.js", "/watchlist.js",
+                                                               "/filters.js", "/tour.js", "/event.js"}}
     for path, assets in pages.items():
         response = client.get(path)
         assert response.status_code == 200 and response.headers["cache-control"] == "no-cache"

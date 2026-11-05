@@ -18,13 +18,20 @@
 // #event=<id> opens that story's sources, #story=<id> scrolls back to a story (set when leaving for
 // its page), and #sample=1 (demos and tests only; the page has no control for it) adds the fictional
 // sample stories, each marked Sample. Without a view in the hash, the last view chosen in this
-// browser is used.
+// browser is used. Search and filters (filters.js) are in the hash too and apply to every view; the
+// server applies them before paging.
+//
+// Stories are grouped under day headers by their latest report. "New" and "Updated" mark stories
+// since the reader's last visit (visits.js, this browser only).
 
 (function () {
   "use strict";
 
   const R = window.StockNewsRender;
   const W = window.StockNewsWatchlist;
+  const F = window.StockNewsFilters;
+  const V = window.StockNewsVisits;
+  const T = window.StockNewsTour;
   const $ = (id) => document.getElementById(id);
   const POLL_MS = 20000;
   const MAX_BACKOFF_MS = 300000;
@@ -35,12 +42,16 @@
   const MAX_EVENTS = 100; // /api/events limit
   const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const SYMBOL = /^[A-Z0-9.\-]{1,12}$/;
+  const SEARCH_DELAY_MS = 350; // typing pauses this long before the search runs
 
   const saved = W.load();
   const state = {
     sample: false,
     view: "all", // "all" | "watchlist" | "company"
     company: "", // the one company of the "company" view
+    filters: F.empty(), // search and filters (filters.js), in the hash
+    customDates: false, // "Custom dates…" chosen, before a date is picked
+    since: V.start(Date.now()), // the last-visit baseline for "New" / "Updated" (ms), or null
     watchlist: saved.companies, // SEC CIKs, as stored in this browser
     watchStatus: saved.status, // how the stored value read: empty | ok | repaired | invalid
     storageAvailable: saved.available,
@@ -143,6 +154,7 @@
     if (state.sample) p.set("include_sample", "true");
     if (filters && state.view === "company" && state.company) p.set("symbol", state.company);
     if (filters && state.view === "watchlist") for (const cik of following()) p.append("company", cik);
+    if (filters) F.api(state.filters, Date.now(), p);
     return p.toString();
   }
 
@@ -200,13 +212,23 @@
     try {
       const data = await getJson(`/api/events?${query({ limit: state.events.limit })}`, signal);
       if (gen !== state.gen) return;
+      if (F.active(state.filters) && !data.filters) {
+        // An older server ignores the filter parameters: never show its unfiltered list as the filtered one.
+        throw new Error("this server does not support search and filters yet (restart the app to update it)");
+      }
       const items = unique(data.events, (e) => e.event_id);
       const fresh = countNew(items);
       state.events.items = items;
+      state.events.stale = false;
+      state.events.loadingMore = false;
       state.events.error = null;
       if (fresh) announce(`${R.plural(fresh, "new story", "new stories")}.`);
     } catch (error) {
-      if (gen === state.gen && !signal.aborted) state.events.error = describe(error);
+      if (gen === state.gen && !signal.aborted) {
+        state.events.error = describe(error);
+        state.events.loadingMore = false;
+        if (state.events.stale) state.events.items = null; // never show the old filters' stories as these
+      }
       throw error;
     }
   }
@@ -288,8 +310,10 @@
         poll.failures = 0;
         poll.error = null;
         poll.lastOk = new Date();
+        state.since = V.touch(Date.now()); // this visit goes on (another tab may have marked all as read)
       }
       safeRender();
+      if (!tourOffered) setTimeout(offerTour, 300); // after the first refresh, so the tour can point at stories
     }
     if (poll.again) {
       poll.again = false;
@@ -323,6 +347,7 @@
       poll.timer = null;
       poll.nextAt = null;
     } else {
+      state.since = V.start(Date.now()); // back after 30+ minutes away: a new visit, as when the page is opened
       refresh();
     }
   });
@@ -414,6 +439,7 @@
 
   function setBusy(busy) {
     $("events-list").setAttribute("aria-busy", String(busy));
+    $("refresh-status").classList.toggle("is-busy", busy); // the live dot pulses while the feed refreshes
   }
 
   function announce(text) {
@@ -429,7 +455,7 @@
     const summaries = c.state === "running" && c.processing ? c.processing.summaries
       : s && s.features && s.features.summary_enabled;
     return { summariesEnabled: summaries, company: state.view === "company" ? state.company : "",
-             followed: new Set(following()) };
+             followed: new Set(following()), fresh: (e) => V.freshness(e, state.since) };
   }
 
   // When the collectors are not running, refreshing cannot bring new stories: say so in plain words.
@@ -455,11 +481,11 @@
       cls = " status-error";
       html = `${R.icon("error")}Could not load the news`;
     } else if (poll.lastOk) {
-      html = `Updated ${R.esc(R.ago(poll.lastOk, now))}`;
+      html = `<span class="live-dot" aria-hidden="true"></span>Updated ${R.esc(R.ago(poll.lastOk, now))}`;
     } else {
-      html = "Loading…";
+      html = `<span class="live-dot" aria-hidden="true"></span>Loading…`;
     }
-    el.className = `refresh-status${cls}`;
+    el.className = `refresh-status${cls}${poll.inFlight ? " is-busy" : ""}`;
     setHtml(el, html);
     el.title = poll.lastOk ? `Last updated at ${poll.lastOk.toLocaleTimeString()}` : "";
     const working = poll.error ? "" : R.activityLine(state.activity);
@@ -516,6 +542,48 @@
     if ($("follow-toggle-label").textContent !== label) $("follow-toggle-label").textContent = label;
     $("follow-toggle").classList.toggle("is-following", followed.length > 0); // a filled star
     $("follow-toggle").setAttribute("aria-expanded", String(state.followOpen));
+    renderFilters();
+    renderFreshNote();
+  }
+
+  // The search box, date choice and filter chips follow the state (never under the reader's hands), and one line
+  // says what the filters keep.
+  function renderFilters() {
+    const f = state.filters;
+    const keep = (el, value) => { if (document.activeElement !== el && el.value !== value) el.value = value; };
+    keep($("search-input"), f.q);
+    const custom = f.when === "custom" || state.customDates;
+    keep($("when-select"), custom ? "custom" : f.when);
+    $("custom-dates").hidden = !custom;
+    keep($("from-date"), f.from);
+    keep($("to-date"), f.to);
+    $("filter-filing").setAttribute("aria-pressed", String(f.filing));
+    $("filter-disagree").setAttribute("aria-pressed", String(f.disagree));
+    const parts = F.describe(f);
+    const note = $("filter-note");
+    note.hidden = !parts.length;
+    setSlotEl(note, parts.length ? `<span>Showing stories ${R.esc(parts.join(", "))}.</span><button type="button"
+      class="link-button" data-clear-filters data-focus="clear-filters">Clear search and filters</button>` : "");
+  }
+
+  // "3 new stories and 1 updated since your last visit", for the stories in this list.
+  function renderFreshNote() {
+    const items = state.events.items || [];
+    let html = "";
+    if (state.since !== null && items.length) {
+      const kinds = items.map((e) => V.freshness(e, state.since));
+      const added = kinds.filter((k) => k === "new").length;
+      const updated = kinds.filter((k) => k === "updated").length;
+      const text = added && updated ? `${R.plural(added, "new story", "new stories")} and ${updated} updated`
+        : added ? R.plural(added, "new story", "new stories") : updated ? `${R.plural(updated, "story", "stories")} updated` : "";
+      if (text) {
+        html = `<span class="fresh-dot" aria-hidden="true"></span><span>${R.esc(text)} since your last visit (${
+          R.shortWhen(new Date(state.since).toISOString())}).</span><button type="button" class="link-button"
+          data-mark-read data-focus="mark-read">Mark all as read</button>`;
+      }
+    }
+    $("fresh-note").hidden = !html;
+    setSlotEl($("fresh-note"), html);
   }
 
   // The follow panel. Checkbox states are set after drawing, so ticking one never redraws the list (or moves focus).
@@ -582,9 +650,10 @@
     el.dataset.id = id;
     el.id = `event-${id}`;
     el.setAttribute("aria-labelledby", `event-${id}-title`);
-    el.innerHTML = `<div data-slot="head"></div><div data-slot="conflict"></div>
+    el.innerHTML = `<div data-slot="head"></div><div data-slot="conflict"></div><div data-slot="filing"></div>
       <div class="summary-preview" data-slot="preview"></div>
       <div class="summary-full" id="event-${safe}-summary" data-slot="full" hidden></div>
+      <div data-slot="update"></div>
       <div class="card-actions">
         <button type="button" class="toggle" data-action="summary" aria-expanded="false"
           aria-controls="event-${safe}-summary" aria-describedby="event-${safe}-title">
@@ -607,7 +676,7 @@
 
   function detailHtml(id) {
     const entry = state.details.get(id);
-    if (!entry) return `<p class="muted small" role="status">Loading sources…</p>`;
+    if (!entry) return R.skeletonLines(4, "Loading sources…");
     if (entry.gone) {
       return `<p class="state-note">This story is no longer available. It may have been merged into another story.</p>`;
     }
@@ -621,8 +690,10 @@
     const view = R.summaryView(e, c);
     setSlot(el, "head", R.cardHead(e, c));
     setSlot(el, "conflict", R.conflictLine(e));
+    setSlot(el, "filing", R.filingLine(e));
     setSlot(el, "preview", view.preview);
     setSlot(el, "full", view.full);
+    setSlot(el, "update", R.updateLine(e));
     const reading = view.more && state.readMore.has(id);
     slotOf(el, "preview").hidden = reading;
     slotOf(el, "full").hidden = !reading;
@@ -641,9 +712,38 @@
     if (open) setSlot(el, "sources", detailHtml(id));
   }
 
+  // The list with a day header before the first story of each day (by its latest report, in this time zone).
+  function feedRows(items) {
+    const rows = [];
+    let day = null;
+    for (const e of items) {
+      const key = R.dayKey(e.last_source_time);
+      if (key !== day) rows.push({ day: key });
+      day = key;
+      rows.push(e);
+    }
+    return rows;
+  }
+  const rowId = (row) => (row.day ? `day-${row.day}` : row.event_id);
+
+  function createRow(id) {
+    if (!id.startsWith("day-")) return createEventCard(id);
+    const el = document.createElement("h3");
+    el.className = "day-head";
+    el.dataset.id = id;
+    return el;
+  }
+
+  function updateRow(el, row) {
+    if (row.day) setHtml(el, R.dayHead(row.day, new Date())); // "Today" becomes "Yesterday" at midnight
+    else updateEventCard(el, row);
+  }
+
   function renderFeed() {
     const events = state.events;
     const list = $("events-list");
+    // A slim moving bar while a search, filter or "Show more" the reader asked for is loading (not for polling).
+    $("feed-progress").hidden = !(events.stale || events.loadingMore);
     if (state.view === "watchlist" && !following().length) {
       setHtml($("events-state"), R.watchlistEmpty(ignoredSaved().length));
       list.replaceChildren();
@@ -653,21 +753,26 @@
     }
     if (events.items === null) {
       setHtml($("events-state"), events.error ? R.loadError("the news", events.error)
-        : `<div class="state" role="status">Loading news…</div>`);
+        : R.skeletonCards(3, "Loading news…"));
       list.replaceChildren();
       setHtml($("events-footer"), "");
       return;
     }
     const label = state.view === "watchlist" ? "the companies you follow" : state.view === "company" ? state.company : "";
-    setHtml($("events-state"), events.items.length ? "" : R.feedEmpty(state.status, label));
-    patchList(list, events.items, (e) => e.event_id, createEventCard, updateEventCard);
+    setHtml($("events-state"), events.items.length ? "" : R.feedEmpty(state.status, label, F.describe(state.filters)));
+    list.classList.toggle("is-stale", Boolean(events.stale)); // the old results, while the new filters load
+    patchList(list, feedRows(events.items), rowId, createRow, updateRow);
     // For automated checks: "list" once stories are shown, "detail" once an open Sources panel has its data.
     document.body.dataset.eventsReady = [...state.sourcesOpen].some((id) => (state.details.get(id) || {}).data)
       ? "detail" : "list";
     document.body.dataset.view = state.view;
     const full = events.items.length >= events.limit;
-    setHtml($("events-footer"), full && events.limit < MAX_EVENTS
-      ? `<button type="button" class="button secondary" id="events-more">Show more news</button>` : "");
+    // The same button while more stories load (it keeps focus), then gone when there are no more.
+    setSlotEl($("events-footer"), events.loadingMore
+      ? `<button type="button" class="button secondary is-loading" id="events-more" aria-disabled="true"
+          data-focus="more"><span class="spinner" aria-hidden="true"></span>Loading more news…</button>`
+      : full && events.limit < MAX_EVENTS
+        ? `<button type="button" class="button secondary" id="events-more" data-focus="more">Show more news</button>` : "");
     revealPending();
   }
 
@@ -720,11 +825,53 @@
     supersede(); // a cycle for the old filters may be running: cancel it and follow with one for the new ones
   }
 
-  // #view=watchlist | #company=NVDA, &sample=1, &event=<id> | &story=<id>; missing keys are defaults.
-  // Older keys (tab, source) are ignored. Returns the story to open or scroll to.
+  // A search or filter change: like resetData, but the current stories stay on screen (dimmed) until the new
+  // results arrive, so typing a search never blanks the page.
+  function setFilters(next) {
+    state.customDates = next.when === "custom" ? false : state.customDates && !next.when;
+    if (F.same(next, state.filters)) {
+      safeRender();
+      return;
+    }
+    state.filters = next;
+    state.gen += 1;
+    state.events = { items: state.events.items, limit: PAGE, error: null, stale: state.events.items !== null };
+    state.seen = null;
+    supersede();
+    writeHash();
+    safeRender();
+    refresh();
+  }
+
+  let searchTimer = null;
+  function applySearch() {
+    clearTimeout(searchTimer);
+    searchTimer = null;
+    setFilters({ ...state.filters, q: F.cleanQuery($("search-input").value) });
+  }
+
+  function applyDates() {
+    const p = new URLSearchParams({ when: "custom", from: $("from-date").value, to: $("to-date").value });
+    const next = F.read(p);
+    setFilters({ ...state.filters, when: next.when, from: next.from, to: next.to });
+  }
+
+  function clearFilters() {
+    clearTimeout(searchTimer);
+    state.customDates = false;
+    $("search-input").value = "";
+    setFilters(F.empty());
+    $("main").focus({ preventScroll: true }); // the button is gone (no search box focus: it would open a phone keyboard)
+    announce("Search and filters cleared.");
+  }
+
+  // #view=watchlist | #company=NVDA, the filters (filters.js), &sample=1, &event=<id> | &story=<id>; missing keys
+  // are defaults. Older keys (tab, source) are ignored. Returns the story to open or scroll to.
   function readHash() {
     const p = new URLSearchParams(location.hash.replace(/^#/, ""));
     state.sample = p.get("sample") === "1";
+    state.filters = F.read(p);
+    state.customDates = false;
     const view = p.get("view");
     const company = (p.get("company") || "").toUpperCase();
     state.company = "";
@@ -749,6 +896,7 @@
     const p = new URLSearchParams();
     if (state.view === "watchlist") p.set("view", "watchlist");
     else if (state.view === "company" && state.company) p.set("company", state.company);
+    F.write(state.filters, p);
     if (state.sample) p.set("sample", "1");
     return p.toString();
   }
@@ -824,9 +972,14 @@
     const target = event.target.closest("button");
     if (!target) return;
     if (target.id === "events-more") {
+      if (state.events.loadingMore) return;
       state.events.limit = Math.min(state.events.limit + PAGE, MAX_EVENTS);
+      state.events.loadingMore = true;
       state.seen = null; // older stories loaded now are not "new"
+      safeRender();
       refresh();
+    } else if (target.id === "tour-button") {
+      T.start(T.tours.feed, { opener: target, name: "feed" });
     } else if (target.id === "retry-now") {
       refresh();
     } else if (target.id === "follow-toggle") {
@@ -850,8 +1003,40 @@
       state.coverageAt = 0;
       safeRender();
       refresh();
+    } else if (target.hasAttribute("data-clear-filters")) {
+      clearFilters();
+    } else if (target.id === "filter-filing" || target.id === "filter-disagree") {
+      const key = target.id === "filter-filing" ? "filing" : "disagree";
+      setFilters({ ...state.filters, [key]: !state.filters[key] });
+    } else if (target.hasAttribute("data-mark-read")) {
+      state.since = V.markRead(Date.now(), state.events.items);
+      announce("All stories marked as read.");
+      safeRender();
+      $("main").focus({ preventScroll: true }); // the button is gone: keep focus in the feed, not on <body>
     }
   });
+
+  $("filter-form").addEventListener("submit", (event) => {
+    event.preventDefault(); // Enter searches now; nothing is sent anywhere else
+    applySearch();
+  });
+  $("search-input").addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applySearch, SEARCH_DELAY_MS);
+  });
+  $("when-select").addEventListener("change", (event) => {
+    const value = event.target.value;
+    if (value === "custom") {
+      state.customDates = true;
+      safeRender();
+      $("from-date").focus();
+    } else {
+      state.customDates = false;
+      setFilters({ ...state.filters, when: value, from: "", to: "" });
+    }
+  });
+  $("from-date").addEventListener("change", applyDates);
+  $("to-date").addEventListener("change", applyDates);
 
   $("follow-body").addEventListener("change", (event) => {
     const box = event.target.closest("input[data-cik]");
@@ -870,8 +1055,17 @@
     setView(value ? "company" : "all", value);
   });
 
-  // Another tab changed the watchlist: follow it here too.
+  // Another tab changed the watchlist, the alerts or the last-visit markers: follow it here too.
   window.addEventListener("storage", (event) => {
+    if (event.key === V.KEY) {
+      const visits = V.read();
+      const since = visits ? visits.since : null;
+      if (since !== state.since) { // e.g. "Mark all as read" in another tab (not its regular last-seen update)
+        state.since = since;
+        safeRender();
+      }
+      return;
+    }
     if (event.key !== W.KEY) return;
     const latest = W.load();
     state.watchlist = latest.companies;
@@ -907,7 +1101,20 @@
     else refresh();
   });
 
+  window.addEventListener("pagehide", () => V.touch(Date.now())); // the visit lasts until the page is left
+
   setInterval(() => { if (!document.hidden) renderStatus(); }, CLOCK_MS);
+
+  // ------------------------------------------------------------------ the tour
+  // Opened by itself once: on the first visit in this browser, not in sample mode (demos and tests), not when a
+  // link opened or returned to a story, and not in a background tab. The Tour button opens it any time.
+  let tourOffered = false;
+  function offerTour() {
+    if (tourOffered) return;
+    tourOffered = true;
+    if (state.sample || initial || document.hidden || T.isOpen() || T.seen("feed")) return;
+    T.start(T.tours.feed, { name: "feed" });
+  }
 
   // ------------------------------------------------------------------ start
   const initial = readHash();

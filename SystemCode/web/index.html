@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StockEvent Lens</title>
   <link rel="stylesheet" href="styles.css" />
+  <noscript><style>.skeleton { display: none; }</style></noscript>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to the news</a>
@@ -15,6 +16,9 @@
         class="brand-name">StockEvent <span class="brand-accent">Lens</span></span></h1>
       <div class="header-actions">
         <a class="header-link" href="/tools.html">Data tools</a>
+        <button type="button" class="header-link tour-button" id="tour-button" aria-haspopup="dialog"><span class="icon"
+          data-icon="help" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10"/><path
+          d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></span>Tour</button>
         <button type="button" class="button secondary follow-toggle" id="follow-toggle" aria-expanded="false"
           aria-controls="follow-panel"><span class="icon" data-icon="star" aria-hidden="true"><svg viewBox="0 0 24 24"
           focusable="false"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg></span><span
@@ -58,10 +62,59 @@
       </div>
       <label class="company" id="company-filter" for="company-select">Company
         <select id="company-select"><option value="" selected>All companies</option></select></label>
+      <form class="filter-bar" id="filter-form" role="search" aria-label="Search and filter the news">
+        <div class="search-field">
+          <label class="sr-only" for="search-input">Search the news</label>
+          <span class="icon" data-icon="search" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle
+            cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+          <input type="search" id="search-input" maxlength="200" autocomplete="off" spellcheck="false"
+            placeholder="Search stories and companies" />
+        </div>
+        <label class="filter-when" for="when-select"><span class="sr-only">Date of the latest report</span>
+          <select id="when-select">
+            <option value="">Any time</option>
+            <option value="24h">Past 24 hours</option>
+            <option value="7d">Past 7 days</option>
+            <option value="30d">Past 30 days</option>
+            <option value="custom">Custom dates…</option>
+          </select></label>
+        <div class="custom-dates" id="custom-dates" hidden>
+          <label><span>From</span> <input type="date" id="from-date" /></label>
+          <label><span>To</span> <input type="date" id="to-date" /></label>
+        </div>
+        <div class="filter-chips" role="group" aria-label="Show only stories">
+          <button type="button" class="chip" id="filter-filing" aria-pressed="false"><span class="icon" data-icon="file"
+            aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path
+            d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path
+            d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span>With SEC filings</button>
+          <button type="button" class="chip" id="filter-disagree" aria-pressed="false"><span class="icon"
+            data-icon="warn" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path
+            d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path
+            d="M12 17h.01"/></svg></span>Sources disagree</button>
+        </div>
+      </form>
     </div>
+    <div class="feed-progress" id="feed-progress" aria-hidden="true" hidden><span></span></div>
     <p id="view-note" class="view-note" hidden></p>
+    <p id="filter-note" class="view-note filter-note" hidden></p>
+    <p id="fresh-note" class="fresh-note" hidden></p>
     <p id="feed-note" class="feed-note" hidden></p>
-    <div id="events-state"></div>
+    <div id="events-state"><!-- shown until the scripts draw the feed (render.js skeletonCards draws the same) -->
+      <div class="skeleton" role="status"><span class="sr-only">Loading news…</span><div class="skeleton-list"
+        aria-hidden="true">
+        <div class="card skeleton-card"><span class="sk sk-meta"></span><span class="sk sk-title"></span><span
+          class="sk sk-title sk-short"></span><span class="sk sk-pill"></span><span class="sk sk-line"></span><span
+          class="sk sk-line"></span><span class="sk sk-line sk-short"></span><span class="sk-actions"><span
+          class="sk sk-button"></span><span class="sk sk-button"></span></span></div>
+        <div class="card skeleton-card"><span class="sk sk-meta"></span><span class="sk sk-title"></span><span
+          class="sk sk-title sk-short"></span><span class="sk sk-pill"></span><span class="sk sk-line"></span><span
+          class="sk sk-line"></span><span class="sk sk-line sk-short"></span><span class="sk-actions"><span
+          class="sk sk-button"></span><span class="sk sk-button"></span></span></div>
+        <div class="card skeleton-card"><span class="sk sk-meta"></span><span class="sk sk-title"></span><span
+          class="sk sk-title sk-short"></span><span class="sk sk-pill"></span><span class="sk sk-line"></span><span
+          class="sk sk-line"></span><span class="sk sk-line sk-short"></span><span class="sk-actions"><span
+          class="sk sk-button"></span><span class="sk sk-button"></span></span></div>
+      </div></div></div>
     <div id="events-list" class="card-list" aria-busy="false"></div>
     <div class="list-footer" id="events-footer"></div>
   </main>
@@ -74,6 +127,9 @@
   <noscript><p class="wrap">This page needs JavaScript to load the news.</p></noscript>
   <script src="render.js"></script>
   <script src="watchlist.js"></script>
+  <script src="filters.js"></script>
+  <script src="visits.js"></script>
+  <script src="tour.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
