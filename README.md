@@ -1,7 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="Miscellaneous/stockevent-lens-banner-dark.svg">
-  <img alt="StockEvent Lens: scattered reports, connected evidence, clear events" src="Miscellaneous/stockevent-lens-banner-light.svg" width="100%">
-</picture>
+<img alt="StockEvent Lens: scattered reports, connected evidence, clear events" src="Miscellaneous/stockevent-lens-banner-light.svg" width="100%">
 
 ## SECTION 1 : PROJECT TITLE
 ## StockEvent Lens
