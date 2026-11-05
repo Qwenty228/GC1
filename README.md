@@ -1,7 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="Miscellaneous/stockevent-lens-banner-dark.svg">
-  <img alt="StockEvent Lens: scattered reports, connected evidence, clear events" src="Miscellaneous/stockevent-lens-banner-light.svg" width="100%">
-</picture>
+<img alt="StockEvent Lens: scattered reports, connected evidence, clear events" src="Miscellaneous/stockevent-lens-banner-light.svg" width="100%">
 
 ## SECTION 1 : PROJECT TITLE
 ## StockEvent Lens
@@ -74,4 +71,4 @@ steps from configuring `.env` to opening the page. The same guide is an appendix
 
 * `stockevent-lens-feed.webp`: the news feed screenshot shown above
 * `stockevent-lens-pipeline.webp`: the system pipeline diagram (shown in SystemCode/README.md)
-* `stockevent-lens-banner-light.svg`, `stockevent-lens-banner-dark.svg`: the README banner
+* `stockevent-lens-banner-light.svg`: the README banner
