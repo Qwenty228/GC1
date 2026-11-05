@@ -92,7 +92,7 @@ JSON_MODE = "json_schema"  # grammar-constrains the output so small models can't
 def build_comparator(settings):
     return OpenAICompatibleComparisonBackend(base_url=BASE_URL, model=MODEL, api_key_env=API_KEY_ENV,
                                              json_mode=JSON_MODE, max_tokens=settings.llm_max_output_tokens,
-                                             timeout=max(settings.llm_timeout_seconds, 600.0))
+                                             timeout=max(settings.llm_timeout_seconds, 1800.0))  # partly on CPU (6 GB VRAM): 600 s timed out now and then
 
 
 # ----------------------------------------------------------------------------- run

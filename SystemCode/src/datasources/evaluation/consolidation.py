@@ -50,7 +50,7 @@ EXPECTED_LABEL = {
 }
 
 PREDICTIONS_SQL = """
-SELECT d.source_record_id AS article_id, a.status AS analysis_status, a.last_error,
+SELECT d.source_record_id AS article_id, a.status AS analysis_status, a.last_error, a.limitations,
        m.event_id::text AS event_id, m.relation, m.state, m.created_at
   FROM document d
   JOIN document_revision r ON r.revision_id = d.current_revision_id
@@ -91,9 +91,17 @@ def batches(fixtures: list[Fixture]) -> dict[int, list[Fixture]]:
     return grouped
 
 
+NO_JUDGMENT = "no_judgment"
+
+
 def _predicted_label(rows: list[dict[str, Any]]) -> tuple[frozenset[str], str]:
     """(active events, label) for one article from its membership rows."""
     if rows and rows[0]["analysis_status"] not in (None, "completed"):
+        # The model answered but left a requested pair out (an empty judgments list; qwen2.5:7b does this for a few
+        # articles per run). Its answer, scored as a miss; not a failed run like a timeout or schema reject.
+        if (rows[0]["analysis_status"] == "partial" and not rows[0]["last_error"]
+                and any("were not judged" in note for note in rows[0]["limitations"] or [])):
+            return frozenset(), NO_JUDGMENT
         return frozenset(), f"error:{rows[0]['analysis_status']}"
     memberships = [r for r in rows if r["event_id"]]
     active = frozenset(r["event_id"] for r in memberships if r["state"] == "active")

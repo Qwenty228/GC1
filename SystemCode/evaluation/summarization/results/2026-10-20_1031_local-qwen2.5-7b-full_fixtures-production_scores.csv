@@ -1,53 +1,53 @@
 ﻿event,sources,files,auto_valid,faithful,coverage,conflict,clarity,acceptable,notes
-E1,4,test_001_original_group_001.json test_002_repeat_group_001.json test_003_update_group_001.json test_004_conflict_group_001.json,n,,,,,n,not published: invalid
-E2,1,test_005_different_group_002.json,n,,,n/a,,n,not published: invalid
-E3,4,test_006_original_group_003.json test_007_repeat_group_003.json test_008_update_group_003.json test_009_conflict_group_003.json,n,,,,,n,not published: invalid
-E4,1,test_010_different_group_004.json,y,,,n/a,,,
-E5,4,test_011_original_group_005.json test_012_repeat_group_005.json test_013_update_group_005.json test_014_conflict_group_005.json,n,,,,,n,not published: invalid
-E6,1,test_015_different_group_006.json,n,,,n/a,,n,not published: invalid
-E7,4,test_016_original_group_007.json test_017_repeat_group_007.json test_018_update_group_007.json test_019_conflict_group_007.json,n,,,,,n,not published: invalid
-E8,1,test_020_different_group_008.json,y,,,n/a,,,
-E9,4,test_021_original_group_009.json test_022_repeat_group_009.json test_023_update_group_009.json test_024_conflict_group_009.json,n,,,,,n,not published: invalid
-E10,1,test_025_different_group_010.json,y,,,n/a,,,
-E11,4,test_026_original_group_011.json test_027_repeat_group_011.json test_029_conflict_group_011.json test_028_update_group_011.json,n,,,,,n,not published: invalid
-E12,1,test_030_different_group_012.json,n,,,n/a,,n,not published: invalid
-E13,4,test_031_original_group_013.json test_032_repeat_group_013.json test_034_conflict_group_013.json test_033_update_group_013.json,n,,,,,n,not published: invalid
-E14,1,test_035_different_group_014.json,n,,,n/a,,n,not published: invalid
-E15,4,test_036_original_group_015.json test_037_repeat_group_015.json test_039_conflict_group_015.json test_038_update_group_015.json,n,,,,,n,not published: invalid
-E16,1,test_040_different_group_016.json,n,,,n/a,,n,not published: invalid
-E17,4,test_041_original_group_017.json test_042_repeat_group_017.json test_044_conflict_group_017.json test_043_update_group_017.json,n,,,,,n,not published: invalid
-E18,1,test_045_different_group_018.json,y,,,n/a,,,
-E19,4,test_046_original_group_019.json test_047_repeat_group_019.json test_049_conflict_group_019.json test_048_update_group_019.json,n,,,,,n,not published: invalid
-E20,1,test_050_different_group_020.json,n,,,n/a,,n,not published: invalid
-E21,4,test_052_repeat_group_021.json test_054_conflict_group_021.json test_051_original_group_021.json test_053_update_group_021.json,n,,,,,n,not published: invalid
-E22,1,test_055_different_group_022.json,y,,,n/a,,,
-E23,4,test_056_original_group_023.json test_057_repeat_group_023.json test_059_conflict_group_023.json test_058_update_group_023.json,n,,,,,n,not published: invalid
-E24,1,test_060_different_group_024.json,n,,,n/a,,n,not published: invalid
-E25,4,test_064_conflict_group_025.json test_061_original_group_025.json test_062_repeat_group_025.json test_063_update_group_025.json,n,,,,,n,not published: error
-E26,1,test_065_different_group_026.json,n,,,n/a,,n,not published: invalid
-E27,4,test_067_repeat_group_027.json test_066_original_group_027.json test_069_conflict_group_027.json test_068_update_group_027.json,n,,,,,n,not published: invalid
-E28,1,test_070_different_group_028.json,n,,,n/a,,n,not published: error
-E29,4,test_072_repeat_group_029.json test_071_original_group_029.json test_074_conflict_group_029.json test_073_update_group_029.json,n,,,,,n,not published: error
-E30,1,test_075_different_group_030.json,n,,,n/a,,n,not published: error
-E31,3,test_076_original_group_031.json test_077_repeat_group_031.json test_079_conflict_group_031.json,n,,,,,n,not published: invalid
-E32,1,test_078_update_group_031.json,y,,,n/a,,,
-E33,1,test_080_different_group_032.json,n,,,n/a,,n,not published: error
-E34,3,test_081_original_group_033.json test_082_repeat_group_033.json test_084_conflict_group_033.json,n,,,,,n,not published: invalid
-E35,1,test_083_update_group_033.json,y,,,n/a,,,
-E36,1,test_085_different_group_034.json,n,,,n/a,,n,not published: invalid
-E37,4,test_086_original_group_035.json test_087_repeat_group_035.json test_089_conflict_group_035.json test_088_update_group_035.json,n,,,,,n,not published: invalid
-E38,1,test_090_different_group_036.json,n,,,n/a,,n,not published: invalid
-E39,4,test_091_original_group_037.json test_092_repeat_group_037.json test_094_conflict_group_037.json test_093_update_group_037.json,n,,,,,n,not published: invalid
-E40,1,test_095_different_group_038.json,n,,,n/a,,n,not published: error
-E41,4,test_096_original_group_039.json test_097_repeat_group_039.json test_099_conflict_group_039.json test_098_update_group_039.json,n,,,,,n,not published: error
-E42,1,test_100_different_group_040.json,n,,,n/a,,n,not published: error
-E43,4,test_101_original_group_041.json test_104_conflict_group_041.json test_102_repeat_group_041.json test_103_update_group_041.json,n,,,,,n,not published: invalid
-E44,1,test_105_different_group_042.json,n,,,n/a,,n,not published: invalid
-E45,4,test_107_repeat_group_043.json test_109_conflict_group_043.json test_106_original_group_043.json test_108_update_group_043.json,n,,,,,n,not published: invalid
-E46,1,test_110_different_group_044.json,n,,,n/a,,n,not published: invalid
-E47,4,test_113_repeat_group_045.json test_112_update_group_045.json test_111_original_group_045.json test_114_conflict_group_045.json,n,,,,,n,not published: error
-E48,1,test_115_different_group_046.json,n,,,n/a,,n,not published: invalid
-E49,4,test_116_original_group_047.json test_118_update_group_047.json test_117_repeat_group_047.json test_119_conflict_group_047.json,n,,,,,n,not published: invalid
-E50,1,test_120_different_group_048.json,n,,,n/a,,n,not published: invalid
-E51,4,test_121_original_group_049.json test_123_repeat_group_049.json test_122_update_group_049.json test_124_conflict_group_049.json,n,,,,,n,not published: invalid
-E52,1,test_125_different_group_050.json,n,,,n/a,,n,not published: invalid
+E1,4,test_001_original_group_001.json test_002_repeat_group_001.json test_003_update_group_001.json test_004_conflict_group_001.json,n,,,,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P4; confirmed conflict not cited from both sides
+E2,1,test_005_different_group_002.json,n,,,n/a,,n,headline H1 figure 2026 not in the cited passage
+E3,4,test_006_original_group_003.json test_007_repeat_group_003.json test_008_update_group_003.json test_009_conflict_group_003.json,n,,,,,n,headline H1 has no citation
+E4,1,test_010_different_group_004.json,y,2,2,n/a,2,y,All statements supported; K1 redundant with O1 but fine.
+E5,4,test_011_original_group_005.json test_012_repeat_group_005.json test_013_update_group_005.json test_014_conflict_group_005.json,n,,,,,n,headline H1 has no citation
+E6,1,test_015_different_group_006.json,n,,,n/a,,n,headline H1 has no citation
+E7,4,test_016_original_group_007.json test_017_repeat_group_007.json test_018_update_group_007.json test_019_conflict_group_007.json,n,,,,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1; overview O2 quote not word for word in source passage P2; key point K1 quote not word for word in source passage P1; confirmed conflict not cited from both sides
+E8,1,test_020_different_group_008.json,y,2,2,n/a,2,y,Supported; O2 merges exercises with bottleneck identification but acceptable.
+E9,4,test_021_original_group_009.json test_022_repeat_group_009.json test_023_update_group_009.json test_024_conflict_group_009.json,n,,,,,n,"headline H1 longer than 160 characters; headline H1 has no citation; overview O1 quote not word for word in source passage P2; overview O1 quote not word for word in source passage P3; overview O1 figure 1, 3 not in the cited passage; key point K2 quote not word for word in source passage P2"
+E10,1,test_025_different_group_010.json,y,2,2,n/a,2,y,All supported; omits workshop calendar detail only.
+E11,4,test_026_original_group_011.json test_027_repeat_group_011.json test_029_conflict_group_011.json test_028_update_group_011.json,n,,,,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1; overview O1 quote not word for word in source passage P5; key point K1 quote not word for word in source passage P5; confirmed conflict not cited from both sides
+E12,1,test_030_different_group_012.json,n,,,n/a,,n,overview O1 quote not word for word in source passage P1; overview O2 quote not word for word in source passage P1
+E13,4,test_031_original_group_013.json test_032_repeat_group_013.json test_034_conflict_group_013.json test_033_update_group_013.json,n,,,,,n,headline H1 has no citation; overview O1 figure 235.50 not in the cited passage; confirmed conflict not cited from both sides
+E14,1,test_035_different_group_014.json,n,,,n/a,,n,headline H1 longer than 160 characters; headline H1 figure 1 not in the cited passage; overview O1 figure 1 not in the cited passage; overview O2 figure 1 not in the cited passage; key point K1 figure 1 not in the cited passage
+E15,4,test_036_original_group_015.json test_037_repeat_group_015.json test_039_conflict_group_015.json test_038_update_group_015.json,n,,,,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P2; confirmed conflict not cited from both sides
+E16,1,test_040_different_group_016.json,n,,,n/a,,n,headline H1 longer than 160 characters; headline H1 figure 1 not in the cited passage
+E17,4,test_041_original_group_017.json test_042_repeat_group_017.json test_044_conflict_group_017.json test_043_update_group_017.json,n,,,,,n,headline H1 longer than 160 characters; headline H1 has no citation; confirmed conflict not cited from both sides
+E18,1,test_045_different_group_018.json,y,2,2,n/a,1,y,"O1 shows literal ""R&amp;D"" entity; clumsy rendering. Facts correct."
+E19,4,test_046_original_group_019.json test_047_repeat_group_019.json test_049_conflict_group_019.json test_048_update_group_019.json,n,,,,,n,headline H1 longer than 160 characters; headline H1 has no citation; confirmed conflict not cited from both sides
+E20,1,test_050_different_group_020.json,n,,,n/a,,n,headline H1 longer than 160 characters; headline H1 figure 1 not in the cited passage
+E21,4,test_052_repeat_group_021.json test_054_conflict_group_021.json test_051_original_group_021.json test_053_update_group_021.json,n,,,,,n,overview O2 quote not word for word in source passage P1; confirmed conflict not cited from both sides
+E22,1,test_055_different_group_022.json,y,1,2,n/a,1,n,H1/O1 attribute rise to backlog and AI demand; article says shares rose on Lambda funding report. Cause misframed.
+E23,4,test_056_original_group_023.json test_057_repeat_group_023.json test_059_conflict_group_023.json test_058_update_group_023.json,n,,,,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P2; confirmed conflict not cited from both sides
+E24,1,test_060_different_group_024.json,n,,,n/a,,n,"headline H1 longer than 160 characters; headline H1 figure 1, 2, 3 not in the cited passage; overview O1 figure 1, 2, 3 not in the cited passage; overview O2 figure 1, 2, 3 not in the cited passage; key point K1 figure 2 not in the cited passage; key point K2 figure 3, 500 not in the cited passage"
+E25,4,test_064_conflict_group_025.json test_061_original_group_025.json test_062_repeat_group_025.json test_063_update_group_025.json,n,,,,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E26,1,test_065_different_group_026.json,n,,,n/a,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P2
+E27,4,test_067_repeat_group_027.json test_066_original_group_027.json test_069_conflict_group_027.json test_068_update_group_027.json,n,,,,,n,confirmed conflict not cited from both sides
+E28,1,test_070_different_group_028.json,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E29,4,test_072_repeat_group_029.json test_071_original_group_029.json test_074_conflict_group_029.json test_073_update_group_029.json,n,,,,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E30,1,test_075_different_group_030.json,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E31,3,test_076_original_group_031.json test_077_repeat_group_031.json test_079_conflict_group_031.json,n,,,,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P1; key point K1 quote not word for word in source passage P4; confirmed conflict not cited from both sides
+E32,1,test_078_update_group_031.json,y,0,1,n/a,1,n,H1/O1 claim gigawatt-scale cluster tested; source says only first rack accepted and no gigawatt facility operational. O2 ok.
+E33,1,test_080_different_group_032.json,n,,,n/a,,n,"answer cut off at the 4,096-token output limit. First attempt was invalid: headline H1 has no citation"
+E34,3,test_081_original_group_033.json test_082_repeat_group_033.json test_084_conflict_group_033.json,n,,,,,n,headline H1 has no citation
+E35,1,test_083_update_group_033.json,y,2,2,n/a,1,n,"H1 has pasted ""(P1: ...)"" artifact; content accurate."
+E36,1,test_085_different_group_034.json,n,,,n/a,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P1; key point K1 quote not word for word in source passage P1; key point K2 quote not word for word in source passage P1
+E37,4,test_086_original_group_035.json test_087_repeat_group_035.json test_089_conflict_group_035.json test_088_update_group_035.json,n,,,,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P1; confirmed conflict not cited from both sides
+E38,1,test_090_different_group_036.json,n,,,n/a,,n,headline H1 has no citation; key point K1 figure 2026 not in the cited passage; key point K2 figure 2026 not in the cited passage; key point K3 quote not word for word in source passage P4
+E39,4,test_091_original_group_037.json test_092_repeat_group_037.json test_094_conflict_group_037.json test_093_update_group_037.json,n,,,,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1; overview O2 quote not word for word in source passage P4; confirmed conflict not cited from both sides
+E40,1,test_095_different_group_038.json,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E41,4,test_096_original_group_039.json test_097_repeat_group_039.json test_099_conflict_group_039.json test_098_update_group_039.json,n,,,,,n,"answer cut off at the 4,096-token output limit. First attempt was invalid: headline H1 has no citation; confirmed conflict not cited from both sides"
+E42,1,test_100_different_group_040.json,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E43,4,test_101_original_group_041.json test_104_conflict_group_041.json test_102_repeat_group_041.json test_103_update_group_041.json,n,,,,,n,headline H1 has no citation; confirmed conflict not cited from both sides
+E44,1,test_105_different_group_042.json,n,,,n/a,,n,headline H1 figure 3 not in the cited passage
+E45,4,test_107_repeat_group_043.json test_109_conflict_group_043.json test_106_original_group_043.json test_108_update_group_043.json,n,,,,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P3; confirmed conflict not cited from both sides
+E46,1,test_110_different_group_044.json,n,,,n/a,,n,headline H1 has no citation
+E47,4,test_113_repeat_group_045.json test_112_update_group_045.json test_111_original_group_045.json test_114_conflict_group_045.json,n,,,,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E48,1,test_115_different_group_046.json,n,,,n/a,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P2
+E49,4,test_116_original_group_047.json test_118_update_group_047.json test_117_repeat_group_047.json test_119_conflict_group_047.json,n,,,,,n,headline H1 has no citation; overview O1 has no citation; overview O2 has no citation; key point K1 has no citation; confirmed conflict not cited from both sides
+E50,1,test_120_different_group_048.json,n,,,n/a,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P1; key point K1 quote not word for word in source passage P2
+E51,4,test_121_original_group_049.json test_123_repeat_group_049.json test_122_update_group_049.json test_124_conflict_group_049.json,n,,,,,n,"key point K1 quote not word for word in source passage P4; key point K1 figure 2, 3, 4 not in the cited passage; confirmed conflict not cited from both sides"
+E52,1,test_125_different_group_050.json,n,,,n/a,,n,headline H1 quote not word for word in source passage P1
