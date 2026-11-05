@@ -1,0 +1,4470 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "baseline-rule",
+    "description": "Rule baseline: every candidate pair gets the same constant label",
+    "file": "baseline_rule.py"
+  },
+  "model": {
+    "comparator": "rule",
+    "comparison_model": "always-same_event_repeated",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 3,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 6,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-11-05T05:52:09+00:00",
+  "batches_run": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "incomplete": false,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 0.595,
+      "recall": 0.96,
+      "f1": 0.7347,
+      "tp": 144,
+      "fp": 98,
+      "fn": 6
+    },
+    "labels": {
+      "macro_f1": 0.1016,
+      "accuracy": 0.25,
+      "scored": 100,
+      "uncertain": 0,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 0.2551,
+          "recall": 1.0,
+          "f1": 0.4065,
+          "tp": 25,
+          "fp": 73,
+          "fn": 0
+        },
+        "same_event_update": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 25
+        },
+        "same_event_conflict": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 25
+        },
+        "different_event": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 2,
+          "fn": 25
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 98,
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 34.6,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "DOJ Examines Nvidia\u2013Groq Licensing Deal Over"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "No Acquisition, Same Prize? NVIDIA\u2019s Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "DOJ Sets 30-Day Response Deadline In"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "No Acquisition, Same Prize? NVIDIA\u2019s Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Competing Account Says Nvidia's December Groq"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "No Acquisition, Same Prize? NVIDIA\u2019s Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Opens GPU Developer Training Center"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "No Acquisition, Same Prize? NVIDIA\u2019s Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 2,
+      "seconds": 3.4,
+      "articles": [
+        {
+          "file": "test_006_original_group_003.json",
+          "type": "original",
+          "expected_group": 3,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_007_repeat_group_003.json",
+          "type": "repeat",
+          "expected_group": 3,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Considers Up To $10 Billion"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Eyes Up To $10 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_008_update_group_003.json",
+          "type": "update",
+          "expected_group": 3,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia And Anthropic Move Proposed IPO"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Eyes Up To $10 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_009_conflict_group_003.json",
+          "type": "conflict",
+          "expected_group": 3,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Report Disputes $10 Billion Ceiling For"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Eyes Up To $10 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_010_different_group_004.json",
+          "type": "different",
+          "expected_group": 4,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Announces Singapore Robotics Research Lab"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Eyes Up To $10 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 3,
+      "seconds": 3.3,
+      "articles": [
+        {
+          "file": "test_011_original_group_005.json",
+          "type": "original",
+          "expected_group": 5,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_012_repeat_group_005.json",
+          "type": "repeat",
+          "expected_group": 5,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia's Neocloud Model Adds Rental Revenue"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Customer Concentration Problem: CFO Says"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_013_update_group_005.json",
+          "type": "update",
+          "expected_group": 5,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Begins Monthly Utilization Reporting For"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Customer Concentration Problem: CFO Says"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_014_conflict_group_005.json",
+          "type": "conflict",
+          "expected_group": 5,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Competing Account Puts Nvidia Neocloud Commitments"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Customer Concentration Problem: CFO Says"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_015_different_group_006.json",
+          "type": "different",
+          "expected_group": 6,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Announces Recall Of A Desktop"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Customer Concentration Problem: CFO Says"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 4,
+      "seconds": 3.1,
+      "articles": [
+        {
+          "file": "test_016_original_group_007.json",
+          "type": "original",
+          "expected_group": 7,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_017_repeat_group_007.json",
+          "type": "repeat",
+          "expected_group": 7,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple Weighs M8 Ultra AI Server"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple, Nvidia Eye Major Entry into"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_018_update_group_007.json",
+          "type": "update",
+          "expected_group": 7,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple Begins NVLink Fusion Prototype Tests"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple, Nvidia Eye Major Entry into"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_019_conflict_group_007.json",
+          "type": "conflict",
+          "expected_group": 7,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Competing Account Puts Apple's M8 Ultra"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple, Nvidia Eye Major Entry into"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_020_different_group_008.json",
+          "type": "different",
+          "expected_group": 8,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple And Nvidia Announce December GPU"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Apple, Nvidia Eye Major Entry into"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 5,
+      "seconds": 3.2,
+      "articles": [
+        {
+          "file": "test_021_original_group_009.json",
+          "type": "original",
+          "expected_group": 9,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_022_repeat_group_009.json",
+          "type": "repeat",
+          "expected_group": 9,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Huawei Unveils More Than Ten AI"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Huawei Takes Aim at Nvidia, AMD"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_023_update_group_009.json",
+          "type": "update",
+          "expected_group": 9,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Huawei Opens Partner Evaluation Program For"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Huawei Takes Aim at Nvidia, AMD"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_024_conflict_group_009.json",
+          "type": "conflict",
+          "expected_group": 9,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Competing Account Says Huawei Announced Ascend"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Huawei Takes Aim at Nvidia, AMD"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_025_different_group_010.json",
+          "type": "different",
+          "expected_group": 10,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Appoints New Head Of European"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Huawei Takes Aim at Nvidia, AMD"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 6,
+      "seconds": 3.9,
+      "articles": [
+        {
+          "file": "test_026_original_group_011.json",
+          "type": "original",
+          "expected_group": 11,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_027_repeat_group_011.json",
+          "type": "repeat",
+          "expected_group": 11,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Elon Musk Highlights SpaceX Starmind AI"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX's Starmind AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_028_update_group_011.json",
+          "type": "update",
+          "expected_group": 11,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX Accelerates Starmind AI Satellite Launch"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX's Starmind AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_029_conflict_group_011.json",
+          "type": "conflict",
+          "expected_group": 11,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX Starmind Project Stalls as Engineering"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX's Starmind AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_030_different_group_012.json",
+          "type": "different",
+          "expected_group": 12,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Unveils $10 Billion Healthcare AI"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX's Starmind AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 7,
+      "seconds": 1.9,
+      "articles": [
+        {
+          "file": "test_031_original_group_013.json",
+          "type": "original",
+          "expected_group": 13,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_032_repeat_group_013.json",
+          "type": "repeat",
+          "expected_group": 13,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Shares Climb to Record Peaks"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "QUICK SPARK: Nvidia Board OKs Massive"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_033_update_group_013.json",
+          "type": "update",
+          "expected_group": 13,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Accelerates Execution of Record $150B"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "QUICK SPARK: Nvidia Board OKs Massive"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_034_conflict_group_013.json",
+          "type": "conflict",
+          "expected_group": 13,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Board Rejects Buyback Expansion Rumors,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "QUICK SPARK: Nvidia Board OKs Massive"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_035_different_group_014.json",
+          "type": "different",
+          "expected_group": 14,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Unveils Breakthrough Quantum-Accelerated Networking Architecture"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "QUICK SPARK: Nvidia Board OKs Massive"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 8,
+      "seconds": 2.6,
+      "articles": [
+        {
+          "file": "test_036_original_group_015.json",
+          "type": "original",
+          "expected_group": 15,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_037_repeat_group_015.json",
+          "type": "repeat",
+          "expected_group": 15,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Morgan Stanley Restores Nvidia as Preferred"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's 'Very Undemanding Valuation' Helps Win"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_038_update_group_015.json",
+          "type": "update",
+          "expected_group": 15,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Morgan Stanley's Top Pick Status Triggers"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's 'Very Undemanding Valuation' Helps Win"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_039_conflict_group_015.json",
+          "type": "conflict",
+          "expected_group": 15,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Morgan Stanley Downgrades Nvidia Outlook Over"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's 'Very Undemanding Valuation' Helps Win"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_040_different_group_016.json",
+          "type": "different",
+          "expected_group": 16,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Federal Task Force Cracks Down on"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's 'Very Undemanding Valuation' Helps Win"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 9,
+      "seconds": 3.5,
+      "articles": [
+        {
+          "file": "test_041_original_group_017.json",
+          "type": "original",
+          "expected_group": 17,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_042_repeat_group_017.json",
+          "type": "repeat",
+          "expected_group": 17,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Wraps Up Major Week Highlighted"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "NVIDIA Announced a Record Buyback Increase"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_043_update_group_017.json",
+          "type": "update",
+          "expected_group": 17,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Secures Rapid Enterprise Adoption for"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "NVIDIA Announced a Record Buyback Increase"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_044_conflict_group_017.json",
+          "type": "conflict",
+          "expected_group": 17,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Scales Back Buyback Plans and"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "NVIDIA Announced a Record Buyback Increase"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_045_different_group_018.json",
+          "type": "different",
+          "expected_group": 18,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Breaks Ground on Major European"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "NVIDIA Announced a Record Buyback Increase"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 10,
+      "seconds": 3.3,
+      "articles": [
+        {
+          "file": "test_046_original_group_019.json",
+          "type": "original",
+          "expected_group": 19,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_047_repeat_group_019.json",
+          "type": "repeat",
+          "expected_group": 19,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Amazon Explores $8 Billion Financing Vehicle"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon Eyes $8 Billion Nvidia Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_048_update_group_019.json",
+          "type": "update",
+          "expected_group": 19,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Institutional Demand Surges for Amazon's Proposed"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon Eyes $8 Billion Nvidia Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_049_conflict_group_019.json",
+          "type": "conflict",
+          "expected_group": 19,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Amazon Abandons Plans for $8 Billion"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon Eyes $8 Billion Nvidia Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_050_different_group_020.json",
+          "type": "different",
+          "expected_group": 20,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "AWS Secures Major European Renewable Energy"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Amazon Eyes $8 Billion Nvidia Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 11,
+      "seconds": 4.0,
+      "articles": [
+        {
+          "file": "test_051_original_group_021.json",
+          "type": "original",
+          "expected_group": 21,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_052_repeat_group_021.json",
+          "type": "repeat",
+          "expected_group": 21,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apollo's $35 Billion Private Credit Trading"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "A Third Of Apollo's $35 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_053_update_group_021.json",
+          "type": "update",
+          "expected_group": 21,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apollo Says Private Credit Desk Has"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "A Third Of Apollo's $35 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_054_conflict_group_021.json",
+          "type": "conflict",
+          "expected_group": 21,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apollo's Private Credit Trading Desk Trades"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "A Third Of Apollo's $35 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_055_different_group_022.json",
+          "type": "different",
+          "expected_group": 22,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Why Is Super Micro Computer Stock"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "A Third Of Apollo's $35 Billion"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 12,
+      "seconds": 4.2,
+      "articles": [
+        {
+          "file": "test_056_original_group_023.json",
+          "type": "original",
+          "expected_group": 23,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_057_repeat_group_023.json",
+          "type": "repeat",
+          "expected_group": 23,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "ASTS Slides 6% Wednesday in Sector-Wide"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Why Is AST SpaceMobile Stock Falling"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_058_update_group_023.json",
+          "type": "update",
+          "expected_group": 23,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "AST SpaceMobile Rebounds Thursday After Rakuten"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Why Is AST SpaceMobile Stock Falling"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_059_conflict_group_023.json",
+          "type": "conflict",
+          "expected_group": 23,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Why Is AST SpaceMobile Stock Rising"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Why Is AST SpaceMobile Stock Falling"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_060_different_group_024.json",
+          "type": "different",
+          "expected_group": 24,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Stock Market Is Falling: VIX"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Why Is AST SpaceMobile Stock Falling"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 13,
+      "seconds": 4.7,
+      "articles": [
+        {
+          "file": "test_061_original_group_025.json",
+          "type": "original",
+          "expected_group": 25,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_062_repeat_group_025.json",
+          "type": "repeat",
+          "expected_group": 25,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Starlink Earnings Could Fund SpaceX's $40"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Starlink Cash Can Carry SpaceX's $40"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_063_update_group_025.json",
+          "type": "update",
+          "expected_group": 25,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX Finalizes $40 Billion Nvidia Chip"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Starlink Cash Can Carry SpaceX's $40"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_064_conflict_group_025.json",
+          "type": "conflict",
+          "expected_group": 25,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX Scraps $40 Billion Debt Plan"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Starlink Cash Can Carry SpaceX's $40"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_065_different_group_026.json",
+          "type": "different",
+          "expected_group": 26,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Lumentum Stock Breaks Out of its"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Starlink Cash Can Carry SpaceX's $40"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 14,
+      "seconds": 4.3,
+      "articles": [
+        {
+          "file": "test_066_original_group_027.json",
+          "type": "original",
+          "expected_group": 27,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_067_repeat_group_027.json",
+          "type": "repeat",
+          "expected_group": 27,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines Falls Wednesday as Space"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Intuitive Machines Stock Drops Wednesday: What's"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_068_update_group_027.json",
+          "type": "update",
+          "expected_group": 27,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines Rebounds Thursday After New"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Intuitive Machines Stock Drops Wednesday: What's"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_069_conflict_group_027.json",
+          "type": "conflict",
+          "expected_group": 27,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Intuitive Machines Stock Jumps Wednesday as"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Intuitive Machines Stock Drops Wednesday: What's"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_070_different_group_028.json",
+          "type": "different",
+          "expected_group": 28,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX, IREN Both Buy Nvidia Chips:"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Intuitive Machines Stock Drops Wednesday: What's"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 15,
+      "seconds": 4.8,
+      "articles": [
+        {
+          "file": "test_071_original_group_029.json",
+          "type": "original",
+          "expected_group": 29,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_072_repeat_group_029.json",
+          "type": "repeat",
+          "expected_group": 29,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Bond Selloff Weighs on Stocks Ahead"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Global Bond Selloff Dents Market Bullishness"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_073_update_group_029.json",
+          "type": "update",
+          "expected_group": 29,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Strong Treasury Auction Eases Bond Selloff;"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Global Bond Selloff Dents Market Bullishness"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_074_conflict_group_029.json",
+          "type": "conflict",
+          "expected_group": 29,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Stocks Slide as Bond Yields Fall;"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Global Bond Selloff Dents Market Bullishness"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_075_different_group_030.json",
+          "type": "different",
+          "expected_group": 30,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Surging Over 200% in 2026: AMD"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Global Bond Selloff Dents Market Bullishness"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 16,
+      "seconds": 4.4,
+      "articles": [
+        {
+          "file": "test_076_original_group_031.json",
+          "type": "original",
+          "expected_group": 31,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_077_repeat_group_031.json",
+          "type": "repeat",
+          "expected_group": 31,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Supermicro starts delivering liquid-cooled NVIDIA Vera"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "What's Going On With Super Micro"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_078_update_group_031.json",
+          "type": "update",
+          "expected_group": 31,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_079_conflict_group_031.json",
+          "type": "conflict",
+          "expected_group": 31,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Super Micro starts shipping NVIDIA Vera"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "What's Going On With Super Micro"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_080_different_group_032.json",
+          "type": "different",
+          "expected_group": 32,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "AMD Hits $1 Trillion, Muse Spooks"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "What's Going On With Super Micro"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 17,
+      "seconds": 3.9,
+      "articles": [
+        {
+          "file": "test_081_original_group_033.json",
+          "type": "original",
+          "expected_group": 33,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_082_repeat_group_033.json",
+          "type": "repeat",
+          "expected_group": 33,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX supercluster adding 220k NVIDIA GB300"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX Could Have"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_083_update_group_033.json",
+          "type": "update",
+          "expected_group": 33,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_084_conflict_group_033.json",
+          "type": "conflict",
+          "expected_group": 33,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Elon Musk announces Colossus expansion using"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX Could Have"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_085_different_group_034.json",
+          "type": "different",
+          "expected_group": 34,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "'Is AI Gonna Kill Us?\u2019 Mark"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Elon Musk Says SpaceX Could Have"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 18,
+      "seconds": 7.0,
+      "articles": [
+        {
+          "file": "test_086_original_group_035.json",
+          "type": "original",
+          "expected_group": 35,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_087_repeat_group_035.json",
+          "type": "repeat",
+          "expected_group": 35,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Coherent raises $2 billion from NVIDIA"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Alpha Buying: Follow the Money From"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_088_update_group_035.json",
+          "type": "update",
+          "expected_group": 35,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA and Coherent execute long-term purchase"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Alpha Buying: Follow the Money From"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_089_conflict_group_035.json",
+          "type": "conflict",
+          "expected_group": 35,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA buys $3.5 billion stake in"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Alpha Buying: Follow the Money From"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_090_different_group_036.json",
+          "type": "different",
+          "expected_group": 36,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "10 Information Technology Stocks Whale Activity"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Alpha Buying: Follow the Money From"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 19,
+      "seconds": 4.5,
+      "articles": [
+        {
+          "file": "test_091_original_group_037.json",
+          "type": "original",
+          "expected_group": 37,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_092_repeat_group_037.json",
+          "type": "repeat",
+          "expected_group": 37,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA's $5.4T valuation towers over Russell"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's $5.4 Trillion Market Cap 'Seems"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_093_update_group_037.json",
+          "type": "update",
+          "expected_group": 37,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA weight in Vanguard S&P 500"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's $5.4 Trillion Market Cap 'Seems"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_094_conflict_group_037.json",
+          "type": "conflict",
+          "expected_group": 37,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA market cap reaches $6.2 trillion,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's $5.4 Trillion Market Cap 'Seems"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_095_different_group_038.json",
+          "type": "different",
+          "expected_group": 38,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "AMD\u2019s AI-Fueled Breakout Could Carry Stock"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's $5.4 Trillion Market Cap 'Seems"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 20,
+      "seconds": 4.8,
+      "articles": [
+        {
+          "file": "test_096_original_group_039.json",
+          "type": "original",
+          "expected_group": 39,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_097_repeat_group_039.json",
+          "type": "repeat",
+          "expected_group": 39,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Global AI chip power consumption forecasted"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Big Tech\u2019s Data Center Boom Could"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_098_update_group_039.json",
+          "type": "update",
+          "expected_group": 39,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Tech giants sign Ratepayer Protection Pledge"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Big Tech\u2019s Data Center Boom Could"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_099_conflict_group_039.json",
+          "type": "conflict",
+          "expected_group": 39,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Report claims AI electricity demand will"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Big Tech\u2019s Data Center Boom Could"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_100_different_group_040.json",
+          "type": "different",
+          "expected_group": 40,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Tops $5.4T, Outvalues Russell 2000:"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Big Tech\u2019s Data Center Boom Could"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 21,
+      "seconds": 5.2,
+      "articles": [
+        {
+          "file": "test_101_original_group_041.json",
+          "type": "original",
+          "expected_group": 41,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_102_repeat_group_041.json",
+          "type": "repeat",
+          "expected_group": 41,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nebius Raises GPU Cloud Prices About"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nebius Reportedly Hikes GPU Prices Another"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_103_update_group_041.json",
+          "type": "update",
+          "expected_group": 41,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nebius hikes AI cloud prices again"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nebius Reportedly Hikes GPU Prices Another"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_104_conflict_group_041.json",
+          "type": "conflict",
+          "expected_group": 41,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nebius Reportedly Hikes GPU Prices, B300"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nebius Reportedly Hikes GPU Prices Another"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_105_different_group_042.json",
+          "type": "different",
+          "expected_group": 42,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "CoreWeave Continues to Contract New Compute"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nebius Reportedly Hikes GPU Prices Another"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 22,
+      "seconds": 5.4,
+      "articles": [
+        {
+          "file": "test_106_original_group_043.json",
+          "type": "original",
+          "expected_group": 43,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_107_repeat_group_043.json",
+          "type": "repeat",
+          "expected_group": 43,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Huang says Nvidia\u2019s chip sales will"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Expects Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_108_update_group_043.json",
+          "type": "update",
+          "expected_group": 43,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia CEO Vows to Double Chip"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Expects Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_109_conflict_group_043.json",
+          "type": "conflict",
+          "expected_group": 43,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia CEO Jensen Huang Expects Chip"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Expects Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_110_different_group_044.json",
+          "type": "different",
+          "expected_group": 44,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Vera Rubin NVL72 Delivers Leading"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Expects Chip"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 23,
+      "seconds": 6.8,
+      "articles": [
+        {
+          "file": "test_111_original_group_045.json",
+          "type": "original",
+          "expected_group": 45,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_112_update_group_045.json",
+          "type": "update",
+          "expected_group": 45,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia CEO Jensen Huang Rejects Calls"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Jensen Huang rejects AI extinction"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_113_repeat_group_045.json",
+          "type": "repeat",
+          "expected_group": 45,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia CEO Jensen Huang says there\u2019s"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Jensen Huang rejects AI extinction"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_114_conflict_group_045.json",
+          "type": "conflict",
+          "expected_group": 45,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia's Jensen Huang puts odds of"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Jensen Huang rejects AI extinction"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_115_different_group_046.json",
+          "type": "different",
+          "expected_group": 46,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "NVIDIA Isaac ROS 5.0 Advances Agentic,"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia's Jensen Huang rejects AI extinction"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 24,
+      "seconds": 5.5,
+      "articles": [
+        {
+          "file": "test_116_original_group_047.json",
+          "type": "original",
+          "expected_group": 47,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_117_repeat_group_047.json",
+          "type": "repeat",
+          "expected_group": 47,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ Superion 256 Set to Be"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ Makes First On-Premise Quantum Deployment"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_118_update_group_047.json",
+          "type": "update",
+          "expected_group": 47,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ to deploy first quantum computer"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ Makes First On-Premise Quantum Deployment"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_119_conflict_group_047.json",
+          "type": "conflict",
+          "expected_group": 47,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ To Install Superion 128 As"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ Makes First On-Premise Quantum Deployment"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_120_different_group_048.json",
+          "type": "different",
+          "expected_group": 48,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "IonQ\u2019s Superion 256 Platform Selected by"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "IonQ Makes First On-Premise Quantum Deployment"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 25,
+      "seconds": 4.5,
+      "articles": [
+        {
+          "file": "test_121_original_group_049.json",
+          "type": "original",
+          "expected_group": 49,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_122_update_group_049.json",
+          "type": "update",
+          "expected_group": 49,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Jensen Huang Says AI Boom Will"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Says AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_123_repeat_group_049.json",
+          "type": "repeat",
+          "expected_group": 49,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Jensen Huang Says AI Boom Will"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Says AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_124_conflict_group_049.json",
+          "type": "conflict",
+          "expected_group": 49,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Jensen Huang Says AI Boom Will"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Says AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_125_different_group_050.json",
+          "type": "different",
+          "expected_group": 50,
+          "expected_label": "different_event",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "",
+              "matching_facts": [],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nscale Raises $3.36 Billion in Pre-IPO"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia CEO Jensen Huang Says AI"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        }
+      ],
+      "comparison_calls": 4,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    }
+  ]
+}
