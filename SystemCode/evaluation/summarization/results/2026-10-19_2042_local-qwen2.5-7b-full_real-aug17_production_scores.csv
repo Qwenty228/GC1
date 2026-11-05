@@ -1,35 +1,35 @@
 ﻿event,sources,files,auto_valid,faithful,coverage,conflict,clarity,acceptable,notes
-E1,1,alpaca:61233673,n,,,n/a,,n,not published: invalid
-E2,3,alpaca:61238060 alpaca:61253659 alpaca:61259063,n,,,n/a,,n,not published: invalid
-E3,1,alpaca:61239424,n,,,n/a,,n,not published: invalid
-E4,1,alpaca:61239930,n,,,n/a,,n,not published: invalid
-E5,2,alpaca:61241373 alpaca:61279800,n,,,n/a,,n,not published: error
-E6,2,alpaca:61243237 alpaca:61293075,y,,,n/a,,,
-E7,1,alpaca:61244495,n,,,n/a,,n,not published: invalid
-E8,1,alpaca:61244507,n,,,n/a,,n,not published: invalid
-E9,11,alpaca:61244662 alpaca:61248274 alpaca:61249540 alpaca:61252856 sec:0001045810-26-000069 alpaca:61256057 alpaca:61264305 alpaca:61273010 alpaca:61282793 alpaca:61284206 alpaca:61291861,n,,,n/a,,n,not published: invalid
-E10,1,alpaca:61245513,y,,,n/a,,,
-E11,1,alpaca:61246697,n,,,n/a,,n,not published: invalid
-E12,1,alpaca:61253042,y,,,n/a,,,
-E13,1,alpaca:61254396,n,,,n/a,,n,not published: invalid
-E14,1,alpaca:61254722,n,,,n/a,,n,not published: invalid
-E15,1,alpaca:61256549,n,,,n/a,,n,not published: error
-E16,1,alpaca:61256795,n,,,n/a,,n,not published: error
-E17,1,alpaca:61259362,n,,,n/a,,n,not published: invalid
-E18,2,alpaca:61259954 alpaca:61266554,n,,,n/a,,n,not published: error
-E19,1,alpaca:61264862,n,,,n/a,,n,not published: invalid
-E20,1,alpaca:61265621,n,,,n/a,,n,not published: invalid
-E21,1,alpaca:61267548,n,,,n/a,,n,not published: invalid
-E22,1,alpaca:61268385,y,,,n/a,,,
-E23,1,alpaca:61279108,n,,,n/a,,n,not published: invalid
-E24,1,alpaca:61279184,n,,,n/a,,n,not published: invalid
-E25,1,alpaca:61279266,n,,,n/a,,n,not published: error
-E26,1,alpaca:61280260,n,,,n/a,,n,not published: invalid
-E27,3,alpaca:61281267 alpaca:61282793 alpaca:61284206,n,,,n/a,,n,not published: invalid
-E28,1,alpaca:61283122,n,,,n/a,,n,not published: invalid
-E29,1,alpaca:61284102,n,,,n/a,,n,not published: invalid
-E30,1,alpaca:61285683,n,,,n/a,,n,not published: invalid
-E31,1,alpaca:61292603,n,,,n/a,,n,not published: invalid
-E32,2,alpaca:61294679 alpaca:61294883,n,,,n/a,,n,not published: invalid
-E33,1,alpaca:61296207,n,,,n/a,,n,not published: invalid
-E34,1,alpaca:61297682,n,,,n/a,,n,not published: invalid
+E1,1,alpaca:61233673,n,,,n/a,,n,headline H1 has no citation
+E2,3,alpaca:61238060 alpaca:61253659 alpaca:61259063,n,,,n/a,,n,headline H1 has no citation
+E3,1,alpaca:61239424,n,,,n/a,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P1; key point K2 quote not word for word in source passage P3
+E4,1,alpaca:61239930,n,,,n/a,,n,headline H1 has no citation
+E5,2,alpaca:61241373 alpaca:61279800,n,,,n/a,,n,"answer cut off at the 4,096-token output limit. First attempt was invalid: headline H1 longer than 160 characters; headline H1 has no citation"
+E6,2,alpaca:61243237 alpaca:61293075,y,2,2,n/a,2,y,Supported; S2 repeat adds nothing new; O1 and K1 somewhat redundant.
+E7,1,alpaca:61244495,n,,,n/a,,n,headline H1 longer than 160 characters; headline H1 has no citation; overview O1 has no citation
+E8,1,alpaca:61244507,n,,,n/a,,n,headline H1 longer than 160 characters; headline H1 has no citation; overview O1 has no citation
+E9,11,alpaca:61244662 alpaca:61248274 alpaca:61249540 alpaca:61252856 sec:0001045810-26-000069 alpaca:61256057 alpaca:61264305 alpaca:61273010 alpaca:61282793 alpaca:61284206 alpaca:61291861,n,,,n/a,,n,headline H1 has no citation; key point K2 figure 120 not in the cited passage
+E10,1,alpaca:61245513,y,1,2,n/a,2,y,"O1 ties ""through 2032"" to long-term jobs; headline-only source, so slightly loose."
+E11,1,alpaca:61246697,n,,,n/a,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1
+E12,1,alpaca:61253042,y,1,2,n/a,2,y,"K2 says ""up to 10%""; source says around 10%. Otherwise supported."
+E13,1,alpaca:61254396,n,,,n/a,,n,headline H1 quote not word for word in source passage P3; headline H1 figure 4 not in the cited passage; overview O1 quote not word for word in source passage P3; overview O1 figure 4 not in the cited passage; key point K1 figure 1 not in the cited passage; key point K2 quote not word for word in source passage P3
+E14,1,alpaca:61254722,n,,,n/a,,n,key point K1 figure 20 not in the cited passage
+E15,1,alpaca:61256549,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E16,1,alpaca:61256795,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E17,1,alpaca:61259362,n,,,n/a,,n,"headline H1 figure 2, 2026 not in the cited passage; overview O1 figure 2026 not in the cited passage"
+E18,2,alpaca:61259954 alpaca:61266554,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E19,1,alpaca:61264862,n,,,n/a,,n,"headline H1 has no citation; overview O1 quote not word for word in source passage P1. First attempt was error: answer cut off at the 4,096-token output limit"
+E20,1,alpaca:61265621,n,,,n/a,,n,"headline H1 figure 00, 08, 16, 18, 2026, 31 not in the cited passage"
+E21,1,alpaca:61267548,n,,,n/a,,n,headline H1 has no citation
+E22,1,alpaca:61268385,y,2,2,n/a,2,y,Headline-only source; summary matches it.
+E23,1,alpaca:61279108,n,,,n/a,,n,"headline H1 has no citation; key point K2 quote not word for word in source passage P2. First attempt was error: answer cut off at the 4,096-token output limit"
+E24,1,alpaca:61279184,n,,,n/a,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P1
+E25,1,alpaca:61279266,n,,,n/a,,n,"answer cut off at the 4,096-token output limit (both attempts)"
+E26,1,alpaca:61280260,n,,,n/a,,n,headline H1 has no citation
+E27,3,alpaca:61281267 alpaca:61282793 alpaca:61284206,n,,,n/a,,n,headline H1 has no citation; key point K2 quote not word for word in source passage P6
+E28,1,alpaca:61283122,n,,,n/a,,n,headline H1 has no citation
+E29,1,alpaca:61284102,n,,,n/a,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1; overview O2 quote not word for word in source passage P1
+E30,1,alpaca:61285683,n,,,n/a,,n,headline H1 has no citation
+E31,1,alpaca:61292603,n,,,n/a,,n,headline H1 has no citation; overview O1 quote not word for word in source passage P1
+E32,2,alpaca:61294679 alpaca:61294883,n,,,n/a,,n,headline H1 has no citation; overview O2 quote not word for word in source passage P1
+E33,1,alpaca:61296207,n,,,n/a,,n,headline H1 has no citation; key point K1 quote not word for word in source passage P3
+E34,1,alpaca:61297682,n,,,n/a,,n,headline H1 has no citation; overview O1 figure 29 not in the cited passage; key point K2 quote not word for word in source passage P3
