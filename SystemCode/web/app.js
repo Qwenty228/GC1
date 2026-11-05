@@ -502,7 +502,7 @@
     let note = "";
     if (state.view === "watchlist" && followed.length) {
       const chips = followed.map(companyOf).filter(Boolean).map((c) =>
-        `<span class="ticker followed" title="${R.esc(c.name)}"><span aria-hidden="true">★</span>${R.esc(c.symbol)}</span>`);
+        `<span class="ticker followed" title="${R.esc(c.name)}">${R.icon("star")}${R.esc(c.symbol)}</span>`);
       note = `<span>Showing stories about the companies you follow${chips.length ? ":" : ""}</span>${chips.length
         ? `<span class="tickers">${chips.join("")}</span>` : ""}<button type="button" class="link-button"
         data-open-follow>Edit watchlist</button>`;
@@ -514,7 +514,7 @@
     setSlotEl(view, note);
     const label = followed.length ? `Following ${followed.length}` : "Follow companies";
     if ($("follow-toggle-label").textContent !== label) $("follow-toggle-label").textContent = label;
-    $("follow-toggle").querySelector(".icon").textContent = followed.length ? "★" : "☆";
+    $("follow-toggle").classList.toggle("is-following", followed.length > 0); // a filled star
     $("follow-toggle").setAttribute("aria-expanded", String(state.followOpen));
   }
 
@@ -588,12 +588,12 @@
       <div class="card-actions">
         <button type="button" class="toggle" data-action="summary" aria-expanded="false"
           aria-controls="event-${safe}-summary" aria-describedby="event-${safe}-title">
-          <span class="label">Read more</span><span class="chev" aria-hidden="true"></span></button>
+          <span class="label">Read more</span>${R.icon("chevronDown", "chev")}</button>
         <button type="button" class="toggle" data-action="sources" aria-expanded="false"
           aria-controls="event-${safe}-sources" aria-describedby="event-${safe}-title">
-          <span class="label">Sources</span><span class="chev" aria-hidden="true"></span></button>
+          <span class="label">Sources</span>${R.icon("chevronDown", "chev")}</button>
         <a class="story-link" data-story-link href="/events/${safe}" aria-describedby="event-${safe}-title">Story
-          &amp; timeline<span class="arrow" aria-hidden="true">→</span></a>
+          &amp; timeline${R.icon("arrowRight", "arrow")}</a>
       </div>
       <div class="sources-panel" id="event-${safe}-sources" data-slot="sources" hidden></div>`;
     return el;
@@ -684,7 +684,7 @@
     try {
       render();
     } catch (error) {
-      console.error("Stock News: rendering failed", error);
+      console.error("StockEvent Lens: rendering failed", error);
     }
   }
 

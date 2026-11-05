@@ -3,18 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stock News</title>
+  <title>StockEvent Lens</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to the news</a>
   <header class="site-header">
     <div class="wrap header-row">
-      <h1 class="site-title">Stock News</h1>
+      <h1 class="site-title"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle
+        cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.9-4.9"/><path d="m7.6 12 2-2.1 1.7 1.4 2.2-2.6"/></svg></span><span
+        class="brand-name">StockEvent <span class="brand-accent">Lens</span></span></h1>
       <div class="header-actions">
         <a class="header-link" href="/tools.html">Data tools</a>
         <button type="button" class="button secondary follow-toggle" id="follow-toggle" aria-expanded="false"
-          aria-controls="follow-panel"><span class="icon" aria-hidden="true">☆</span><span
+          aria-controls="follow-panel"><span class="icon" data-icon="star" aria-hidden="true"><svg viewBox="0 0 24 24"
+          focusable="false"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg></span><span
           id="follow-toggle-label">Follow companies</span></button>
       </div>
     </div>

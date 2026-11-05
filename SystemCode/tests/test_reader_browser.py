@@ -133,7 +133,7 @@ def test_following_companies_filters_the_feed_and_persists_in_this_browser(site,
     assert "view=watchlist" in page.evaluate("location.hash")
     followed = page.evaluate(f"[...document.querySelectorAll('#event-{site['shared']} .ticker')].map(t => "
                              "[t.textContent.trim(), t.classList.contains('followed')])")
-    assert ["★MSFT (you follow this company)", True] in followed and ["NVDA", False] in followed
+    assert ["MSFT (you follow this company)", True] in followed and ["NVDA", False] in followed
 
     page.reload()  # a refresh keeps the view and the selection
     page.wait_for(f"document.body.dataset.view === 'watchlist' && {READY} === 'list' && {CARDS}.length === 2")

@@ -8,8 +8,30 @@
 (function (root) {
   "use strict";
 
-  const ICONS = { warn: "⚠", info: "ℹ", ok: "✓", off: "■", error: "✕", skip: "–" };
-  const icon = (name) => `<span class="icon" aria-hidden="true">${ICONS[name]}</span>`;
+  // One icon family for every page: 24px stroke icons (shapes from Lucide, ISC licence), sized and coloured by CSS.
+  // An icon is always decorative (aria-hidden) and sits next to text that carries the meaning.
+  const ICONS = {
+    warn: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    ok: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    off: '<circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" rx="1"/>',
+    error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+    skip: '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+    help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    minus: '<path d="M5 12h14"/>',
+    square: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    dot: '<circle cx="12" cy="12" r="3"/>',
+    star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>',
+    ai: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0l1.58 6.14a2 2 0 0 0 1.44 1.44l6.14 1.58a.5.5 0 0 1 0 .96l-6.14 1.58a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/>',
+    arrowRight: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    arrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  };
+  const svg = (name) => `<svg viewBox="0 0 24 24" focusable="false">${ICONS[name] || ICONS.dot}</svg>`;
+  const icon = (name, cls) =>
+    `<span class="icon${cls ? ` ${cls}` : ""}" data-icon="${name}" aria-hidden="true">${svg(name)}</span>`;
 
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) =>
@@ -148,7 +170,7 @@
     const base = (e.symbols || []).length ? e.symbols : ctx.company ? [ctx.company] : [];
     const symbols = [...base].sort((a, b) => Number(followed.has(b)) - Number(followed.has(a)));
     const chip = (s) => followed.has(s)
-      ? `<span class="ticker followed" title="${esc(`You follow ${names[s] || s}`)}"><span aria-hidden="true">★</span>${
+      ? `<span class="ticker followed" title="${esc(`You follow ${names[s] || s}`)}">${icon("star")}${
           esc(s)}<span class="sr-only"> (you follow this company)</span></span>`
       : `<span class="ticker"${names[s] ? ` title="${esc(names[s])}"` : ""}>${esc(s)}</span>`;
     return symbols.slice(0, max).map(chip).join("") +
@@ -211,7 +233,7 @@
     const s = e.summary;
     const points = keyPoints(s);
     const blocked = e.conflict && ["under_review", "correction_pending"].includes(e.conflict.status);
-    return `<p class="ai-label">AI summary</p>${paragraphs(s.overview)}
+    return `<p class="ai-label">${icon("ai")}AI summary</p>${paragraphs(s.overview)}
       ${points.length ? `<ul class="summary-points">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
       <p class="summary-note">Written by AI from the sources listed under Sources${s.published_at
         ? `, ${shortWhen(s.published_at)}` : ""}. Check the originals before relying on it.</p>
@@ -223,7 +245,7 @@
   function summaryView(e, ctx) {
     if (!e.summary) return { preview: noSummary(e, ctx), full: "", more: false };
     const p = preview(e.summary);
-    return { preview: `<p class="ai-label">AI summary</p>${p.html}`, full: fullSummary(e), more: !p.complete };
+    return { preview: `<p class="ai-label">${icon("ai")}AI summary</p>${p.html}`, full: fullSummary(e), more: !p.complete };
   }
 
   // ------------------------------------------------------------------ sources panel: conflict notice
@@ -544,7 +566,7 @@
       const followed = ctx.followed && ctx.followed.has(c.cik);
       const symbol = (c.symbols || [])[0];
       return `<li class="story-company${followed ? " followed" : ""}">${symbol ? `<span class="ticker${followed
-        ? " followed" : ""}">${followed ? `<span aria-hidden="true">★</span>` : ""}${esc(symbol)}</span>` : ""}${
+        ? " followed" : ""}">${followed ? icon("star") : ""}${esc(symbol)}</span>` : ""}${
         esc(c.name || `CIK ${c.cik}`)}${followed ? `<span class="muted small"> · you follow this company</span>` : ""}</li>`;
     }).join("");
     return `<div class="story-companies"><span class="muted">About</span><ul>${items}</ul></div>`;
@@ -571,7 +593,7 @@
     }
     const points = (s.key_points || []).map((p) => p.text).filter(Boolean);
     const blocked = d.conflict && ["under_review", "correction_pending"].includes(d.conflict.status);
-    return `<p class="ai-label">AI summary · version ${esc(s.version)}</p>${paragraphs(s.overview)}
+    return `<p class="ai-label">${icon("ai")}AI summary · version ${esc(s.version)}</p>${paragraphs(s.overview)}
       ${points.length ? `<ul class="summary-points">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : ""}
       <p class="summary-note">Written by AI from the sources listed below, published ${when(s.published_at)}. Each
         statement's supporting quote is under “Supporting quotes”. Check the originals before relying on it.</p>
@@ -734,7 +756,7 @@
   // ------------------------------------------------------------------ processing activity (/api/activity)
   // What the ingestion worker and the startup summary catch-up report about each article, filing or story, step
   // by step. Durations are measured against the server's clock (`now`), not this browser's.
-  const STEP_MARK = { done: "✓", skipped: "–", failed: "✕", interrupted: "■" };
+  const STEP_MARK = { done: "check", skipped: "minus", failed: "x", interrupted: "square", stale: "help" };
   const STEP_WORD = { running: "In progress", done: "Done", skipped: "Skipped", failed: "Failed",
                       interrupted: "Interrupted" };
   const KIND_WORD = { article: "Article", filing: "SEC filing", event: "Story" };
@@ -753,7 +775,7 @@
     const took = duration(end - new Date(step.started_at));
     const state = running && stale ? "stale" : step.state;
     const mark = state === "running" ? `<span class="spinner" aria-hidden="true"></span>`
-      : `<span class="step-mark" aria-hidden="true">${state === "stale" ? "?" : STEP_MARK[state] || "•"}</span>`;
+      : `<span class="step-mark" aria-hidden="true">${svg(STEP_MARK[state] || "dot")}</span>`;
     const ai = step.model ? ` <span class="badge info" title="AI model: ${esc(step.model)}">AI</span>` : "";
     const result = step.result ? ` <span class="step-result">· ${esc(step.result)}</span>`
       : state === "running" ? ` <span class="step-result">…</span>` : "";

@@ -689,7 +689,7 @@ def test_page_renders_the_notice_and_escapes_hostile_source_text(db):
                  "The summary shown above was published", ARTICLES["d"]["url"]):
         assert text in page, text
     assert published(db, s.event_id)["headline"] in page  # the published summary is shown unchanged
-    assert "Conflicting reports—under review" in cards and 'aria-hidden="true">⚠' in cards
+    assert "Conflicting reports—under review" in cards and 'data-icon="warn" aria-hidden="true"' in cards
 
     # Hostile article text, publisher and link are displayed as inert text (the serialized DOM escapes
     # text-node markup, so injected elements would appear as real tags here).
@@ -700,4 +700,4 @@ def test_page_renders_the_notice_and_escapes_hostile_source_text(db):
             assert value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") in hostile
     assert "<script>document.title" not in hostile
     assert 'href="javascript' not in hostile.lower() and "(no valid link)" in hostile
-    assert "<title>Stock News</title>" in hostile and "pwned</title>" not in hostile
+    assert "<title>StockEvent Lens</title>" in hostile and "pwned</title>" not in hostile

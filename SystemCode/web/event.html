@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Story · Stock News</title>
+  <title>Story · StockEvent Lens</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="story-page">
   <a class="skip-link" href="#main">Skip to the story</a>
   <header class="site-header">
     <div class="wrap header-row">
-      <p class="site-title"><a href="/" class="home-link">Stock News</a></p>
+      <p class="site-title"><a href="/" class="home-link"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"
+        focusable="false"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.9-4.9"/><path
+        d="m7.6 12 2-2.1 1.7 1.4 2.2-2.6"/></svg></span><span class="brand-name">StockEvent <span
+        class="brand-accent">Lens</span></span></a></p>
       <a class="header-link" href="/tools.html">Data tools</a>
     </div>
   </header>
@@ -20,8 +23,9 @@
   <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
 
   <main id="main" class="wrap" tabindex="-1">
-    <nav class="story-nav" aria-label="Back"><a id="back-link" class="back-link" href="/"><span aria-hidden="true">←</span>
-      Back to the news</a></nav>
+    <nav class="story-nav" aria-label="Back"><a id="back-link" class="back-link" href="/"><span class="icon"
+      data-icon="arrowLeft" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m12 19-7-7 7-7"/><path
+      d="M19 12H5"/></svg></span>Back to the news</a></nav>
     <article id="story" class="card story-card" aria-busy="true">
       <div class="state" role="status">Loading the story…</div>
     </article>

@@ -92,7 +92,7 @@
   function render() {
     const d = state.detail;
     show(R.storyPage(d, state.timeline, ctx()), timelineState());
-    document.title = `${(d.summary && d.summary.headline) || d.title || "Story"} · Stock News`;
+    document.title = `${(d.summary && d.summary.headline) || d.title || "Story"} · StockEvent Lens`;
     if (state.first) {
       state.first = false;
       const title = $("story-title");
