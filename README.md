@@ -6,7 +6,10 @@
 ## SECTION 1 : PROJECT TITLE
 ## StockEvent Lens
 
-![StockEvent Lens system pipeline](Miscellaneous/stockevent-lens-pipeline.webp)
+![StockEvent Lens news feed: a story with its AI summary, a conflicting-reports notice and four sources](Miscellaneous/stockevent-lens-feed.webp)
+
+*The news feed, shown with the fictional sample story from the test suite (sample mode). The system architecture is
+in [SystemCode/README.md](SystemCode/README.md).*
 
 ---
 
@@ -69,5 +72,6 @@ steps from configuring `.env` to opening the page. The same guide is an appendix
 
 `Refer to Github Folder: Miscellaneous`
 
-* `stockevent-lens-pipeline.webp`: the system pipeline diagram shown above
+* `stockevent-lens-feed.webp`: the news feed screenshot shown above
+* `stockevent-lens-pipeline.webp`: the system pipeline diagram (shown in SystemCode/README.md)
 * `stockevent-lens-banner-light.svg`, `stockevent-lens-banner-dark.svg`: the README banner
