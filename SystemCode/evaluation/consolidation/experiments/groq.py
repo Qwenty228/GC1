@@ -13,6 +13,7 @@ Free-tier notes:
     uv run python evaluation/consolidation/experiments/groq.py        (from SystemCode/)
 """
 
+from datasources.evaluation.rate_limit import RateLimited
 from datasources.llm_openai import OpenAICompatibleComparisonBackend
 
 NAME = "groq-llama-3.3-70b"
@@ -29,11 +30,15 @@ API_KEY_ENV = "GROQ_API_KEY"  # the name of the variable in .env, not the key it
 JSON_MODE = "json_object"  # schema goes in the prompt; "json_schema" for models with structured outputs
 MAX_OUTPUT_TOKENS = 8000  # the answer is short; stays under Groq's per-model output caps
 
+REQUESTS_PER_MINUTE = 30  # Groq free tier (see console.groq.com/settings/limits); None = no limit
+TOKENS_PER_MINUTE = 8000  # per model: check your own limits; None = no limit
+
 
 def build_comparator(settings):
-    return OpenAICompatibleComparisonBackend(base_url=BASE_URL, model=MODEL, api_key_env=API_KEY_ENV,
-                                             json_mode=JSON_MODE, max_tokens=MAX_OUTPUT_TOKENS,
-                                             timeout=settings.llm_timeout_seconds)
+    backend = OpenAICompatibleComparisonBackend(base_url=BASE_URL, model=MODEL, api_key_env=API_KEY_ENV,
+                                                json_mode=JSON_MODE, max_tokens=MAX_OUTPUT_TOKENS,
+                                                timeout=settings.llm_timeout_seconds)
+    return RateLimited(backend, requests_per_minute=REQUESTS_PER_MINUTE, tokens_per_minute=TOKENS_PER_MINUTE)
 
 
 # ----------------------------------------------------------------------------- run
