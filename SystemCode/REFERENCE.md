@@ -274,6 +274,23 @@ cut at a sentence boundary. Nothing is rewritten or generated for the page.
   A filing that covers several stories lists only its sections about this one. *Back to the news* returns to the
   feed view the reader came from, at that story. Unknown or malformed links, loading and API errors have their own
   states.
+* **Search and filters** sit above the feed and live in the address, so a filtered view can be shared:
+  `q=<text>` (every word must start a word in the headline, the summary, a source title, or a company name or
+  ticker; case-insensitive, special characters literal, at most 200 characters), `when=24h|7d|30d|custom` (with
+  `from`/`to=YYYY-MM-DD`), `filing=1` (*With SEC filings*) and `disagree=1` (*Sources disagree*: an open review, a
+  confirmed disagreement or an unfinished correction). The server applies them in SQL before paging, together with
+  the company or watchlist view.
+* Stories are grouped under **day headers** by their latest report. **New** and **Updated** mark stories since the
+  reader's last visit, remembered in this browser only (`localStorage` key `stocknews.visits`). A visit ends after
+  30 minutes with no open feed page; *Mark all as read* moves the baseline to now. The times are the sources' own
+  report times, and the first visit ever shows no markers.
+* A card with an SEC filing among its sources shows a filing line, for example "SEC 8-K: Earnings and financial
+  results (Item 2.02)": plain names for the 8-K items, with the official caption as the tooltip. Item 9.01 (the
+  exhibit list) is left out when the filing reports anything else. A card also shows the **latest update**: the
+  newest substantive update's time, source and what it changed.
+* The **Tour** (header button) is a spotlight walk-through of the feed or the story page. The feed opens it once by
+  itself on the first visit in a browser (never in sample mode or when a link opens a story); which tours were
+  offered is remembered in this browser only (`stocknews.tour`).
 * Sample records never appear in the feed. Add `#sample=1` to the address for demos and tests; sample
   stories are then marked *Sample*.
 
@@ -907,6 +924,13 @@ that arrived later is listed but never shown as evidence of an older version).
 `/api/events` also accepts `symbol=<ticker>`: events with a current source linked to that company. Each
 listed event carries `symbols` (the tickers of its current sources) and `latest_source` (`title`, `name`,
 `record_type`, `published_at` and an http(s) `url` or `null`), which the feed shows before a summary exists.
+
+Search and filters, all applied in SQL before `limit`/`offset`: `q` (search text, see [The page](#the-page)),
+`since` / `until` (ISO date-times on the latest report; `since` must be earlier), `has_filing=true` (an SEC filing
+among the sources) and `conflict=true` (the sources disagree). The response echoes the applied values under
+`filters`. Each listed event also carries `filings` (form and the 8-K items of the event's own part of a filing,
+with their official captions) and `latest_update` (the newest substantive update's time, source and stored
+aspects).
 
 A watchlist is `company=<CIK>`, repeated or comma-separated (up to 50; digits only, zero-padded to 10): events
 with a current source linked to **any** of those companies. It is applied in SQL before `limit`/`offset`, an event

@@ -239,8 +239,13 @@ The full detail of each part (ingestion, grouping, summaries) is in [REFERENCE.m
 
 ### The page
 
-* **News feed** (`/`): all companies, one company, or a watchlist saved in this browser. Cards show the AI summary,
-  its **Sources (N)** with the quote behind each statement, and conflict notices. The feed refreshes every 20 s.
+* **News feed** (`/`): all companies, one company, or a watchlist saved in this browser.
+  * **Search and filters:** text search, a time window (24 h, 7 days, 30 days or custom dates), *With SEC filings*
+    and *Sources disagree*. The server applies them before paging.
+  * **Cards:** the AI summary, the latest substantive update, the 8-K items of a filing in plain words, a conflict
+    notice with *Compare the claims*, and **Sources (N)** with the quote behind each statement.
+  * Stories are grouped by day, and *New* / *Updated* mark what changed since your last visit (this browser only).
+  * The feed refreshes every 20 s. A guided **Tour** opens on the first visit and from the header.
 * **Story page** (`/events/<id>`): the latest summary, its sources, and a timeline built from stored records.
 * **Data tools** (`/tools.html`): collector status, live processing activity, stored records and a source explorer.
 
