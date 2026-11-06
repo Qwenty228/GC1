@@ -1,0 +1,165 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "gemini",
+    "description": "Gemini (OpenAI-compatible endpoint), the production comparison prompt",
+    "file": "gemini.py"
+  },
+  "model": {
+    "comparator": "openai_compatible",
+    "comparison_model": "gemini-2.5-flash",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 0,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 3,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-10-24T09:22:21+00:00",
+  "batches_run": [
+    1
+  ],
+  "incomplete": true,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "tp": 0,
+      "fp": 0,
+      "fn": 6
+    },
+    "labels": {
+      "macro_f1": 0.25,
+      "accuracy": 0.25,
+      "scored": 4,
+      "uncertain": 0,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_update": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "same_event_conflict": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        },
+        "different_event": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 52.3,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-2.5-flash: HTTP 404: [{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/doc",
+          "judgments": []
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-2.5-flash: HTTP 404: [{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/doc",
+          "judgments": []
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-2.5-flash: HTTP 404: [{\n  \"error\": {\n    \"code\": 404,\n    \"message\": \"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/doc",
+          "judgments": []
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    }
+  ],
+  "incomplete_reason": "3 article(s) did not complete, e.g. test_002_repeat_group_001.json: error:pending"
+}

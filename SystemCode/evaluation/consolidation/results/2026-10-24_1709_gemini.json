@@ -1,0 +1,2383 @@
+{
+  "stage": "consolidation",
+  "experiment": {
+    "name": "gemini",
+    "description": "Gemini (OpenAI-compatible endpoint), the production comparison prompt",
+    "file": "gemini.py"
+  },
+  "model": {
+    "comparator": "openai_compatible",
+    "comparison_model": "gemini-3.8-flash",
+    "prompt_version": "compare-2",
+    "embedder": {
+      "model_provider": "sentence-transformers",
+      "model_name": "BAAI/bge-small-en-v1.5",
+      "model_version": "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a",
+      "dimensions": 384,
+      "distance_metric": "cosine",
+      "max_input_tokens": 512,
+      "encoding": {
+        "normalize_embeddings": true,
+        "query_instruction": null,
+        "truncation": "never"
+      }
+    }
+  },
+  "settings": {
+    "window_days": 7.0,
+    "min_semantic_similarity": 0.78,
+    "lexical_plausible_rank": 0,
+    "semantic_top_k": 20,
+    "lexical_top_k": 20,
+    "max_candidate_events": 3,
+    "exact_match_min_chars": 400,
+    "no_company_window_hours": 48.0
+  },
+  "started_at": "2026-10-24T09:30:39+00:00",
+  "batches_run": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25
+  ],
+  "incomplete": true,
+  "metrics": {
+    "grouping_pairwise": {
+      "precision": 1.0,
+      "recall": 0.1667,
+      "f1": 0.2857,
+      "tp": 25,
+      "fp": 0,
+      "fn": 125
+    },
+    "labels": {
+      "macro_f1": 0.4291,
+      "accuracy": 0.36,
+      "scored": 100,
+      "uncertain": 1,
+      "per_label": {
+        "same_event_repeated": {
+          "precision": 1.0,
+          "recall": 0.16,
+          "f1": 0.2759,
+          "tp": 4,
+          "fp": 0,
+          "fn": 21
+        },
+        "same_event_update": {
+          "precision": 0.625,
+          "recall": 0.2,
+          "f1": 0.303,
+          "tp": 5,
+          "fp": 3,
+          "fn": 20
+        },
+        "same_event_conflict": {
+          "precision": 1.0,
+          "recall": 0.12,
+          "f1": 0.2143,
+          "tp": 3,
+          "fp": 0,
+          "fn": 22
+        },
+        "different_event": {
+          "precision": 0.8889,
+          "recall": 0.96,
+          "f1": 0.9231,
+          "tp": 24,
+          "fp": 3,
+          "fn": 1
+        }
+      }
+    }
+  },
+  "usage": {
+    "comparison_calls": 16,
+    "input_tokens": 33344,
+    "output_tokens": 9959
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "seconds": 281.0,
+      "articles": [
+        {
+          "file": "test_001_original_group_001.json",
+          "type": "original",
+          "expected_group": 1,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_002_repeat_group_001.json",
+          "type": "repeat",
+          "expected_group": 1,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both passages report the same DOJ antitrust investigation into Nvidia's licensing deal and talent acquisition from Groq.",
+              "matching_facts": [
+                "DOJ antitrust inquiry into Groq deal",
+                "Licensing agreement and executive moves",
+                "Formal request for information sent to Nvidia"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Justice Department is investigating whether Nvidia's arrangement with Groq bypassed regulatory scrutiny"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The Justice Department has launched an antitrust inquiry into NVIDIA\u2019s arrangement with AI chip startup Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_003_update_group_001.json",
+          "type": "update",
+          "expected_group": 1,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "The incoming segment reports a new procedural development in the DOJ inquiry, imposing a 30-day response deadline on Nvidia.",
+              "matching_facts": [
+                "DOJ antitrust inquiry into Nvidia-Groq licensing arrangement",
+                "formal request for information issued to Nvidia"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "procedural step",
+                  "incoming": "30-day deadline set to respond to information request",
+                  "candidate": "formal request for information issued without stated deadline"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "The Justice Department has set a 30-day deadline for Nvidia to answer the formal information request in its inquiry into the Groq licensing arrangement."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The Justice Department has launched an antitrust inquiry into NVIDIA\u2019s arrangement with AI chip startup Groq"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_004_conflict_group_001.json",
+          "type": "conflict",
+          "expected_group": 1,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "The incoming segment contradicts the candidate event by asserting the December technology license was exclusive rather than nonexclusive.",
+              "matching_facts": [
+                "Nvidia Groq December license",
+                "DOJ antitrust inquiry",
+                "executive hires"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "license exclusivity",
+                  "incoming": "exclusive technology access",
+                  "candidate": "nonexclusive licensing deal"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A competing account disputes the original description of the Groq license, saying the same December agreement granted exclusive technology access."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Groq granted NVIDIA access to its AI inference technology through what the startup characterized as a nonexclusive licensing deal."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_005_different_group_002.json",
+          "type": "different",
+          "expected_group": 2,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 5760,
+        "output": 1638
+      },
+      "database": null
+    },
+    {
+      "batch": 2,
+      "seconds": 330.6,
+      "articles": [
+        {
+          "file": "test_006_original_group_003.json",
+          "type": "original",
+          "expected_group": 3,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_007_repeat_group_003.json",
+          "type": "repeat",
+          "expected_group": 3,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both articles report the identical details of Nvidia considering an anchor investment of up to $10 billion in Anthropic's potential IPO.",
+              "matching_facts": [
+                "Nvidia anchor investment up to $10 billion",
+                "Anthropic potential IPO raise up to $100 billion",
+                "Anthropic valuation around $2 trillion"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia is reportedly exploring an anchor investment of up to $10 billion in a possible Anthropic initial public offering."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Corp. (NASDAQ:NVDA) is reportedly weighing an investment of up to $10 billion in Anthropic\u2019s potential initial public offering"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_008_update_group_003.json",
+          "type": "update",
+          "expected_group": 3,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Discussions on Nvidia's potential $10 billion anchor investment have advanced from preliminary talks into the due-diligence phase.",
+              "matching_facts": [
+                "Nvidia potential $10B anchor investment",
+                "Anthropic IPO target of $100B at $2T valuation"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "negotiation stage",
+                  "incoming": "due diligence and data room access",
+                  "candidate": "preliminary talks"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia and Anthropic have moved discussions of a possible anchor investment into due diligence."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The talks remain preliminary and could change."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_009_conflict_group_003.json",
+          "type": "conflict",
+          "expected_group": 3,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "uncertain",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "uncertain",
+              "method": "llm",
+              "explanation": "The incoming report disputes the candidate's reported $10 billion ceiling for the same talks, asserting the maximum was $5 billion.",
+              "matching_facts": [
+                "Nvidia anchor investment discussions in Anthropic IPO",
+                "Anthropic targeting up to $100 billion raise at $2 trillion valuation"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "Nvidia investment ceiling",
+                  "incoming": "$5 billion",
+                  "candidate": "$10 billion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A competing account says Nvidia's investment ceiling in the talks reported on September 12 was $5 billion, not $10 billion"
+                  }
+                ],
+                "candidate": []
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": [
+                "candidate evidence quote not found in C1",
+                "downgraded same_event_conflict to uncertain: evidence could not be verified on both sides"
+              ]
+            }
+          ]
+        },
+        {
+          "file": "test_010_different_group_004.json",
+          "type": "different",
+          "expected_group": 4,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 6719,
+        "output": 1825
+      },
+      "database": null
+    },
+    {
+      "batch": 3,
+      "seconds": 309.2,
+      "articles": [
+        {
+          "file": "test_011_original_group_005.json",
+          "type": "original",
+          "expected_group": 5,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_012_repeat_group_005.json",
+          "type": "repeat",
+          "expected_group": 5,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both articles report identical customer concentration metrics and details of Nvidia's neocloud strategy.",
+              "matching_facts": [
+                "Three customers generated 44% of H1 fiscal 2027 revenue",
+                "Neocloud model combines GPU sales with compute rental share",
+                "Neocloud commitments totaled $36 billion as of July 26"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Three direct customers supplied 44%, or $78.2 billion, of its $177.8 billion revenue in the first half of fiscal 2027."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Three direct customers generated 44% ($78.2 billion) of Nvidia\u2019s $177.8 billion revenue in the first half of fiscal 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_013_update_group_005.json",
+          "type": "update",
+          "expected_group": 5,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Nvidia introduces monthly utilization statements as a new reporting development for its neocloud revenue-sharing program.",
+              "matching_facts": [
+                "Nvidia neocloud revenue-sharing program",
+                "CFO Colette Kress",
+                "$36 billion commitments as of July 26"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "utilization reporting",
+                  "incoming": "monthly statements starting in October for September usage",
+                  "candidate": "not reported"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia has introduced monthly utilization statements for cloud providers participating in its neocloud revenue-sharing program."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "CFO Colette Kress described a neocloud approach that earns revenue both when hardware is sold and when its computing capacity is rented."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_014_conflict_group_005.json",
+          "type": "conflict",
+          "expected_group": 5,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "The incoming text explicitly contradicts the candidate event by reporting $18 billion rather than $36 billion in commitments as of July 26.",
+              "matching_facts": [
+                "Nvidia neocloud commitments",
+                "as of July 26"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "commitments as of July 26",
+                  "incoming": "$18 billion",
+                  "candidate": "$36 billion"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "A competing account says Nvidia's commitments under its new neocloud model were $18 billion as of July 26."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C2",
+                    "quote": "Commitments associated with the model stood at $36 billion on July 26."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_015_different_group_006.json",
+          "type": "different",
+          "expected_group": 6,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 6549,
+        "output": 1918
+      },
+      "database": null
+    },
+    {
+      "batch": 4,
+      "seconds": 251.5,
+      "articles": [
+        {
+          "file": "test_016_original_group_007.json",
+          "type": "original",
+          "expected_group": 7,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_017_repeat_group_007.json",
+          "type": "repeat",
+          "expected_group": 7,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: timed out after 180.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_018_update_group_007.json",
+          "type": "update",
+          "expected_group": 7,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Apple has progressed from considering Nvidia NVLink Fusion connectivity to actively testing prototypes for its proposed M8 Ultra server.",
+              "matching_facts": [
+                "Apple M8 Ultra AI server development",
+                "Nvidia NVLink Fusion interconnect",
+                "Target launch no earlier than 2029"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "testing status",
+                  "incoming": "started prototype tests",
+                  "candidate": "considering technology"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Apple has started prototype tests of Nvidia NVLink Fusion connectivity for the AI server project described in the earlier report."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The iPhone company is considering Nvidia Corp\u2018s (NASDAQ:NVDA) NVLink Fusion technology to connect the processors."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_019_conflict_group_007.json",
+          "type": "conflict",
+          "expected_group": 7,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 503: [{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "judgments": []
+        },
+        {
+          "file": "test_020_different_group_008.json",
+          "type": "different",
+          "expected_group": 8,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 1,
+      "tokens": {
+        "input": 1749,
+        "output": 486
+      },
+      "database": null
+    },
+    {
+      "batch": 5,
+      "seconds": 227.0,
+      "articles": [
+        {
+          "file": "test_021_original_group_009.json",
+          "type": "original",
+          "expected_group": 9,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_022_repeat_group_009.json",
+          "type": "repeat",
+          "expected_group": 9,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 503: [{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+          "judgments": []
+        },
+        {
+          "file": "test_023_update_group_009.json",
+          "type": "update",
+          "expected_group": 9,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: timed out after 180.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_024_conflict_group_009.json",
+          "type": "conflict",
+          "expected_group": 9,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_conflict",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_conflict",
+              "method": "llm",
+              "explanation": "The reports conflict on whether the Huawei Connect presentation announced the Ascend 960 DT launch for Q1 or Q2 2027.",
+              "matching_facts": [
+                "Huawei Connect presentation in Shanghai",
+                "Ascend 960 DT accelerator launch schedule",
+                "Over ten AI chipsets announced"
+              ],
+              "differences": [
+                {
+                  "kind": "conflict",
+                  "aspect": "Ascend 960 DT launch date",
+                  "incoming": "second quarter of 2027",
+                  "candidate": "first quarter of 2027"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "says the Ascend 960 DT was scheduled for an official launch in the second quarter of 2027."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "The next-generation Ascend 960 DT AI accelerator is on track to launch officially in the first quarter of 2027"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_025_different_group_010.json",
+          "type": "different",
+          "expected_group": 10,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 1,
+      "tokens": {
+        "input": 1750,
+        "output": 513
+      },
+      "database": null
+    },
+    {
+      "batch": 6,
+      "seconds": 293.4,
+      "articles": [
+        {
+          "file": "test_026_original_group_011.json",
+          "type": "original",
+          "expected_group": 11,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_027_repeat_group_011.json",
+          "type": "repeat",
+          "expected_group": 11,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Both report Musk's statements regarding SpaceX Starmind satellites' power, with the incoming segment adding detailed remarks on VR72 operating power.",
+              "matching_facts": [
+                "Musk remarks on Starmind satellite power",
+                "250 kW solar power exceeding ISS"
+              ],
+              "differences": [
+                {
+                  "kind": "new_information",
+                  "aspect": "VR72 power details",
+                  "incoming": "operate VR72 at ~250kW average power with peak ~10% higher",
+                  "candidate": "not reported in text"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Each SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power, which is about 20% more than the International Space Station"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Each @SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power, which is about 20% more than the International Space Station"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_028_update_group_011.json",
+          "type": "update",
+          "expected_group": 11,
+          "expected_label": "same_event_update",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "SpaceX updated Starmind AI satellite plans with successful 300 kW power tests and an accelerated Q1 2027 launch schedule.",
+              "matching_facts": [
+                "SpaceX Starmind AI satellite deployment",
+                "integration of NVIDIA hardware racks",
+                "announcements by Elon Musk via X"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "power specification",
+                  "incoming": "upgraded 300 kW peak load tested",
+                  "candidate": "250 kW solar power discussed"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "launch timeline",
+                  "incoming": "accelerated to early Q1 2027",
+                  "candidate": "unspecified timeline"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Musk confirmed via X that engineers successfully tested an upgraded power regulation module capable of sustaining a 300 kW peak load"
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Each @SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_029_conflict_group_011.json",
+          "type": "conflict",
+          "expected_group": 11,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "Musk later disclosed technical roadblocks capping Starmind satellites at 45 kW, updating earlier 250 kW projections.",
+              "matching_facts": [
+                "SpaceX Starmind AI satellite constellation",
+                "Elon Musk",
+                "NVIDIA AI compute hardware deployment"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "satellite power capacity",
+                  "incoming": "capped at 45 kW due to engineering roadblocks",
+                  "candidate": "projected at over 250 kW"
+                },
+                {
+                  "kind": "new_information",
+                  "aspect": "announcement setting",
+                  "incoming": "unexpected press briefing",
+                  "candidate": "posts on X"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "capping solar power capacity at a meager 45 kW per spacecraft\u2014far below the International Space Station's benchmarks."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Each @SpaceX Star Mind super intelligence spacecraft will have over 250kW of solar power"
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_030_different_group_012.json",
+          "type": "different",
+          "expected_group": 12,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 3,
+      "tokens": {
+        "input": 6985,
+        "output": 2163
+      },
+      "database": null
+    },
+    {
+      "batch": 7,
+      "seconds": 280.7,
+      "articles": [
+        {
+          "file": "test_031_original_group_013.json",
+          "type": "original",
+          "expected_group": 13,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_032_repeat_group_013.json",
+          "type": "repeat",
+          "expected_group": 13,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "same_event_repeated",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_repeated",
+              "method": "llm",
+              "explanation": "Both passages report Nvidia's board authorizing an additional $150 billion share repurchase program and the corresponding stock reaction.",
+              "matching_facts": [
+                "$150 billion repurchase program approved",
+                "buyback capacity to $235 billion through fiscal 2028",
+                "shares reach record intraday high of $237.55"
+              ],
+              "differences": [],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "Nvidia Corp. shares reached a record high on Friday following board approval for an additional $150 billion in share repurchase authorization."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "Nvidia Corp. (NASDAQ:NVDA) shares hit a fresh all-time high on Friday after the board approved an additional $150 billion share repurchase authorization."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_033_update_group_013.json",
+          "type": "update",
+          "expected_group": 13,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: timed out after 180.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_034_conflict_group_013.json",
+          "type": "conflict",
+          "expected_group": 13,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_035_different_group_014.json",
+          "type": "different",
+          "expected_group": 14,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 1,
+      "tokens": {
+        "input": 1617,
+        "output": 682
+      },
+      "database": null
+    },
+    {
+      "batch": 8,
+      "seconds": 1.9,
+      "articles": [
+        {
+          "file": "test_036_original_group_015.json",
+          "type": "original",
+          "expected_group": 15,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_037_repeat_group_015.json",
+          "type": "repeat",
+          "expected_group": 15,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_038_update_group_015.json",
+          "type": "update",
+          "expected_group": 15,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_039_conflict_group_015.json",
+          "type": "conflict",
+          "expected_group": 15,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_040_different_group_016.json",
+          "type": "different",
+          "expected_group": 16,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 9,
+      "seconds": 1.8,
+      "articles": [
+        {
+          "file": "test_041_original_group_017.json",
+          "type": "original",
+          "expected_group": 17,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_042_repeat_group_017.json",
+          "type": "repeat",
+          "expected_group": 17,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_043_update_group_017.json",
+          "type": "update",
+          "expected_group": 17,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_044_conflict_group_017.json",
+          "type": "conflict",
+          "expected_group": 17,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_045_different_group_018.json",
+          "type": "different",
+          "expected_group": 18,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 10,
+      "seconds": 1.7,
+      "articles": [
+        {
+          "file": "test_046_original_group_019.json",
+          "type": "original",
+          "expected_group": 19,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_047_repeat_group_019.json",
+          "type": "repeat",
+          "expected_group": 19,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_048_update_group_019.json",
+          "type": "update",
+          "expected_group": 19,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_049_conflict_group_019.json",
+          "type": "conflict",
+          "expected_group": 19,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_050_different_group_020.json",
+          "type": "different",
+          "expected_group": 20,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 11,
+      "seconds": 1.8,
+      "articles": [
+        {
+          "file": "test_051_original_group_021.json",
+          "type": "original",
+          "expected_group": 21,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_052_repeat_group_021.json",
+          "type": "repeat",
+          "expected_group": 21,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_053_update_group_021.json",
+          "type": "update",
+          "expected_group": 21,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_054_conflict_group_021.json",
+          "type": "conflict",
+          "expected_group": 21,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_055_different_group_022.json",
+          "type": "different",
+          "expected_group": 22,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 12,
+      "seconds": 2.1,
+      "articles": [
+        {
+          "file": "test_056_original_group_023.json",
+          "type": "original",
+          "expected_group": 23,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_057_repeat_group_023.json",
+          "type": "repeat",
+          "expected_group": 23,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_058_update_group_023.json",
+          "type": "update",
+          "expected_group": 23,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_059_conflict_group_023.json",
+          "type": "conflict",
+          "expected_group": 23,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_060_different_group_024.json",
+          "type": "different",
+          "expected_group": 24,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 13,
+      "seconds": 116.5,
+      "articles": [
+        {
+          "file": "test_061_original_group_025.json",
+          "type": "original",
+          "expected_group": 25,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_062_repeat_group_025.json",
+          "type": "repeat",
+          "expected_group": 25,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_063_update_group_025.json",
+          "type": "update",
+          "expected_group": 25,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_064_conflict_group_025.json",
+          "type": "conflict",
+          "expected_group": 25,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "same_event_update",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": [
+            {
+              "candidate_event": "E1",
+              "label": "same_event_update",
+              "method": "llm",
+              "explanation": "SpaceX reportedly dropped its planned $40 billion debt package in favor of an $8 billion equity raise, prompting an analyst downgrade.",
+              "matching_facts": [
+                "SpaceX financing for Nvidia chips",
+                "Dan Ives analyst commentary on SPCX"
+              ],
+              "differences": [
+                {
+                  "kind": "temporal_development",
+                  "aspect": "financing structure",
+                  "incoming": "$8 billion equity raise",
+                  "candidate": "$40 billion debt financing"
+                },
+                {
+                  "kind": "temporal_development",
+                  "aspect": "analyst rating",
+                  "incoming": "Neutral with $150 target",
+                  "candidate": "Outperform with $225 target"
+                }
+              ],
+              "evidence": {
+                "incoming": [
+                  {
+                    "ref": "U1",
+                    "quote": "SpaceX reportedly replaced its $40 billion debt plan with an $8 billion equity raise, and Dan Ives downgraded the stock to Neutral."
+                  }
+                ],
+                "candidate": [
+                  {
+                    "ref": "C1",
+                    "quote": "SpaceX (NASDAQ:SPCX) is reportedly preparing to borrow about $40 billion to buy Nvidia Corp. (NASDAQ:NVDA) chips."
+                  }
+                ]
+              },
+              "insufficient_context": false,
+              "uncertainty": null,
+              "validation_notes": []
+            }
+          ]
+        },
+        {
+          "file": "test_065_different_group_026.json",
+          "type": "different",
+          "expected_group": 26,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 1,
+      "tokens": {
+        "input": 2215,
+        "output": 734
+      },
+      "database": null
+    },
+    {
+      "batch": 14,
+      "seconds": 1.9,
+      "articles": [
+        {
+          "file": "test_066_original_group_027.json",
+          "type": "original",
+          "expected_group": 27,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_067_repeat_group_027.json",
+          "type": "repeat",
+          "expected_group": 27,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_068_update_group_027.json",
+          "type": "update",
+          "expected_group": 27,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_069_conflict_group_027.json",
+          "type": "conflict",
+          "expected_group": 27,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_070_different_group_028.json",
+          "type": "different",
+          "expected_group": 28,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 15,
+      "seconds": 1.9,
+      "articles": [
+        {
+          "file": "test_071_original_group_029.json",
+          "type": "original",
+          "expected_group": 29,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_072_repeat_group_029.json",
+          "type": "repeat",
+          "expected_group": 29,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_073_update_group_029.json",
+          "type": "update",
+          "expected_group": 29,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_074_conflict_group_029.json",
+          "type": "conflict",
+          "expected_group": 29,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_075_different_group_030.json",
+          "type": "different",
+          "expected_group": 30,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 16,
+      "seconds": 1.5,
+      "articles": [
+        {
+          "file": "test_076_original_group_031.json",
+          "type": "original",
+          "expected_group": 31,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_077_repeat_group_031.json",
+          "type": "repeat",
+          "expected_group": 31,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_078_update_group_031.json",
+          "type": "update",
+          "expected_group": 31,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_079_conflict_group_031.json",
+          "type": "conflict",
+          "expected_group": 31,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_080_different_group_032.json",
+          "type": "different",
+          "expected_group": 32,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 17,
+      "seconds": 181.3,
+      "articles": [
+        {
+          "file": "test_081_original_group_033.json",
+          "type": "original",
+          "expected_group": 33,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_082_repeat_group_033.json",
+          "type": "repeat",
+          "expected_group": 33,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: timed out after 180.0s",
+          "judgments": []
+        },
+        {
+          "file": "test_083_update_group_033.json",
+          "type": "update",
+          "expected_group": 33,
+          "expected_label": "same_event_update",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_084_conflict_group_033.json",
+          "type": "conflict",
+          "expected_group": 33,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_085_different_group_034.json",
+          "type": "different",
+          "expected_group": 34,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 18,
+      "seconds": 2.6,
+      "articles": [
+        {
+          "file": "test_086_original_group_035.json",
+          "type": "original",
+          "expected_group": 35,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_087_repeat_group_035.json",
+          "type": "repeat",
+          "expected_group": 35,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_088_update_group_035.json",
+          "type": "update",
+          "expected_group": 35,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_089_conflict_group_035.json",
+          "type": "conflict",
+          "expected_group": 35,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_090_different_group_036.json",
+          "type": "different",
+          "expected_group": 36,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 19,
+      "seconds": 2.0,
+      "articles": [
+        {
+          "file": "test_091_original_group_037.json",
+          "type": "original",
+          "expected_group": 37,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_092_repeat_group_037.json",
+          "type": "repeat",
+          "expected_group": 37,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_093_update_group_037.json",
+          "type": "update",
+          "expected_group": 37,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_094_conflict_group_037.json",
+          "type": "conflict",
+          "expected_group": 37,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_095_different_group_038.json",
+          "type": "different",
+          "expected_group": 38,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 20,
+      "seconds": 2.0,
+      "articles": [
+        {
+          "file": "test_096_original_group_039.json",
+          "type": "original",
+          "expected_group": 39,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_097_repeat_group_039.json",
+          "type": "repeat",
+          "expected_group": 39,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_098_update_group_039.json",
+          "type": "update",
+          "expected_group": 39,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_099_conflict_group_039.json",
+          "type": "conflict",
+          "expected_group": 39,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_100_different_group_040.json",
+          "type": "different",
+          "expected_group": 40,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 21,
+      "seconds": 2.4,
+      "articles": [
+        {
+          "file": "test_101_original_group_041.json",
+          "type": "original",
+          "expected_group": 41,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_102_repeat_group_041.json",
+          "type": "repeat",
+          "expected_group": 41,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_103_update_group_041.json",
+          "type": "update",
+          "expected_group": 41,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_104_conflict_group_041.json",
+          "type": "conflict",
+          "expected_group": 41,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_105_different_group_042.json",
+          "type": "different",
+          "expected_group": 42,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 22,
+      "seconds": 2.3,
+      "articles": [
+        {
+          "file": "test_106_original_group_043.json",
+          "type": "original",
+          "expected_group": 43,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_107_repeat_group_043.json",
+          "type": "repeat",
+          "expected_group": 43,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_108_update_group_043.json",
+          "type": "update",
+          "expected_group": 43,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_109_conflict_group_043.json",
+          "type": "conflict",
+          "expected_group": 43,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_110_different_group_044.json",
+          "type": "different",
+          "expected_group": 44,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 23,
+      "seconds": 2.6,
+      "articles": [
+        {
+          "file": "test_111_original_group_045.json",
+          "type": "original",
+          "expected_group": 45,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_112_update_group_045.json",
+          "type": "update",
+          "expected_group": 45,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_113_repeat_group_045.json",
+          "type": "repeat",
+          "expected_group": 45,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_114_conflict_group_045.json",
+          "type": "conflict",
+          "expected_group": 45,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_115_different_group_046.json",
+          "type": "different",
+          "expected_group": 46,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 24,
+      "seconds": 3.2,
+      "articles": [
+        {
+          "file": "test_116_original_group_047.json",
+          "type": "original",
+          "expected_group": 47,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_117_repeat_group_047.json",
+          "type": "repeat",
+          "expected_group": 47,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_118_update_group_047.json",
+          "type": "update",
+          "expected_group": 47,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_119_conflict_group_047.json",
+          "type": "conflict",
+          "expected_group": 47,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_120_different_group_048.json",
+          "type": "different",
+          "expected_group": 48,
+          "expected_label": "different_event",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    },
+    {
+      "batch": 25,
+      "seconds": 1.8,
+      "articles": [
+        {
+          "file": "test_121_original_group_049.json",
+          "type": "original",
+          "expected_group": 49,
+          "expected_label": null,
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E1"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_122_update_group_049.json",
+          "type": "update",
+          "expected_group": 49,
+          "expected_label": "same_event_update",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_123_repeat_group_049.json",
+          "type": "repeat",
+          "expected_group": 49,
+          "expected_label": "same_event_repeated",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E2"
+          ],
+          "error": null,
+          "judgments": []
+        },
+        {
+          "file": "test_124_conflict_group_049.json",
+          "type": "conflict",
+          "expected_group": 49,
+          "expected_label": "same_event_conflict",
+          "predicted_label": "error:pending",
+          "predicted_events": [],
+          "error": "comparison: gemini-3.8-flash: HTTP 429: [{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \\n* Quota e",
+          "judgments": []
+        },
+        {
+          "file": "test_125_different_group_050.json",
+          "type": "different",
+          "expected_group": 50,
+          "expected_label": "different_event",
+          "predicted_label": "different_event",
+          "predicted_events": [
+            "E3"
+          ],
+          "error": null,
+          "judgments": []
+        }
+      ],
+      "comparison_calls": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "database": null
+    }
+  ],
+  "incomplete_reason": "57 article(s) did not complete, e.g. test_017_repeat_group_007.json: error:pending"
+}

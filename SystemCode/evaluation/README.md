@@ -24,21 +24,31 @@ uv run python evaluation/consolidation/experiments/baseline_rule.py   # free, no
 make eval EXP=evaluation/consolidation/experiments/baseline_rule.py   # same thing
 ```
 
-Three lines at the top of every experiment file control the run:
+These lines at the top of every experiment file control the run:
 
 ```python
 BATCHES = [1]     # 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25
-SAVE = True       # write the result file
+SAVE = True       # write the result file (rewritten after every batch)
 KEEP_DB = False   # keep each batch's test database to look at it
+RESUME = None     # a saved run to finish, e.g. "2026-10-24_1709_gemini"
+VERBOSE = False   # True: log every stage as it happens
 ```
 
 For a paid model, start with one batch.
 
+* **RESUME.** If a run stops part-way (rate limit, outage, Ctrl-C), its result file already holds every
+  finished batch. Set `RESUME` to that file's name and run again: batches whose five articles all completed
+  are kept, the others run again from their first article (a batch is never patched article by article).
+  The model, prompt, embedding model and `SIMILARITY_*` settings must match the saved run, or it refuses.
+* **VERBOSE.** Prints a timestamped line for each step: test database, each article, each judgment with
+  its validation result, each HTTP call to an OpenAI-compatible API. Never a key, a prompt or article text.
+
 ## Use your own model
 
 * Any model: copy `baseline_rule.py` and fill the block marked `PUT YOUR MODEL HERE`.
-* Any OpenAI-compatible API: copy `groq.py`, `gemini.py` or `ollama_local.py` and change
-  `BASE_URL`, `MODEL` and `API_KEY_ENV`.
+* Any OpenAI-compatible API: copy `groq.py`, `gemini.py` or `local.py` and change
+  `BASE_URL`, `MODEL` and `API_KEY_ENV`. Free tiers: wrap the backend in `RateLimited` as `groq.py` and
+  `gemini.py` do, so calls stay under the per-minute limits.
 
 Keys live in `.env`. The files only name the variable.
 
@@ -46,9 +56,10 @@ Keys live in `.env`. The files only name the variable.
 | --- | --- |
 | `baseline_rule.py` | Rule-based, same answer every time. Template, free. |
 | `claude.py` | Claude (Anthropic API) |
-| `gemini.py` | Gemini |
+| `opus.py` | Claude Opus 5.5 at low effort (Anthropic API) |
+| `gemini.py` | Gemini 3.8 Flash (Google, OpenAI-compatible endpoint) |
 | `groq.py` | Llama on Groq, free tier |
-| `ollama_local.py` | Local model through Ollama, LM Studio or vLLM |
+| `local.py`, `local_qwen3.py` | Local model through Ollama (Qwen2.5-7B, Qwen3-8B) |
 
 All are in `evaluation/consolidation/experiments/`.
 
@@ -76,8 +87,41 @@ The run prints two scores and a per-article table (expected vs predicted).
   different)? `uncertain` counts as wrong. Higher is better.
 
 Reference: the free "always same event" baseline over all 25 batches, with the
-`.env.example` settings, scores grouping F1 0.954 and label macro F1 0.355. A real model
+`.env.example` retrieval settings (3 / 0), scores grouping F1 0.954 and label macro F1 0.355. A real model
 should beat both, especially the label score (see "How to read the scores" below).
+
+## Results so far
+
+All 25 batches (100 scored articles), production prompt `compare-2`. "Retrieval" is the setting each run
+used: candidate events shown to the model / `SIMILARITY_LEXICAL_PLAUSIBLE_RANK` (0 = lexical search alone
+never qualifies a candidate). Runs with different retrieval settings are not strictly comparable.
+
+| Model | Retrieval | Grouping F1 | Label macro F1 | Accuracy | `uncertain` | Model calls | Result file |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Claude Opus 5.5 (low effort) | 6 / 3 | **0.947** | **0.920** | **0.92** | 0 | 101 | `2026-11-06_1007_claude-opus-5-5-low` |
+| Gemini 3.8 Flash | 3 / 0 | 0.940 | 0.889 | 0.88 | 2 | 77 | `gemini_125_completed` |
+| Claude Sonnet 5.5 | 3 / 0 | 0.925 | 0.869 | 0.87 | 0 | 79 | `2026-10-23_1818_claude-sonnet-5-5` |
+| Claude Haiku 5.5 | 6 / 3 | 0.872 | 0.803 | 0.79 | 4 | 116 | `2026-10-23_1557_claude` |
+| Claude Haiku 5.5 | 3 / 0 | 0.859 | 0.806 | 0.80 | 2 | 83 | `2026-10-23_1902_haiku-sonnet-settings` |
+| Qwen2.5-7B (local) | 6 / 3 | 0.643 | 0.453 | 0.46 | 17 | 132 | `2026-11-05_1519_local-qwen2.5-7b` |
+| Rule baseline (always "repeat") | 6 / 3 | 0.735 | 0.102 | 0.25 | 0 | 0 | `2026-11-05_1354_baseline-rule` |
+
+* No LLM merged two different events (grouping precision 1.0 for every model).
+* `update` is the hardest label for every model (F1: Opus 0.83, Gemini 0.78, Sonnet 0.72, Haiku 0.62-0.64).
+* **Opus** misses 8 of 100: 5 updates split off as new events (`test_028`, `058`, `068`, `078`, `083`),
+  2 repeats read as updates (`037`, `107`) and 1 conflict read as an update (`049`, a reversed plan).
+* **Gemini** (Le Duc Nghia's run) misses 12: 4 updates split off as new events (`058`, `068`, `078`, `083`),
+  3 repeats read as updates (`027`, `037`, `072`), 2 conflicts read as updates (`029`, `049`), 1 update read
+  as a repeat (`118`), and 2 `uncertain` (`009`, `063`). In both `uncertain` cases Gemini gave the right
+  label; the evidence check downgraded it because one quote was not found word for word.
+* The same articles trip every model, which points at the pipeline rather than the model: `test_078` and
+  `test_083` never reach the model (the follow-up scores below the 0.78 similarity filter), next-day
+  follow-ups (`058`, `068`) are split because the prompt treats a different trading session as a separate
+  event, and cancelled or reversed plans (`049`) are labelled `update` as the prompt asks.
+* The Gemini run first finished 68 of 125 articles (`2026-10-24_1709_gemini`: 57 failed on HTTP 429,
+  timeouts and 503); the other batches were rerun whole with the same settings and combined into
+  `gemini_125_completed`. Batch-by-batch explanations and the error analysis are in
+  `Miscellaneous/Report/` (repository root).
 
 ## Where the result is
 
@@ -90,7 +134,8 @@ should beat both, especially the label score (see "How to read the scores" below
 * "Docker is not running": start Docker Desktop, run `make db` again.
 * Embedding model "not available locally": run the two once-only commands in steps 2 and 3.
 * "`<NAME>` is not set": the error names the variable. Add it to `.env`.
-* HTTP 429: you hit the provider's rate limit. Run fewer batches or wait a minute.
+* HTTP 429: you hit the provider's rate limit. Lower `REQUESTS_PER_MINUTE` (files that use
+  `RateLimited`), run fewer batches, or finish the run later with `RESUME`.
 
 ## Why we evaluate, and how to read the scores
 

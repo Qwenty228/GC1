@@ -258,25 +258,40 @@ The read-only API endpoints are listed in [REFERENCE.md](REFERENCE.md#read-api).
 * **Summaries:** mechanical checks plus a human score sheet. See
   [evaluation/summarization/README.md](evaluation/summarization/README.md).
 
-Event grouping, all 25 batches, with retrieval settings `SIMILARITY_MAX_CANDIDATE_EVENTS=6` and
-`SIMILARITY_LEXICAL_PLAUSIBLE_RANK=3`:
+Event grouping, all 25 batches. "Retrieval" is what each run used: candidate events shown to the model /
+`SIMILARITY_LEXICAL_PLAUSIBLE_RANK`.
 
-| Comparator | Grouping F1 | Label macro F1 | Label accuracy | `uncertain` | Model calls |
-| --- | --- | --- | --- | --- | --- |
-| Claude Sonnet 5.5 | **0.925** | **0.869** | 0.87 | 0 | 79 |
-| Claude Haiku 5.5 | 0.859 | 0.806 | 0.80 | 2 | 83 |
-| Qwen2.5-7B (local) | 0.643 | 0.453 | 0.46 | 17 | 132 |
-| Rule baseline (always "repeat") | 0.735 | 0.102 | 0.25 | 0 | 0 |
+| Comparator | Retrieval | Grouping F1 | Label macro F1 | Label accuracy | `uncertain` | Model calls |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Opus 5.5 (low effort) | 6 / 3 | **0.947** | **0.920** | **0.92** | 0 | 101 |
+| Gemini 3.8 Flash | 3 / 0 | 0.940 | 0.889 | 0.88 | 2 | 77 |
+| Claude Sonnet 5.5 | 3 / 0 | 0.925 | 0.869 | 0.87 | 0 | 79 |
+| Claude Haiku 5.5 | 3 / 0 | 0.859 | 0.806 | 0.80 | 2 | 83 |
+| Qwen2.5-7B (local) | 6 / 3 | 0.643 | 0.453 | 0.46 | 17 | 132 |
+| Rule baseline (always "repeat") | 6 / 3 | 0.735 | 0.102 | 0.25 | 0 | 0 |
 
-* The Claude models and Qwen2.5 made no false merges (grouping precision 1.0). The models differ in recall: they miss
-  pairs that belong together.
+* No LLM merged two different events (grouping precision 1.0). The models differ in recall: they miss pairs that
+  belong together.
 * The rule baseline scores well on grouping because it links every candidate, at a precision of 0.60. Its label
   score shows that it cannot tell the labels apart.
-* `update` is the hardest label for both Claude models (F1 0.72 for Sonnet, 0.62 for Haiku).
+* `update` is the hardest label for every model (F1 0.83 for Opus, 0.78 for Gemini, 0.72 for Sonnet, 0.62 for Haiku).
+  The same articles trip all of them: follow-ups that score below the 0.78 similarity filter never reach the model,
+  next-day follow-ups are split off as new events, and reversed plans are labelled `update`, as the prompt asks.
 * There are about 25 articles per label, so differences under roughly 15 points may be noise.
 
-Raw results: `evaluation/consolidation/results/` (`2026-10-23_1818_claude-sonnet-5-5`,
-`2026-10-23_1902_haiku-sonnet-settings`, `2026-11-05_1519_local-qwen2.5-7b`, `2026-11-05_1354_baseline-rule`).
+Summaries (stage 2), not scored against an answer key:
+
+* **Local models** (125 test articles, grouping by the model): Qwen2.5-7B published 7 of 52 event summaries (13.5%);
+  the rest failed validation or errored. Qwen3-8B published 44 of 77 (57.1%), with 84% of citations verified, and every
+  update article (15 events) and conflict article (9 events) cited in its event's summary.
+* **Direct prompting** (Gemini, reading each complete batch with no retrieval, filter or passage limit): its 50 event
+  summaries kept the update and flagged the conflict in all 25 batches, by its own checklist (spot-checked on batches
+  1 and 12). This is qualitative: the model knew the batch structure.
+
+Raw results: `evaluation/consolidation/results/` (`2026-11-06_1007_claude-opus-5-5-low`, `gemini_125_completed`,
+`2026-10-23_1818_claude-sonnet-5-5`, `2026-10-23_1902_haiku-sonnet-settings`, `2026-11-05_1519_local-qwen2.5-7b`,
+`2026-11-05_1354_baseline-rule`) and `evaluation/summarization/results/`. The Gemini error analysis and per-batch
+notes are in `Miscellaneous/Report/` at the repository root.
 
 ## Tests
 

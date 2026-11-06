@@ -53,8 +53,9 @@ def test_every_experiment_file_has_the_same_runnable_shape():
     for path in sorted(EXPERIMENTS.glob("*.py")):
         module = _module(path)
         assert callable(module.build_comparator) and module.NAME and isinstance(module.BATCHES, list), path.name
-        assert {"SAVE", "KEEP_DB", "DESCRIPTION"} <= set(vars(module)), path.name
+        assert {"SAVE", "KEEP_DB", "RESUME", "VERBOSE", "DESCRIPTION"} <= set(vars(module)), path.name
         assert 'if __name__ == "__main__":' in path.read_text() and "run_experiment(" in path.read_text(), path.name
+        assert "resume=RESUME, verbose=VERBOSE" in path.read_text(), path.name
 
 
 def test_the_template_comparator_labels_every_pair_and_passes_validation():
