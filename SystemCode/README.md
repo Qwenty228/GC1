@@ -266,18 +266,23 @@ Event grouping, all 25 batches. "Retrieval" is what each run used: candidate eve
 | Claude Opus 5.5 (low effort) | 6 / 3 | **0.947** | **0.920** | **0.92** | 0 | 101 |
 | Gemini 3.8 Flash | 3 / 0 | 0.940 | 0.889 | 0.88 | 2 | 77 |
 | Claude Sonnet 5.5 | 3 / 0 | 0.925 | 0.869 | 0.87 | 0 | 79 |
+| Claude Haiku 5.5 | 6 / 3 | 0.872 | 0.803 | 0.79 | 4 | 116 |
 | Claude Haiku 5.5 | 3 / 0 | 0.859 | 0.806 | 0.80 | 2 | 83 |
 | Qwen2.5-7B (local) | 6 / 3 | 0.643 | 0.453 | 0.46 | 17 | 132 |
+| Rule baseline (always "repeat") | 3 / 0 | 0.954 | 0.355 | 0.48 | 0 | 0 |
 | Rule baseline (always "repeat") | 6 / 3 | 0.735 | 0.102 | 0.25 | 0 | 0 |
 
 * No LLM merged two different events (grouping precision 1.0). The models differ in recall: they miss pairs that
   belong together.
-* The rule baseline scores well on grouping because it links every candidate, at a precision of 0.60. Its label
-  score shows that it cannot tell the labels apart.
-* `update` is the hardest label for every model (F1 0.83 for Opus, 0.78 for Gemini, 0.72 for Sonnet, 0.62 for Haiku).
-  The same articles trip all of them: follow-ups that score below the 0.78 similarity filter never reach the model,
+* The rule baseline scores well on grouping because it links every candidate that passes the similarity filter
+  (precision 0.95 at 3 / 0, 0.60 at 6 / 3). Its label score shows that it cannot tell the labels apart.
+* `update` is the hardest label for every model (F1 0.83 for Opus, 0.78 for Gemini, 0.72 for Sonnet, 0.62-0.64 for Haiku).
+  The same articles trip all of them: follow-ups published more than 7 days after the original fall outside the search window and never reach
+  the model,
   next-day follow-ups are split off as new events, and reversed plans are labelled `update`, as the prompt asks.
 * There are about 25 articles per label, so differences under roughly 15 points may be noise.
+* The project report's results table uses the Opus, Gemini, Sonnet and Qwen rows, Haiku at 6 / 3 and the rule
+  baseline at 3 / 0.
 
 Summaries (stage 2), not scored against an answer key:
 
@@ -289,8 +294,8 @@ Summaries (stage 2), not scored against an answer key:
   1 and 12). This is qualitative: the model knew the batch structure.
 
 Raw results: `evaluation/consolidation/results/` (`2026-11-06_1007_claude-opus-5-5-low`, `gemini_125_completed`,
-`2026-10-23_1818_claude-sonnet-5-5`, `2026-10-23_1902_haiku-sonnet-settings`, `2026-11-05_1519_local-qwen2.5-7b`,
-`2026-11-05_1354_baseline-rule`) and `evaluation/summarization/results/`. The Gemini error analysis and per-batch
+`2026-10-23_1818_claude-sonnet-5-5`, `2026-10-23_1557_claude`, `2026-10-23_1902_haiku-sonnet-settings`,
+`2026-11-05_1519_local-qwen2.5-7b`, `2026-10-10_1458_baseline-rule`, `2026-11-05_1354_baseline-rule`) and `evaluation/summarization/results/`. The Gemini error analysis and per-batch
 notes are in `Miscellaneous/Report/` at the repository root.
 
 ## Tests
@@ -320,7 +325,7 @@ notes are in `Miscellaneous/Report/` at the repository root.
 
 * SEC extraction covers the primary 8-K document only; exhibits such as EX-99.1 press releases are linked, not
   extracted.
-* Alpaca and SEC recovery are bounded (72 h / 40 pages; `SEC_RECOVERY_MAX_DAYS`, `SEC_MAX_HISTORICAL_FILES`).
+* Alpaca and SEC recovery are bounded (72 h by default, 3 h in `.env.example`, and 40 pages; `SEC_RECOVERY_MAX_DAYS`, `SEC_MAX_HISTORICAL_FILES`).
 * Only registered tickers are linked: `GOOG` or preferred-share tickers are not.
 * Collecting all 11 companies is tested offline but has not been measured live (Alpaca symbol limits, article
   volume).

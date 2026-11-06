@@ -104,6 +104,7 @@ never qualifies a candidate). Runs with different retrieval settings are not str
 | Claude Haiku 5.5 | 6 / 3 | 0.872 | 0.803 | 0.79 | 4 | 116 | `2026-10-23_1557_claude` |
 | Claude Haiku 5.5 | 3 / 0 | 0.859 | 0.806 | 0.80 | 2 | 83 | `2026-10-23_1902_haiku-sonnet-settings` |
 | Qwen2.5-7B (local) | 6 / 3 | 0.643 | 0.453 | 0.46 | 17 | 132 | `2026-11-05_1519_local-qwen2.5-7b` |
+| Rule baseline (always "repeat") | 3 / 0 | 0.954 | 0.355 | 0.48 | 0 | 0 | `2026-10-10_1458_baseline-rule` |
 | Rule baseline (always "repeat") | 6 / 3 | 0.735 | 0.102 | 0.25 | 0 | 0 | `2026-11-05_1354_baseline-rule` |
 
 * No LLM merged two different events (grouping precision 1.0 for every model).
@@ -115,7 +116,8 @@ never qualifies a candidate). Runs with different retrieval settings are not str
   as a repeat (`118`), and 2 `uncertain` (`009`, `063`). In both `uncertain` cases Gemini gave the right
   label; the evidence check downgraded it because one quote was not found word for word.
 * The same articles trip every model, which points at the pipeline rather than the model: `test_078` and
-  `test_083` never reach the model (the follow-up scores below the 0.78 similarity filter), next-day
+  `test_083` never reach the model (published more than 7 days after the rest of its batch, outside the
+  `SIMILARITY_WINDOW_DAYS` search window, although its text similarity is above 0.78), next-day
   follow-ups (`058`, `068`) are split because the prompt treats a different trading session as a separate
   event, and cancelled or reversed plans (`049`) are labelled `update` as the prompt asks.
 * The Gemini run first finished 68 of 125 articles (`2026-10-24_1709_gemini`: 57 failed on HTTP 429,
@@ -146,9 +148,10 @@ it is a `different` event. We test that decision on articles whose answer we kno
 compare models fairly and see which kind of decision each one gets wrong.
 
 **The test set.** 25 batches of 5 articles: an original, a repeat, an update and a conflict
-of one event, plus one article about a different event. Originals are real Alpaca/Benzinga
-news; the others are real articles from other outlets or edited copies (a conflict usually
-changes one number). So it tests the grouping and labelling logic, not the full live news mix.
+of one event, plus one article about a different event. Originals are real NVIDIA news
+(24 from Benzinga via Alpaca, one from CBS News). Repeats and updates are 20 edited copies and
+5 real articles each, all 25 conflicts are edited copies (usually one changed number), and 15 of
+the 25 different-event articles are real: 75 synthetic and 50 real articles in all. So it tests the grouping and labelling logic, not the full live news mix.
 
 **Why batches run on their own.** Each answer key only describes the five articles inside
 its batch. Two people may have picked overlapping stories from the same week, so putting all
