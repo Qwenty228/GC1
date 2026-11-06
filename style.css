@@ -136,3 +136,9 @@ summary { cursor: pointer; font-weight: 600; font-size: .93rem; }
 .back { font-size: .8rem; }
 
 footer { border-top: 1px solid var(--line); margin-top: 3rem; padding: 1.4rem 0 2.4rem; color: var(--ink-2); font-size: .82rem; }
+
+/* screenshots of the app */
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0 1.6rem; }
+.shots figure { margin: 0; }
+.shots img { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--white); }
+.shots figcaption { font-size: .84rem; color: var(--ink-2); margin-top: .4rem; }

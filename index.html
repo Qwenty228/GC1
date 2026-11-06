@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Evaluation Guideline — Stock News</title>
-<meta name="description" content="How the Stock News system's two LLM stages are evaluated, for any model under the same rules, and why each step is sound.">
+<title>Evaluation — StockEvent Lens</title>
+<meta name="description" content="How StockEvent Lens's two LLM stages are evaluated, for any model under the same rules, and why each step is sound.">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="masthead"><div class="wrap">
-  <a class="brand" href="#top"><span aria-hidden="true">✿</span>Stock News — Evaluation</a>
+  <a class="brand" href="#top"><span aria-hidden="true">✿</span>StockEvent Lens — Evaluation</a>
   <nav aria-label="On this page">
-    <a href="#principles">Principles</a><a href="#part-a">A · Consolidation</a><a href="#part-b">B · Summaries</a>
+    <a href="#app">The app</a><a href="#principles">Principles</a><a href="#results">Results</a><a href="#part-a">A · Consolidation</a><a href="#part-b">B · Summaries</a>
     <a href="#report">C · Report</a><a href="#notes">Notes</a>
   </nav>
 </div></header>
@@ -25,6 +25,20 @@
   API, under the same rules, and why each step can be trusted. Sources are marked <b>*</b>, <b>**</b> and <b>***</b> and
   listed in the <a href="#notes">notes</a>.</p>
 </header>
+
+<h2 id="app">The app being evaluated</h2>
+<p>StockEvent Lens collects SEC EDGAR 8-K filings and Alpaca (Benzinga) news, groups the reports about one development into a
+single event, labels each new report as a repeat, an update or a conflict, and writes a summary in which every statement quotes
+its sources. Conflicting reports are flagged for a person to review; no source is declared right.
+Code and setup: <a href="https://github.com/Qwenty228/GC1">github.com/Qwenty228/GC1</a>.</p>
+<div class="shots">
+  <figure><img src="img/feed.webp" alt="The news feed: one story with its AI summary, a conflicting-reports notice and its sources" loading="lazy">
+    <figcaption>The feed: one record per development, with its summary and sources.</figcaption></figure>
+  <figure><img src="img/feed-conflict.webp" alt="A story marked Conflicting reports, under review, with a Compare the claims link" loading="lazy">
+    <figcaption>A conflict is flagged for review, with both claims one click away.</figcaption></figure>
+  <figure><img src="img/dev-new-story.webp" alt="Developer mode replaying test batch 1: the first article opens story E1" loading="lazy">
+    <figcaption>Developer mode replays the labelled test batches one article at a time.</figcaption></figure>
+</div>
 
 <h2 id="decisions">The two decisions</h2>
 <div class="pair">
@@ -91,14 +105,20 @@ checked separately against Alpaca's archive.</p>
 <h2 id="run">How to run your model</h2>
 <div class="callout strong">
 <p><b>Consolidation:</b> copy <code>evaluation/consolidation/experiments/local.py</code> (any OpenAI-compatible API or Ollama),
-or <code>claude.py</code>, <code>gemini.py</code> or <code>groq.py</code>, and change only <code>NAME</code> and <code>MODEL</code>
-(plus <code>BASE_URL</code> and the API-key variable for a new provider). Set <code>BATCHES = []</code> to run all 25 batches.
-<code>baseline_rule.py</code> is the template for a model that is not an LLM.</p>
-<p><b>Summarization:</b> copy <code>evaluation/summarization/experiments/local_full.py</code> and change only <code>NAME</code> and <code>MODEL</code>.</p>
+or <code>claude.py</code>, <code>opus.py</code>, <code>gemini.py</code>, <code>groq.py</code> or <code>local_qwen3.py</code>, and change only
+<code>NAME</code> and <code>MODEL</code> (plus <code>BASE_URL</code> and the API-key variable for a new provider). Set <code>BATCHES = []</code>
+to run all 25 batches. <code>baseline_rule.py</code> is the template for a model that is not an LLM.</p>
+<p><b>Long runs:</b> the result file is saved after every batch. If a run stops (rate limit, outage), set <code>RESUME</code> to its
+file name and run again: complete batches are kept, the others rerun whole, and the model, prompt, embedder and retrieval settings
+must match. <code>VERBOSE = True</code> logs every stage and HTTP call. Free tiers: wrap the backend in <code>RateLimited</code>,
+as <code>groq.py</code> and <code>gemini.py</code> do.</p>
+<p><b>Summarization:</b> copy <code>evaluation/summarization/experiments/local_full.py</code> and change only <code>NAME</code> and <code>MODEL</code>
+(not run further for now; see <a href="#part-b">Part B</a>).</p>
 <p class="muted">Do not edit <code>src/</code> or the prompts. Results are saved in <code>evaluation/consolidation/results/</code> and
 <code>evaluation/summarization/results/</code>; compare consolidation runs with <code>uv run datasources-eval compare</code>.</p>
 </div>
 
+<h2 id="results">Results</h2>
 <h3 id="compare">What to compare</h3>
 <p>Every run uses the same 25 batches, the same prompt (<code>compare-2</code>) and the same retrieval settings, the
 <code>.env.example</code> values: <code>SIMILARITY_MAX_CANDIDATE_EVENTS=3</code> and <code>SIMILARITY_LEXICAL_PLAUSIBLE_RANK=0</code>.
@@ -111,31 +131,65 @@ Check the <code>settings</code> block of a result file before adding it to the t
 <tr><td><b>Gemini 3.8 Flash</b></td><td>0.940</td><td>1.00</td><td>0.89</td><td><b>0.889</b></td><td>0.94</td><td>2</td><td><code>gemini_125_completed.json</code>*</td></tr>
 <tr><td><b>Claude Sonnet 5.5</b></td><td>0.925</td><td>1.00</td><td>0.86</td><td>0.869</td><td><b>0.96</b></td><td>0</td><td><code>2026-10-23_1818_claude-sonnet-5-5</code></td></tr>
 <tr><td><b>Claude Haiku 5.5</b></td><td>0.859</td><td>1.00</td><td>0.75</td><td>0.806</td><td>0.94</td><td>2</td><td><code>2026-10-23_1902_haiku-sonnet-settings</code></td></tr>
-<tr><td><b>Qwen 2.5 7B</b> (local)</td><td colspan="6" class="muted">Rerun at 3 / 0 in progress</td><td></td></tr>
 <tr><td>Similarity gate alone (no LLM)</td><td><b>0.954</b></td><td>0.95</td><td><b>0.96</b></td><td>0.355</td><td>0.00</td><td>0</td><td><code>2026-10-10_1458_baseline-rule</code></td></tr>
 </tbody></table></div>
-<p class="muted small">* On branch <code>GC1_nghia_mike_gemini_results</code>, recovered batch by batch after quota limits and re-scored with the same <code>metrics.py</code>.</p>
+<p class="muted small">* Le Duc Nghia's run. The first run (<code>2026-10-24_1709_gemini</code>) finished 68 of 125 articles before quota
+limits and outages; the other batches were rerun whole with the same settings and combined, re-scored with the same <code>metrics.py</code>.</p>
+
+<p class="label">Runs at 6 / 3 (6 candidate events, lexical rank 3) · not comparable with the table above</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Model</th><th>Grouping F1</th><th>Precision</th><th>Recall</th><th>Label macro-F1</th><th>Conflict F1</th><th>Uncertain</th><th>Result file</th></tr></thead>
+<tbody>
+<tr><td><b>Claude Opus 5.5</b> (low effort)</td><td><b>0.947</b></td><td>1.00</td><td><b>0.90</b></td><td><b>0.920</b></td><td><b>0.98</b></td><td>0</td><td><code>2026-11-06_1007_claude-opus-5-5-low</code></td></tr>
+<tr><td><b>Claude Haiku 5.5</b></td><td>0.872</td><td>1.00</td><td>0.77</td><td>0.803</td><td>0.94</td><td>4</td><td><code>2026-10-23_1557_claude</code></td></tr>
+<tr><td><b>Qwen 2.5 7B</b> (local)</td><td>0.643</td><td>1.00</td><td>0.47</td><td>0.453</td><td>0.44</td><td>17</td><td><code>2026-11-05_1519_local-qwen2.5-7b</code></td></tr>
+<tr><td>Rule baseline (always “repeat”)</td><td>0.735</td><td>0.59</td><td>0.96</td><td>0.102</td><td>0.00</td><td>0</td><td><code>2026-11-05_1354_baseline-rule</code></td></tr>
+</tbody></table></div>
 <ul class="caveats">
   <li><b>Precision 1.00</b>: the model never merged two different events. <b>Recall</b>: the share of same-event pairs it kept together.
   The gate links everything above the similarity threshold, so it leads on recall here (the set has only 2 hard negatives) but cannot label repeats, updates or conflicts.</li>
   <li>Compare label macro-F1 and the per-label scores first, especially conflicts; that is where the LLM adds what the gate cannot.</li>
   <li><code>uv run datasources-eval compare</code> lists complete runs; <code>uv run datasources-eval report &lt;run&gt;</code> shows any run in full.</li>
-  <li>Earlier runs at 6 / 3 are not comparable: Claude Haiku 5.5 (<code>2026-10-23_1557_claude</code>) and Qwen 2.5 7B (<code>2026-10-12_0348</code>, <code>2026-10-22_2231</code>).</li>
+  <li>Opus 5.5 is the strongest model on labels, but at 6 / 3; it has not been run at 3 / 0, so it is not ranked against the first table.
+  Qwen 2.5 7B has no complete run at 3 / 0. Older incomplete Qwen runs: <code>2026-10-12_0348</code>, <code>2026-10-22_2231</code>.</li>
 </ul>
 
-<p class="label">Summarization results (local Qwen 2.5 7B) · <code>evaluation/summarization/results/</code></p>
+<h3 id="errors">What the errors show</h3>
+<p>Every miss of Gemini 3.8 Flash was traced to its cause (Le Duc Nghia's error analysis, with each batch documented in
+<code>Miscellaneous/Report/</code>), and Opus 5.5 trips over largely the same articles. The pattern points at the pipeline more than at the model.</p>
+<ul class="caveats">
+  <li><b>No false merges.</b> Every LLM kept grouping precision at 1.00; the errors are pairs left apart (Gemini: 17 of 150 same-event pairs).</li>
+  <li><b>Updates are the weak label</b> for every model (update F1: Opus 0.83, Gemini 0.78, Sonnet 0.72, Haiku 0.62). Repeats and updates
+  blur in both directions (Gemini: repeat→update ×3, update→repeat ×1).</li>
+  <li><b>Some misses never reach the model.</b> <code>test_078</code> and <code>test_083</code> are follow-ups in new wording
+  (“started shipping” → “completed acceptance testing”) that score below the 0.78 similarity filter, so they open a new event for every model.</li>
+  <li><b>Next-day follow-ups are split.</b> Continuations on a later trading day (<code>test_058</code>, <code>test_068</code>) become separate
+  events, because the prompt treats a different session as a different event.</li>
+  <li><b>Reversed plans read as updates.</b> A cancelled or reversed plan keyed as a conflict (<code>test_049</code>) is labelled
+  <code>update</code>, as the prompt instructs.</li>
+  <li><b>“Uncertain” was a quote check, not reasoning.</b> In both of Gemini's <code>uncertain</code> results (<code>test_009</code>,
+  <code>test_063</code>) the label was right; the evidence check downgraded it because one quote was not word for word in its passage.</li>
+</ul>
+
+<p class="label">Summarization results (local models) · <code>evaluation/summarization/results/</code></p>
 <div class="table-wrap"><table>
 <thead><tr><th>Run</th><th>Data</th><th>Events</th><th>Published</th><th>Rejected</th><th>No answer</th></tr></thead>
 <tbody>
 <tr><td><code>2026-10-20_1031_…_fixtures-production</code></td><td>125 labelled articles</td><td>52</td><td>7</td><td>36</td><td>9</td></tr>
 <tr><td><code>2026-10-19_2042_…_real-aug17_production</code></td><td>Real news, 15–20 Aug, production filter</td><td>34</td><td>4</td><td>25</td><td>5</td></tr>
 <tr><td><code>2026-10-20_0426_…_real-aug17_no-filter</code></td><td>Same slice, similarity gate off: every event in the ±7-day window reaches the LLM</td><td>22</td><td>3</td><td>16</td><td>3</td></tr>
+<tr><td><code>2026-10-23_2202_local-qwen3-8b_…_fixtures-production</code> (Qwen3 8B)</td><td>125 labelled articles</td><td>77</td><td><b>44</b></td><td>33</td><td>0</td></tr>
 </tbody></table></div>
 <ul class="caveats">
   <li><b>Published</b>: passed every check. <b>Rejected</b>: a well-formed summary that failed validation, mostly a statement
   (usually the headline) with no citation or a quote not copied exactly. <b>No answer</b>: the model returned nothing usable; here,
   always an answer cut off at the 4,096-token limit. Counts use each event's last attempt (up to 2).</li>
-  <li>Compare the share of events published, then the rubric scores in each run's <code>_scores.csv</code>.</li></ul>
+  <li>Compare the share of events published, then the rubric scores in each run's <code>_scores.csv</code>.</li>
+  <li>Qwen3 8B published 57% of its summaries against 13% for Qwen 2.5 7B, with 84% of citations verified and every update and
+  conflict article cited in its event's summary.</li>
+  <li><b>Direct prompting</b> (qualitative): Gemini, reading each complete batch with no retrieval, filter or passage limit, wrote 50 event
+  summaries that kept the update and flagged the conflict in all 25 batches by its own checklist (spot-checked on batches 1 and 12).
+  It knew the batch structure, so this is not a score.</li></ul>
 <p class="muted">Every model is run once, with each pair judged in one order, so small differences may be noise.</p>
 
 <h2 id="part-a">Part A · Consolidation</h2>
@@ -172,6 +226,9 @@ Check the <code>settings</code> block of a result file before adding it to the t
   McNemar is built for two systems scored on the same items, and resampling batches respects that articles in one batch are related.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup></p></article>
 
 <h2 id="part-b">Part B · Summarization</h2>
+<div class="callout"><span class="label">Status</span>
+<p>Paused. Summarization was evaluated with the local runs and the direct-prompting review above; steps B1–B4 are the method for
+a full evaluation and have not been run.</p></div>
 <ol class="flow" aria-label="Part B steps">
   <li><a href="#b1" class="paid"><b>B1</b>Reliability</a></li><li><a href="#b2"><b>B2</b>Groundedness</a></li>
   <li><a href="#b3" class="paid"><b>B3</b>Baselines</a></li><li><a href="#b4" class="people"><b>B4</b>Human rating</a></li>
@@ -261,7 +318,7 @@ calls, tokens_in, tokens_out, wall_time_s, failures, incomplete (yes|no)</pre>
 </main>
 
 <footer><div class="wrap">
-<p>Stock News evaluation guideline. Numbers on this page are thresholds and sample sizes for the method, not results.</p>
+<p>StockEvent Lens evaluation. Results are from the files in <code>SystemCode/evaluation/</code>; numbers in Parts A–C are thresholds and sample sizes for the method. Updated 6 November 2026.</p>
 </div></footer>
 </body>
 </html>
