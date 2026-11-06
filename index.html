@@ -90,7 +90,7 @@ checked separately against Alpaca's archive.</p>
   <span class="now">Now: all 125 labels are human, one person per batch. Planned: a second labeller and agreement (κ) for new hard negatives (A1) and summary ratings (B4).</span></li>
   <li><b>Tune on some batches, test on others <span class="st part">Partly</span></b>Thresholds are chosen on some batches and
   tested on others; whole batches are split and resampled, never single articles.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
-  <span class="now">Now: the gate threshold was cross-validated by batch. Planned: the ambiguous band (A2).</span></li>
+  <span class="now">Now: the 0.78 gate threshold is a starting point calibrated on 58 stored NVIDIA revisions, not tuned on these batches. Planned: tune it and the ambiguous band (A2) on held-out batches.</span></li>
   <li><b>Use metrics that fit the task <span class="st part">Partly</span></b>Two grouping scores, misses and false merges kept
   apart, and a paired significance test.<sup class="cite"><a href="#note-2" aria-label="note **">**</a></sup>
   <span class="now">Now: pairwise F1, false merges and splits, and McNemar's test. Planned: B-cubed and batch-level confidence intervals (A4).</span></li>
@@ -164,8 +164,8 @@ limits and outages; the other batches were rerun whole with the same settings an
   <li><b>No false merges.</b> Every LLM kept grouping precision at 1.00; the errors are pairs left apart (Gemini: 17 of 150 same-event pairs).</li>
   <li><b>Updates are the weak label</b> for every model (update F1: Opus 0.83, Gemini 0.78, Sonnet 0.72, Haiku 0.64 at 6 / 3 and 0.62 at 3 / 0, Qwen 2.5 7B 0.44). Repeats and updates
   blur in both directions (Gemini: repeat→update ×3, update→repeat ×1).</li>
-  <li><b>Some misses never reach the model.</b> <code>test_078</code> and <code>test_083</code> are follow-ups in new wording
-  (“started shipping” → “completed acceptance testing”) that score below the 0.78 similarity filter, so they open a new event for every model.</li>
+  <li><b>Some misses never reach the model.</b> <code>test_078</code> and <code>test_083</code> are follow-ups published more than 7 days after the rest of their batch,
+  outside the 7-day search window, so they open a new event for every model even though their text similarity is above 0.78.</li>
   <li><b>Next-day follow-ups are split.</b> Continuations on a later trading day (<code>test_058</code>, <code>test_068</code>) become separate
   events, because the prompt treats a different session as a different event.</li>
   <li><b>Reversed plans read as updates.</b> A cancelled or reversed plan keyed as a conflict (<code>test_049</code>) is labelled
