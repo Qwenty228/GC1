@@ -17,6 +17,8 @@ DESCRIPTION = "Claude (Anthropic API), the production comparison prompt"
 BATCHES = [1]  # batch numbers: 1 = tests 001-005 ... 25 = tests 121-125; [] = all 25. Paid model: start small.
 SAVE = True  # write evaluation/consolidation/results/<date>_<time>_<NAME>.json
 KEEP_DB = False  # keep each batch's test database (stock_news_eval_..._test) to inspect it
+RESUME = None  # a saved run to finish, e.g. "2026-10-24_1709_gemini": keeps its completed batches
+VERBOSE = False  # True: log every stage as it happens (database, article, judgment, HTTP call)
 
 MODEL = None  # e.g. "claude-sonnet-5-5"; None = SIMILARITY_COMPARISON_MODEL from .env
 
@@ -30,4 +32,4 @@ if __name__ == "__main__":
     from datasources.evaluation import run_experiment
 
     run_experiment(NAME, build_comparator, description=DESCRIPTION, batches=BATCHES, save=SAVE, keep_db=KEEP_DB,
-                   source=__file__)
+                   source=__file__, resume=RESUME, verbose=VERBOSE)

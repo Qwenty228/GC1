@@ -72,3 +72,7 @@ steps from configuring `.env` to opening the page. The same guide is an appendix
 * `stockevent-lens-feed.webp`: the news feed screenshot shown above
 * `stockevent-lens-pipeline.webp`: the system pipeline diagram (shown in SystemCode/README.md)
 * `stockevent-lens-banner-light.svg`, `stockevent-lens-banner-dark.svg`: the README banner
+* `Report/batch_doc/`: one Word file per test batch (`batch_001.docx` ... `batch_025.docx`): the five articles, their
+  expected relationship and the supporting text
+* `Report/error_analysis/`: the Gemini 3.8 Flash error analysis (the 10 misclassifications, the 2 `uncertain`
+  results and the error patterns), as Word files, with each page also as an image in `webp/`

@@ -25,6 +25,7 @@ validation afterwards: only the transport differs.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import time
@@ -43,6 +44,8 @@ from .similarity.comparison import (
 
 JSON_MODES = ("json_schema", "json_object", "prompt")
 _FENCE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S)
+# One DEBUG line per request and per outcome (status, time, tokens). Never a header, a key, the prompt or the answer.
+LOGGER = logging.getLogger(__name__)
 
 
 def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: str, user: str,
@@ -66,13 +69,18 @@ def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: 
         body["response_format"] = {"type": "json_object"}
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     started = time.monotonic()
+    LOGGER.debug("%s: request sent (timeout %.0fs)", model, timeout)
     try:
         response = httpx.post(f"{base_url.rstrip('/')}/chat/completions", json=body, headers=headers,
                               timeout=timeout)
     except httpx.TimeoutException as exc:
+        LOGGER.debug("%s: timed out after %.1fs", model, time.monotonic() - started)
         raise error(f"{model}: timed out after {timeout}s", kind="timeout", retryable=True) from exc
     except httpx.HTTPError as exc:
+        LOGGER.debug("%s: connection failed after %.1fs (%s)", model, time.monotonic() - started,
+                     type(exc).__name__)
         raise error(f"{model}: connection failed ({exc})", kind="connection", retryable=True) from exc
+    LOGGER.debug("%s: HTTP %d in %.1fs", model, response.status_code, time.monotonic() - started)
     if response.status_code >= 400:
         retryable = response.status_code in (408, 409, 429) or response.status_code >= 500
         raise error(f"{model}: HTTP {response.status_code}: {response.text[:300]}",
@@ -85,6 +93,8 @@ def call_openai_json(*, base_url: str, model: str, api_key: str | None, system: 
     text = (choice.get("message") or {}).get("content") or ""
     fenced = _FENCE.match(text)  # some local models wrap JSON in ```json fences
     usage = data.get("usage") or {}
+    LOGGER.debug("%s: finish_reason %s, tokens in/out %s/%s", model, finish, usage.get("prompt_tokens", "?"),
+                 usage.get("completion_tokens", "?"))
     return JsonModelResult(
         text=fenced.group(1) if fenced else text.strip(),
         model=data.get("model") or model,
