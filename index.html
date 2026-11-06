@@ -152,6 +152,9 @@ limits and outages; the other batches were rerun whole with the same settings an
   <li><code>uv run datasources-eval compare</code> lists complete runs; <code>uv run datasources-eval report &lt;run&gt;</code> shows any run in full.</li>
   <li>Opus 5.5 is the strongest model on labels, but at 6 / 3; it has not been run at 3 / 0, so it is not ranked against the first table.
   Qwen 2.5 7B has no complete run at 3 / 0. Older incomplete Qwen runs: <code>2026-10-12_0348</code>, <code>2026-10-22_2231</code>.</li>
+  <li>The project report's results table uses six of these runs: the similarity gate (<code>2026-10-10_1458</code>), Sonnet and Gemini at 3 / 0,
+  and Qwen 2.5 7B (<code>2026-11-05_1519</code>), Haiku (<code>2026-10-23_1557</code>) and Opus at 6 / 3. Runs by Nathan (gate, Qwen),
+  Claire (Haiku), Nakhin (Sonnet), Le Duc Nghia (Gemini) and Lim Hao (Opus).</li>
 </ul>
 
 <h3 id="errors">What the errors show</h3>
@@ -159,7 +162,7 @@ limits and outages; the other batches were rerun whole with the same settings an
 <code>Miscellaneous/Report/</code>), and Opus 5.5 trips over largely the same articles. The pattern points at the pipeline more than at the model.</p>
 <ul class="caveats">
   <li><b>No false merges.</b> Every LLM kept grouping precision at 1.00; the errors are pairs left apart (Gemini: 17 of 150 same-event pairs).</li>
-  <li><b>Updates are the weak label</b> for every model (update F1: Opus 0.83, Gemini 0.78, Sonnet 0.72, Haiku 0.62). Repeats and updates
+  <li><b>Updates are the weak label</b> for every model (update F1: Opus 0.83, Gemini 0.78, Sonnet 0.72, Haiku 0.64 at 6 / 3 and 0.62 at 3 / 0, Qwen 2.5 7B 0.44). Repeats and updates
   blur in both directions (Gemini: repeat→update ×3, update→repeat ×1).</li>
   <li><b>Some misses never reach the model.</b> <code>test_078</code> and <code>test_083</code> are follow-ups in new wording
   (“started shipping” → “completed acceptance testing”) that score below the 0.78 similarity filter, so they open a new event for every model.</li>
