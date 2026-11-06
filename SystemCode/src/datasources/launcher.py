@@ -103,7 +103,9 @@ def _stop_when_stdin_closes() -> None:
     """Wait until the launcher closes our stdin (or dies), then stop gracefully via our own SIGINT handler."""
     try:
         if os.name != "nt" or not _wait_for_stdin_eof_windows():
-            while sys.stdin.buffer.read(4096):
+            # Raw read, not sys.stdin.buffer: a daemon thread blocked in the buffered reader holds its
+            # lock, and interpreter shutdown then aborts ("could not acquire lock ... daemon threads").
+            while os.read(sys.stdin.fileno(), 4096):
                 pass
     except (OSError, ValueError):
         pass

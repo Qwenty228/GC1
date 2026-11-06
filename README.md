@@ -33,11 +33,11 @@ with a macro F1 of 0.869, without a single false merge. A local 7B model and a r
 
 | Official Full Name  | Student ID (MTech Applicable)  | Work Items (Who Did What) | Email (Optional) |
 | :------------ |:---------------:| :-----| :-----|
-| Lim Hao | A0354214M | TBD | zdino1998@gmail.com |
-| Pang Claire Fuiyi | A0357738L | TBD | clairepang22@gmail.com |
-| Polthai Nakhin | A0355086X | TBD | nakhinbill@gmail.com |
-| Le Duc Nghia | A0356261E | TBD | nghialeduc268@gmail.com |
-| Kittichaikoonkij Nathan | A0352270M | TBD | nathan.kittichai@gmail.com |
+| Lim Hao | A0354214M | System architecture design, Claude Opus evaluation and results | zdino1998@gmail.com |
+| Pang Claire Fuiyi | A0357738L | Claude Haiku evaluation, validation of evaluation results, evaluation metric design | clairepang22@gmail.com |
+| Polthai Nakhin | A0355086X | Data ingestion pipeline, PostgreSQL storage, event grouping and web interface, Claude Sonnet evaluation, evaluation metric design | nakhinbill@gmail.com |
+| Le Duc Nghia | A0356261E | Gemini evaluation, summarization evaluation analysis, finalising the consolidation evaluation and its reports | nghialeduc268@gmail.com |
+| Kittichaikoonkij Nathan | A0352270M | Local LLM evaluation (Qwen2.5, plus Qwen3-8B as an extra experiment), scaffolding of the system modules and evaluation harness, evaluation runs, evaluation metric design | nathan.kittichai@gmail.com |
 
 ---
 
